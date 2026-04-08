@@ -136,3 +136,18 @@ export function listProjects() {
     }
   });
 }
+
+/**
+ * 更新项目信息
+ * @param {Object} data - 项目更新数据，需包含 id
+ */
+export function updateProject(data) {
+  return request({
+    url: '/projectService',
+    method: 'post',
+    data: {
+      action: 'update',
+      data
+    }
+  });
+}

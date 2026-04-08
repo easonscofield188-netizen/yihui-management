@@ -30,6 +30,8 @@ exports.main = async (event, context) => {
         return await createProject(data);
       case 'list':
         return await listProjects(data);
+      case 'update':
+        return await updateProject(data);
       default:
         return { code: 400, message: '未知操作' };
     }
@@ -88,5 +90,30 @@ async function listProjects(params) {
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+async function updateProject(params) {
+  const { id, ...updateData } = params;
+
+  if (!id) {
+    return { code: 400, message: '缺少项目ID' };
+  }
+
+  // 安全校验
+  if (updateData.name && !isSafeInput(updateData.name)) return { code: 400, message: '项目名称包含非法字符' };
+  if (updateData.client && !isSafeInput(updateData.client)) return { code: 400, message: '客户名称包含非法字符' };
+
+  try {
+    await db.collection('projects').doc(id).update({
+      data: {
+        ...updateData,
+        updateTime: db.serverDate()
+      }
+    });
+    return { code: 0, message: '更新成功' };
+  } catch (err) {
+    console.error('更新项目失败:', err);
+    return { code: 500, message: '更新失败', error: err.message };
   }
 }

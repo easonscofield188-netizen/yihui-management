@@ -139,19 +139,20 @@
               style="width: 100%"
               :row-class-name="tableRowClassName"
               header-align="left"
+              @row-click="handleViewProject"
             >
               <el-table-column
                 label="项目名称"
                 min-width="200"
                 align="left"
               >
-                <template #default="{ row, $index }">
+                <template #default="{ row }">
                   <div class="flex items-center gap-4">
                     <div 
                       class="w-2 h-2 rounded-full shrink-0" 
                       :class="[
                         row.statusColor,
-                        $index === 0 ? 'shadow-[0_0_10px_rgba(82,238,138,0.8)]' : ''
+                        row.id === selectedProjectId ? 'shadow-[0_0_10px_rgba(82,238,138,0.8)]' : ''
                       ]"
                     />
                     <span class="font-bold text-sm text-on-surface truncate">{{ row.name }}</span>
@@ -163,10 +164,10 @@
                 label="客户单位"
                 min-width="120"
               >
-                <template #default="{ row, $index }">
+                <template #default="{ row }">
                   <span 
                     class="text-sm truncate block"
-                    :class="$index === 0 ? 'text-on-surface font-medium' : 'text-on-surface-variant'"
+                    :class="row.id === selectedProjectId ? 'text-on-surface font-medium' : 'text-on-surface-variant'"
                   >{{ row.client }}</span>
                 </template>
               </el-table-column>
@@ -175,10 +176,10 @@
                 label="开始时间"
                 min-width="100"
               >
-                <template #default="{ row, $index }">
+                <template #default="{ row }">
                   <span 
                     class="font-mono text-xs"
-                    :class="$index === 0 ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
                   >{{ row.date }}</span>
                 </template>
               </el-table-column>
@@ -186,10 +187,10 @@
                 label="订单金额 (¥)"
                 min-width="120"
               >
-                <template #default="{ row, $index }">
+                <template #default="{ row }">
                   <span 
                     class="font-bold font-mono text-sm"
-                    :class="$index === 0 ? 'text-primary' : 'text-on-surface'"
+                    :class="row.id === selectedProjectId ? 'text-primary' : 'text-on-surface'"
                   >{{ row.amount }}</span>
                 </template>
               </el-table-column>
@@ -248,10 +249,37 @@
               <!-- Decorative Arc in Top Right -->
               <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors duration-500" />
               
-              <h3 class="text-lg font-bold text-on-surface flex items-center gap-2 mb-8">
-                <span class="w-1.5 h-6 bg-primary rounded-full" />
-                基础项目信息
-              </h3>
+              <div class="flex items-center justify-between mb-8 relative z-10">
+                <h3 class="text-lg font-bold text-on-surface flex items-center gap-2">
+                  <span class="w-1.5 h-6 bg-primary rounded-full" />
+                  基础项目信息
+                </h3>
+                
+                <!-- Edit/Save Button -->
+                <div v-if="selectedProjectId" class="flex gap-2">
+                  <el-button
+                    v-if="isViewMode"
+                    type="default"
+                    size="small"
+                    class="!rounded-full !px-6 !bg-emerald-500/10 !text-primary !border !border-primary/30 hover:!bg-primary/20 hover:scale-105 transition-all duration-300 font-bold shadow-[0_0_15px_rgba(82,238,138,0.1)]"
+                    @click="enterEditMode"
+                  >
+                    <el-icon class="mr-1"><Edit /></el-icon>
+                    编辑项目
+                  </el-button>
+                  <el-button
+                    v-else-if="isEditMode"
+                    type="primary"
+                    size="small"
+                    class="!rounded-full !px-6 !text-black !border-none hover:scale-105 transition-all duration-300 font-bold shadow-lg shadow-primary/40 brightness-110"
+                    :loading="savingProject"
+                    @click="confirmSaveUpdate"
+                  >
+                    <el-icon class="mr-1"><Check /></el-icon>
+                    保存修改
+                  </el-button>
+                </div>
+              </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <!-- Project Name -->
@@ -261,6 +289,7 @@
                     v-model="form.name"
                     placeholder="请输入项目名称"
                     class="custom-input"
+                    :disabled="isViewMode"
                   />
                 </div>
 
@@ -281,6 +310,7 @@
                       start-placeholder="开始日期"
                       end-placeholder="结束日期"
                       class="!w-full custom-date-picker"
+                      :disabled="isViewMode"
                     />
                   </div>
                 </div>
@@ -297,6 +327,7 @@
                     class="w-full custom-select"
                     popper-class="custom-dropdown"
                     :loading="clientLoading"
+                    :disabled="isViewMode"
                     @change="handleClientChange"
                     @visible-change="handleClientVisibleChange"
                   >
@@ -329,7 +360,7 @@
                     placeholder="请选择客户角色" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="!isNewClient"
+                    :disabled="isViewMode || !isNewClient"
                   >
                     <el-option 
                       v-for="item in clientRoles" 
@@ -351,6 +382,7 @@
                     placeholder="请选择客户来源" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
+                    :disabled="isViewMode"
                   >
                     <el-option 
                       v-for="item in clientSources" 
@@ -370,6 +402,7 @@
                     :controls="false"
                     placeholder="请输入预计施工及管理人员数量"
                     class="!w-full custom-number-input"
+                    :disabled="isViewMode"
                   />
                 </div>
 
@@ -380,7 +413,27 @@
                     v-model="form.amount"
                     placeholder="请输入总签约金额"
                     class="custom-input amount-input"
+                    :disabled="isViewMode"
                   />
+                </div>
+
+                <!-- Project Status -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
+                  <el-select 
+                    v-model="form.status" 
+                    placeholder="请选择项目状态" 
+                    class="w-full custom-select" 
+                    popper-class="custom-dropdown"
+                    :disabled="isViewMode"
+                  >
+                    <el-option 
+                      v-for="item in projectStatuses" 
+                      :key="item.value" 
+                      :label="item.label" 
+                      :value="item.value" 
+                    />
+                  </el-select>
                 </div>
 
                 <!-- Project Description -->
@@ -392,6 +445,7 @@
                     :rows="4" 
                     placeholder="在此详细说明园林项目的设计要求与技术难点..."
                     class="custom-textarea"
+                    :disabled="isViewMode"
                   />
                 </div>
               </div>
@@ -447,6 +501,7 @@
                             placeholder="请选择类目" 
                             class="w-full custom-select-small"
                             popper-class="custom-dropdown"
+                            :disabled="isViewMode"
                           >
                             <el-option 
                               v-for="cat in costCategories" 
@@ -463,6 +518,7 @@
                             placeholder="请选择供应商" 
                             class="w-full custom-select-small supplier-select"
                             popper-class="custom-dropdown"
+                            :disabled="isViewMode"
                           >
                             <el-option 
                               v-for="sup in suppliers" 
@@ -480,12 +536,14 @@
                               type="number"
                               class="bg-transparent border-none p-0 focus:ring-0 text-sm font-mono w-full outline-none cost-amount-input"
                               placeholder="0.00"
+                              :disabled="isViewMode"
                             >
                           </div>
                         </td>
                         <td class="px-4 py-4 text-right rounded-r-lg">
                           <button 
-                            class="text-red-400/40 hover:text-red-400 transition-colors"
+                            class="text-red-400/40 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="isViewMode"
                             @click="costs.splice(index, 1)"
                           >
                             <el-icon class="text-lg">
@@ -513,7 +571,7 @@
                       单据凭证列表 (多图上传)
                     </h4>
                     <button 
-                      :disabled="uploadingVoucher"
+                      :disabled="isViewMode || uploadingVoucher"
                       class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
                       @click="triggerUpload"
                     >
@@ -563,8 +621,9 @@
                             <View />
                           </el-icon>
                           <el-icon
-                            class="text-red-400 hover:text-red-500 transition-colors"
+                            class="text-red-400 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             size="20"
+                            :disabled="isViewMode"
                             @click.stop="removeVoucher(idx)"
                           >
                             <Delete />
@@ -576,8 +635,8 @@
                     <!-- Upload Placeholder -->
                     <button 
                       v-if="vouchers.length < 20"
-                      :disabled="uploadingVoucher"
-                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-50"
+                      :disabled="isViewMode || uploadingVoucher"
+                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
                       @click="triggerUpload"
                     >
                       <el-icon
@@ -752,23 +811,36 @@
 
         <!-- Footer Actions -->
         <div class="flex justify-end gap-4 pt-4 pb-12">
-          <el-button
-            v-if="projects.length > 0"
-            size="large"
-            class="!bg-neutral-800 !border-white/5 !text-on-surface-variant"
-            @click="resetForm"
-          >
-            放弃修改
-          </el-button>
-          <el-button 
-            type="primary" 
-            size="large" 
-            class="!px-10 !font-bold shadow-xl"
-            :loading="savingProject"
-            @click="handleSaveProject"
-          >
-            {{ projects.length > 0 ? '保存项目档案' : '确认并创建首个项目' }}
-          </el-button>
+          <template v-if="isViewMode">
+            <el-button
+              type="primary"
+              size="large"
+              class="!px-10 !font-bold shadow-xl"
+              @click="enterCreateMode"
+            >
+              创建新项目
+            </el-button>
+          </template>
+          <template v-else>
+            <el-button
+              v-if="projects.length > 0"
+              size="large"
+              class="!bg-neutral-800 !border-white/5 !text-on-surface-variant"
+              @click="cancelEdit"
+            >
+              放弃修改
+            </el-button>
+            <el-button 
+              v-if="!isEditMode"
+              type="primary" 
+              size="large" 
+              class="!px-10 !font-bold shadow-xl"
+              :loading="savingProject"
+              @click="handleSaveProject"
+            >
+              {{ projects.length > 0 ? '保存项目档案' : '确认并创建首个项目' }}
+            </el-button>
+          </template>
         </div>
       </main>
     </div>
@@ -787,7 +859,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, deleteVoucher, createProject, updateVouchersProject, listProjects } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, deleteVoucher, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -808,6 +880,8 @@ import {
   Box,
   Setting,
   Refresh,
+  Edit,
+  Check,
 } from '@element-plus/icons-vue'
 
 // 获取API域名
@@ -825,6 +899,13 @@ const menuItems = ref([
   { name: 'settings', label: '系统设置', icon: markRaw(Setting), active: false },
 ])
 
+// 视图模式：true为查看模式（只读），false为创建/编辑模式
+const isViewMode = ref(false)
+// 是否为编辑模式（针对已存在的项目）
+const isEditMode = ref(false)
+// 当前选中的项目ID
+const selectedProjectId = ref(null)
+
 // 项目列表数据
 const projects = ref([])
 
@@ -835,6 +916,7 @@ const form = reactive({
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
+  status: '',         // 项目状态
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
   desc: ''            // 项目描述
@@ -859,6 +941,9 @@ const clientSources = ref([])
 
 // 成本类目列表（由接口获取）
 const costCategories = ref([])
+
+// 项目状态列表（由接口获取）
+const projectStatuses = ref([])
 
 // 供应商列表（目前默认只有一个“无”）
 const suppliers = ref([
@@ -888,9 +973,23 @@ const initGlobalConfigs = async (forceRefresh = false) => {
     if (!forceRefresh && cachedData && lastFetchTime && (now - parseInt(lastFetchTime) < EXPIRE_TIME)) {
       const configs = JSON.parse(cachedData)
       console.log('📦 [Local Cache Hit] 从本地存储加载配置数据')
-      clientRoles.value = configs['CLIENT_ROLE'] || []
-      clientSources.value = configs['CLIENT_SOURCE'] || []
-      costCategories.value = configs['COST_CATEGORY'] || []
+      
+      // 统一去重处理，防止数据库脏数据导致前端显示重复
+      const deduplicate = (arr) => {
+        if (!Array.isArray(arr)) return []
+        const seen = new Set()
+        return arr.filter(item => {
+          const val = item.value
+          if (seen.has(val)) return false
+          seen.add(val)
+          return true
+        })
+      }
+
+      clientRoles.value = deduplicate(configs['CLIENT_ROLE'])
+      clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
+      costCategories.value = deduplicate(configs['COST_CATEGORY'])
+      projectStatuses.value = deduplicate(configs['PROJECT_STATUS'])
       return
     }
 
@@ -899,9 +998,22 @@ const initGlobalConfigs = async (forceRefresh = false) => {
     const res = await getGlobalConfig(forceRefresh)
     if (res && res.code === 0 && res.data) {
       const configs = res.data
-      clientRoles.value = configs['CLIENT_ROLE'] || []
-      clientSources.value = configs['CLIENT_SOURCE'] || []
-      costCategories.value = configs['COST_CATEGORY'] || []
+      
+      const deduplicate = (arr) => {
+        if (!Array.isArray(arr)) return []
+        const seen = new Set()
+        return arr.filter(item => {
+          const val = item.value
+          if (seen.has(val)) return false
+          seen.add(val)
+          return true
+        })
+      }
+
+      clientRoles.value = deduplicate(configs['CLIENT_ROLE'])
+      clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
+      costCategories.value = deduplicate(configs['COST_CATEGORY'])
+      projectStatuses.value = deduplicate(configs['PROJECT_STATUS'])
       
       // 3. 更新本地缓存
       localStorage.setItem(CACHE_KEY, JSON.stringify(configs))
@@ -1071,6 +1183,71 @@ const compressImage = (file) => {
 }
 
 /**
+ * 查看项目详情
+ */
+const handleViewProject = (project) => {
+  if (!project) return
+  
+  isViewMode.value = true
+  isEditMode.value = false
+  selectedProjectId.value = project.id
+  
+  // 回显数据
+  Object.assign(form, {
+    name: project.name,
+    period: project.period,
+    client: project.client,
+    role: project.role,
+    clientSource: project.clientSource,
+    status: project.status,
+    staffCount: project.staffCount,
+    amount: project.amount,
+    desc: project.desc
+  })
+  
+  // 回显成本项
+  costs.value = project.costs ? project.costs.map(c => ({
+    id: Date.now() + Math.random(),
+    category: c.category,
+    supplier: c.supplier,
+    amount: c.amount
+  })) : []
+  
+  // 回显凭证
+  vouchers.value = project.vouchers || []
+}
+
+/**
+ * 进入编辑模式
+ */
+const enterEditMode = () => {
+  isViewMode.value = false
+  isEditMode.value = true
+}
+
+/**
+ * 放弃修改
+ */
+const cancelEdit = () => {
+  const project = projects.value.find(p => p.id === selectedProjectId.value)
+  if (project) {
+    handleViewProject(project)
+  } else {
+    enterCreateMode()
+  }
+}
+
+/**
+ * 进入创建模式
+ */
+const enterCreateMode = () => {
+  isViewMode.value = false
+  isEditMode.value = false
+  selectedProjectId.value = null
+  resetForm()
+}
+
+/**
  * 加载项目列表
  */
 const loadProjects = async () => {
@@ -1078,12 +1255,21 @@ const loadProjects = async () => {
     const res = await listProjects()
     // Support both res.success and checking res.code
     if (res.success || res.code === 0) {
-      projects.value = res.data.map(p => ({
-        ...p,
-        statusColor: p.status === 'ongoing' ? 'bg-primary' : 'bg-secondary',
-        statusText: p.status === 'ongoing' ? '施工中' : '设计中',
-        date: p.period ? new Date(p.period[0]).toLocaleDateString() : '-'
-      }))
+      projects.value = res.data.map(p => {
+        const statusConfig = projectStatuses.value.find(s => s.value === p.status)
+        return {
+          ...p,
+          id: p._id || p.id, // 确保有统一的 id 字段用于高亮匹配
+          statusColor: p.status === 'ongoing' || p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
+          statusText: statusConfig ? statusConfig.label : (p.status === 'ongoing' ? '施工中' : '设计中'),
+          date: p.period ? new Date(p.period[0]).toLocaleDateString() : '-'
+        }
+      })
+      
+      // 如果有数据，默认选中最新的一条（假设后端返回的是按时间降序）
+      if (projects.value.length > 0 && !selectedProjectId.value) {
+        handleViewProject(projects.value[0])
+      }
     }
   } catch (err) {
     console.error('加载项目列表失败:', err.message || err)
@@ -1100,6 +1286,7 @@ const resetForm = () => {
     client: '',
     role: '',
     clientSource: '',
+    status: 'negotiating', // 默认谈判中
     staffCount: null,
     amount: '',
     desc: ''
@@ -1203,6 +1390,8 @@ const validateProjectForm = (checkVouchers = true) => {
   
   if (isNewClient.value && !form.clientSource) return '请选择新客户来源';
 
+  if (!form.status) return '请选择项目状态';
+
   if (form.staffCount === null || form.staffCount === undefined) return '请输入人员数量';
   
   if (!form.amount) return '请输入订单金额';
@@ -1226,6 +1415,28 @@ const validateProjectForm = (checkVouchers = true) => {
 }
 
 /**
+ * 确认保存修改（带弹窗提醒）
+ */
+const confirmSaveUpdate = () => {
+  import('element-plus').then(({ ElMessageBox }) => {
+    ElMessageBox.confirm(
+      '确认保存对该项目的修改吗？',
+      '提示',
+      {
+        confirmButtonText: '确认保存',
+        cancelButtonText: '取消',
+        type: 'warning',
+        customClass: 'custom-message-box'
+      }
+    ).then(() => {
+      handleSaveProject()
+    }).catch(() => {
+      // 取消操作
+    })
+  })
+}
+
+/**
  * 保存/创建项目
  */
 const handleSaveProject = async () => {
@@ -1246,6 +1457,7 @@ const handleSaveProject = async () => {
       client: form.client,
       role: form.role,
       clientSource: form.clientSource,
+      status: form.status,
       staffCount: Number(form.staffCount),
       amount: Number(form.amount),
       desc: form.desc,
@@ -1254,7 +1466,6 @@ const handleSaveProject = async () => {
         supplier: item.supplier,
         amount: Number(item.amount)
       })),
-      status: 'ongoing',
       financials: {
         totalIncome: Number(totalIncome.value),
         totalCost: Number(totalCost.value),
@@ -1264,10 +1475,23 @@ const handleSaveProject = async () => {
       }
     }
     
-    const res = await createProject(projectData)
+    let res;
+    if (isEditMode.value && selectedProjectId.value) {
+      // 更新项目
+      res = await updateProject({
+        id: selectedProjectId.value,
+        ...projectData
+      })
+    } else {
+      // 创建项目
+      res = await createProject({
+        ...projectData,
+        status: 'ongoing' // 初始状态
+      })
+    }
     
     if (res.success || res.code === 0) {
-      const projectId = res.data.id
+      const projectId = isEditMode.value ? selectedProjectId.value : res.data.id
       
       // 2. 关联凭证
       if (vouchers.value.length > 0) {
@@ -1279,11 +1503,27 @@ const handleSaveProject = async () => {
       }
 
       import('element-plus').then(({ ElMessage }) => {
-        ElMessage.success('项目创建成功')
+        ElMessage.success(isEditMode.value ? '项目更新成功' : '项目创建成功')
       })
       
-      resetForm()
-      loadProjects()
+      // 强制重置编辑状态
+      isEditMode.value = false
+      isViewMode.value = true
+      
+      if (!isEditMode.value && !selectedProjectId.value) {
+        resetForm()
+      }
+      
+      await loadProjects()
+      
+      // 保存后进入查看模式
+      const savedProject = projects.value.find(p => p.id === projectId)
+      if (savedProject) {
+        handleViewProject(savedProject)
+      } else {
+        // 如果 find 没找到（可能是异步延迟），手动设置 ID 触发高亮
+        selectedProjectId.value = projectId
+      }
     } else {
       throw new Error(res.message)
     }
@@ -1468,8 +1708,8 @@ const removeVoucher = async (index) => {
   }
 }
 
-const tableRowClassName = ({ rowIndex }) => {
-  if (rowIndex === 0) {
+const tableRowClassName = ({ row }) => {
+  if (row.id === selectedProjectId.value) {
     return 'active-project-row'
   }
   return ''
@@ -1746,5 +1986,48 @@ const handleLogout = () => {
 .el-date-table td.current:not(.disabled) .el-date-table-cell__text {
   background-color: #52ee8a !important;
   color: #131314 !important;
+}
+
+/* 科技感弹窗样式 */
+.custom-message-box {
+  background-color: rgba(28, 27, 28, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(82, 238, 138, 0.2) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(82, 238, 138, 0.05) !important;
+}
+
+.custom-message-box .el-message-box__title {
+  color: #52ee8a !important;
+  font-weight: bold !important;
+  letter-spacing: 1px !important;
+}
+
+.custom-message-box .el-message-box__content {
+  color: #e5e2e3 !important;
+  font-size: 15px !important;
+  padding-top: 20px !important;
+  padding-bottom: 20px !important;
+}
+
+.custom-message-box .el-message-box__btns .el-button--primary {
+  background-color: #52ee8a !important;
+  border-color: #52ee8a !important;
+  color: #131314 !important;
+  font-weight: bold !important;
+  border-radius: 8px !important;
+  padding: 8px 20px !important;
+}
+
+.custom-message-box .el-message-box__btns .el-button:not(.el-button--primary) {
+  background-color: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  border-radius: 8px !important;
+}
+
+.custom-message-box .el-message-box__btns .el-button:not(.el-button--primary):hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #fff !important;
 }
 </style>
