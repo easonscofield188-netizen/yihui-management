@@ -1,0 +1,9 @@
+{
+  "name": "queryClients",
+  "version": "1.0.0",
+  "description": "查询客户列表云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
