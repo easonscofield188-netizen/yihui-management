@@ -66,7 +66,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, period, client, role, staffCount, amount, desc, costs, status } = params;
+  const { id, name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -78,6 +78,12 @@ async function updateProject(params) {
   }
 
   try {
+    const projectDoc = await db.collection('projects').doc(id).get();
+    if (!projectDoc.data) {
+      return { code: 404, message: '项目不存在' };
+    }
+    const oldProject = projectDoc.data;
+
     const updateData = {
       updateTime: db.serverDate()
     };
@@ -91,6 +97,20 @@ async function updateProject(params) {
     if (desc !== undefined) updateData.desc = desc;
     if (costs) updateData.costs = costs;
     if (status) updateData.status = status;
+    
+    // 历史数据相关字段
+    if (isHistorical !== undefined) updateData.isHistorical = isHistorical;
+    if (constructionPeriod) updateData.constructionPeriod = constructionPeriod;
+    if (collectionPeriod) updateData.collectionPeriod = collectionPeriod;
+
+    // 状态变更时间节点记录
+    if (status && status !== oldProject.status) {
+      const now = new Date().toISOString();
+      if (status === 'negotiating') updateData.negotiatingTime = now;
+      if (status === 'constructing') updateData.constructingTime = now;
+      if (status === 'completed') updateData.completedTime = now;
+      if (status === 'closed') updateData.settledTime = now;
+    }
 
     await db.collection('projects').doc(id).update({
       data: updateData
@@ -104,10 +124,10 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, period, client, role, staffCount, amount, desc, costs } = params;
+  const { name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
 
   // 1. 基础完整性校验
-  if (!name || !period || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
+  if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
   }
 
@@ -122,12 +142,22 @@ async function createProject(params) {
   }
 
   try {
+    const now = new Date().toISOString();
+    const data = {
+      ...params,
+      createTime: db.serverDate(),
+      updateTime: db.serverDate()
+    };
+
+    // 初始化时间节点
+    const initialStatus = status || 'negotiating';
+    if (initialStatus === 'negotiating') data.negotiatingTime = now;
+    if (initialStatus === 'constructing') data.constructingTime = now;
+    if (initialStatus === 'completed') data.completedTime = now;
+    if (initialStatus === 'closed') data.settledTime = now;
+
     const res = await db.collection('projects').add({
-      data: {
-        ...params,
-        createTime: db.serverDate(),
-        updateTime: db.serverDate()
-      }
+      data
     });
     return { code: 0, message: '创建成功', data: { id: res._id } };
   } catch (err) {

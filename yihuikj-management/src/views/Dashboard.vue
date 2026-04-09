@@ -99,17 +99,41 @@
               <span>项目概览</span>
             </div>
           </div>
+          <div v-if="projects.length > 0 && !isCreating" class="flex gap-3">
+            <el-button 
+              type="primary" 
+              size="large" 
+              class="!bg-primary !text-black !border-none !font-bold shadow-lg hover:brightness-110"
+              @click="enterCreateMode"
+            >
+              <el-icon class="mr-2 !text-black">
+                <Plus />
+              </el-icon>
+              新建项目
+            </el-button>
+            <el-button 
+              type="info" 
+              size="large" 
+              class="!bg-neutral-800 !text-on-surface-variant !border-white/10 !font-bold shadow-lg hover:!bg-neutral-700 hover:!text-white"
+              @click="enterHistoricalCreateMode"
+            >
+              <el-icon class="mr-2">
+                <Management />
+              </el-icon>
+              历史数据录入
+            </el-button>
+          </div>
           <el-button 
-            v-if="projects.length > 0" 
-            type="primary" 
+            v-if="isCreating" 
+            type="info" 
             size="large" 
-            class="!bg-gradient-to-br from-primary to-primary-container !border-none !font-bold shadow-lg"
-            @click="resetForm"
+            class="!bg-neutral-800 !text-on-surface-variant !border-white/10 !font-bold shadow-lg hover:!bg-neutral-700 hover:!text-white"
+            @click="handleAbandonCreate"
           >
             <el-icon class="mr-2">
-              <Plus />
+              <Close />
             </el-icon>
-            新建项目
+            放弃创建
           </el-button>
         </div>
 
@@ -141,7 +165,7 @@
               style="width: 100%"
               :row-class-name="tableRowClassName"
               header-align="left"
-              @row-click="handleViewProject"
+              @row-click="(row) => !isCreating && handleViewProject(row)"
             >
               <el-table-column
                 label="项目名称"
@@ -157,7 +181,17 @@
                         row.id === selectedProjectId ? 'shadow-[0_0_10px_rgba(82,238,138,0.8)]' : ''
                       ]"
                     />
-                    <span class="font-bold text-sm text-on-surface truncate">{{ row.name }}</span>
+                    <div class="flex flex-col min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm text-on-surface truncate">{{ row.name }}</span>
+                        <el-tag 
+                          v-if="row.isHistorical" 
+                          size="small" 
+                          effect="dark" 
+                          class="!bg-neutral-800 !border-white/10 !text-[10px] !text-on-surface-variant/60 !px-1.5 !h-5 !leading-5"
+                        >补录</el-tag>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </el-table-column>
@@ -186,6 +220,39 @@
                 </template>
               </el-table-column>
               <el-table-column
+                label="项目周期"
+                min-width="90"
+              >
+                <template #default="{ row }">
+                  <span 
+                    class="text-xs font-bold"
+                    :class="row.projectDaysText !== '-' ? 'text-primary' : 'text-on-surface-variant/40'"
+                  >{{ row.projectDaysText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="施工周期"
+                min-width="90"
+              >
+                <template #default="{ row }">
+                  <span 
+                    class="text-xs font-bold"
+                    :class="row.constructionDaysText !== '-' ? 'text-secondary' : 'text-on-surface-variant/40'"
+                  >{{ row.constructionDaysText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="回款周期"
+                min-width="90"
+              >
+                <template #default="{ row }">
+                  <span 
+                    class="text-xs font-bold"
+                    :class="row.collectionDaysText !== '-' ? 'text-orange-400' : 'text-on-surface-variant/40'"
+                  >{{ row.collectionDaysText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
                 label="订单金额 (¥)"
                 min-width="120"
               >
@@ -204,23 +271,25 @@
                   <el-dropdown 
                     trigger="click" 
                     popper-class="status-dropdown-popper"
+                    :disabled="isCreating"
                     @command="(val) => handleInlineStatusChange(row, val)"
                     @click.stop
                   >
                     <div 
                       class="status-badge-trigger"
                       :class="[
-                        row.status === 'ongoing' || row.status === 'constructing' ? 'is-active' : 'is-pending'
+                        row.status === 'constructing' ? 'is-active' : 'is-pending',
+                        isCreating ? 'opacity-50 cursor-not-allowed' : ''
                       ]"
                     >
                       <div class="status-dot"></div>
                       <span class="status-text">{{ row.statusText }}</span>
-                      <el-icon class="status-chevron"><ArrowDown /></el-icon>
+                      <el-icon v-if="!isCreating" class="status-chevron"><ArrowDown /></el-icon>
                     </div>
                     <template #dropdown>
                       <el-dropdown-menu class="status-dropdown-menu">
                         <el-dropdown-item
-                          v-for="item in projectStatuses"
+                          v-for="item in getRowProjectStatuses(row)"
                           :key="item.value"
                           :command="item.value"
                           :class="{ 'is-selected': row.status === item.value }"
@@ -233,17 +302,6 @@
                 </template>
               </el-table-column>
               <el-table-column
-                label="创建时间"
-                min-width="120"
-              >
-                <template #default="{ row }">
-                  <span 
-                    class="font-mono text-xs"
-                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
-                  >{{ row.createTimeText }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
                 label="操作"
                 align="right"
                 width="80"
@@ -252,12 +310,14 @@
                 <template #default="{ row }">
                   <div class="flex justify-end pr-2">
                     <el-icon 
+                      v-if="!isCreating"
                       class="cursor-pointer !text-red-500 hover:!text-red-600 transition-colors text-lg"
                       title="删除项目"
                       @click.stop="handleDeleteProject(row)"
                     >
                       <Delete />
                     </el-icon>
+                    <span v-else class="text-[10px] text-on-surface-variant/40 italic">新建中...</span>
                   </div>
                 </template>
               </el-table-column>
@@ -337,8 +397,40 @@
                   />
                 </div>
 
-                <!-- Project Period -->
+                <!-- Project Status -->
                 <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
+                  <el-select 
+                    v-model="form.status" 
+                    placeholder="请选择项目状态" 
+                    class="w-full custom-select" 
+                    popper-class="custom-dropdown"
+                    :disabled="isViewMode"
+                  >
+                    <el-option 
+                      v-for="item in filteredProjectStatuses" 
+                      :key="item.value" 
+                      :label="item.label" 
+                      :value="item.value" 
+                    />
+                  </el-select>
+                </div>
+
+                <!-- Start Date (Only for New Project Mode) -->
+                <div v-if="isCreating && !isCreatingHistorical" class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
+                  <el-date-picker
+                    v-model="form.startDate"
+                    type="date"
+                    placeholder="选择开始日期"
+                    class="!w-full custom-date-picker"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                  />
+                </div>
+
+                <!-- Project Period (Hidden in New Project Mode) -->
+                <div v-if="!isCreating || isCreatingHistorical" class="space-y-2">
                   <div class="flex justify-between items-center px-1">
                     <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">项目周期</label>
                     <span
@@ -357,6 +449,48 @@
                       :disabled="isViewMode"
                     />
                   </div>
+                </div>
+
+                <!-- Construction Period (Only for Historical Mode or View Mode with data) -->
+                <div v-if="form.isHistorical || isCreatingHistorical || (isViewMode && constructionDays > 0)" class="space-y-2">
+                  <div class="flex justify-between items-center px-1">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">施工周期</label>
+                    <span
+                      v-if="constructionDays > 0"
+                      class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
+                    >共 {{ constructionDays }} 天</span>
+                  </div>
+                  <el-date-picker
+                    v-model="form.constructionPeriod"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开始施工"
+                    end-placeholder="竣工日期"
+                    class="!w-full custom-date-picker"
+                    :disabled="isViewMode"
+                    @change="handleConstructionPeriodChange"
+                  />
+                </div>
+
+                <!-- Collection Period (Only for Historical Mode or View Mode with data) -->
+                <div v-if="(form.isHistorical && form.status === 'closed') || (!form.isHistorical && isViewMode && collectionDays > 0)" class="space-y-2">
+                  <div class="flex justify-between items-center px-1">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">回款周期</label>
+                    <span
+                      v-if="collectionDays > 0"
+                      class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
+                    >共 {{ collectionDays }} 天</span>
+                  </div>
+                  <el-date-picker
+                    v-model="form.collectionPeriod"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="竣工日期"
+                    end-placeholder="完账日期"
+                    class="!w-full custom-date-picker"
+                    :disabled="isViewMode"
+                    @change="handleCollectionPeriodChange"
+                  />
                 </div>
 
                 <!-- Client Name -->
@@ -459,25 +593,6 @@
                     class="custom-input amount-input"
                     :disabled="isViewMode"
                   />
-                </div>
-
-                <!-- Project Status -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
-                  <el-select 
-                    v-model="form.status" 
-                    placeholder="请选择项目状态" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode"
-                  >
-                    <el-option 
-                      v-for="item in projectStatuses" 
-                      :key="item.value" 
-                      :label="item.label" 
-                      :value="item.value" 
-                    />
-                  </el-select>
                 </div>
 
                 <!-- Project Description -->
@@ -854,28 +969,24 @@
         </div>
 
         <!-- Footer Actions -->
-        <div class="flex justify-end gap-4 pt-4 pb-12">
-          <template v-if="isViewMode">
-            <el-button
-              type="primary"
-              size="large"
-              class="!px-10 !font-bold shadow-xl"
-              @click="enterCreateMode"
-            >
-              创建新项目
-            </el-button>
-          </template>
-          <template v-else-if="!isEditMode">
-            <el-button 
-              type="primary" 
-              size="large" 
-              class="!px-10 !font-bold shadow-xl"
-              :loading="savingProject"
-              @click="handleSaveProject"
-            >
-              {{ projects.length > 0 ? '保存项目档案' : '确认并创建首个项目' }}
-            </el-button>
-          </template>
+        <div v-if="isCreating" class="flex justify-end gap-4 pt-4 pb-12">
+          <el-button 
+            type="primary" 
+            size="large" 
+            class="!px-10 !font-bold !text-black shadow-xl hover:brightness-110"
+            :loading="savingProject"
+            @click="handleSaveProject"
+          >
+            {{ isCreatingHistorical ? '保存历史档案' : '创建新项目' }}
+          </el-button>
+          <el-button 
+            type="info" 
+            size="large" 
+            class="!px-10 !bg-neutral-800 !text-on-surface-variant !border-white/10 !font-bold shadow-xl hover:!bg-neutral-700 hover:!text-white"
+            @click="handleAbandonCreate"
+          >
+            放弃创建
+          </el-button>
         </div>
       </main>
     </div>
@@ -892,7 +1003,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, markRaw, computed, onMounted } from 'vue'
+import { ref, reactive, markRaw, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
 import axios from 'axios'
@@ -904,9 +1015,9 @@ import {
   Bell, 
   QuestionFilled, 
   Plus, 
-  ArrowRight,
   ArrowDown,
   Delete,
+  Close,
   Upload,
   View,
   Picture,
@@ -935,12 +1046,26 @@ const menuItems = ref([
   { name: 'settings', label: '系统设置', icon: markRaw(Setting), active: false },
 ])
 
+// 项目状态顺序定义，用于回溯保护
+const statusOrder = {
+  'negotiating': 1,
+  'designing': 2,
+  'constructing': 3,
+  'completed': 4,
+  'settling': 5,
+  'closed': 6
+}
+
 // 视图模式：true为查看模式（只读），false为创建/编辑模式
 const isViewMode = ref(false)
 // 是否为编辑模式（针对已存在的项目）
 const isEditMode = ref(false)
+// 是否为历史数据录入模式
+const isCreatingHistorical = ref(false)
 // 当前选中的项目ID
 const selectedProjectId = ref(null)
+// 是否正在新建项目
+const isCreating = computed(() => !selectedProjectId.value && !isViewMode.value && !isEditMode.value)
 // 记录编辑前的项目名称，用于同步修改云存储路径
 const originalProjectName = ref('')
 
@@ -952,13 +1077,17 @@ const loadingProjects = ref(false)
 const form = reactive({
   name: '',           // 项目名称
   period: null,       // 项目周期（日期范围数组）
+  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
+  constructionPeriod: null, // 施工周期（历史模式）
+  collectionPeriod: null,   // 回款周期（历史模式）
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
   status: '',         // 项目状态
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
-  desc: ''            // 项目描述
+  desc: '',           // 项目描述
+  isHistorical: false // 标识是否为历史补录项目
 })
 
 // 是否为新客户标识：用于控制“客户来源”显示及“客户角色”是否可编辑
@@ -1085,13 +1214,106 @@ onMounted(() => {
 
 // 计算属性：根据选择的日期范围自动计算项目总天数
 const projectDays = computed(() => {
-  if (!form.period || !Array.isArray(form.period) || form.period.length !== 2) return 0
-  const start = new Date(form.period[0])
-  const end = new Date(form.period[1])
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
-  // 计算毫秒差并转换为天数，包含首尾两日
-  const diffTime = Math.abs(end - start)
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+  // 如果有表单数据（编辑/历史模式）
+  if (form.period && Array.isArray(form.period) && form.period.length === 2) {
+    const start = new Date(form.period[0])
+    const end = new Date(form.period[1])
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1
+    }
+  }
+  
+  // 查看模式下的非历史数据，从时间节点计算
+  if (isViewMode.value && selectedProjectId.value) {
+    const p = projects.value.find(item => item.id === selectedProjectId.value)
+    if (p && !p.isHistorical) {
+      const days = calculateDiffDays(p.negotiatingTime || p.createTime, p.completedTime)
+      if (days) return days
+    }
+  }
+  return 0
+})
+
+// 计算属性：施工周期天数
+const constructionDays = computed(() => {
+  if (form.constructionPeriod && Array.isArray(form.constructionPeriod) && form.constructionPeriod.length === 2) {
+    const start = new Date(form.constructionPeriod[0])
+    const end = new Date(form.constructionPeriod[1])
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1
+    }
+  }
+
+  if (isViewMode.value && selectedProjectId.value) {
+    const p = projects.value.find(item => item.id === selectedProjectId.value)
+    if (p && !p.isHistorical) {
+      const days = calculateDiffDays(p.constructingTime, p.completedTime)
+      if (days) return days
+    }
+  }
+  return 0
+})
+
+// 计算属性：回款周期天数
+const collectionDays = computed(() => {
+  if (form.collectionPeriod && Array.isArray(form.collectionPeriod) && form.collectionPeriod.length === 2) {
+    const start = new Date(form.collectionPeriod[0])
+    const end = new Date(form.collectionPeriod[1])
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1
+    }
+  }
+
+  if (isViewMode.value && selectedProjectId.value) {
+    const p = projects.value.find(item => item.id === selectedProjectId.value)
+    if (p && !p.isHistorical) {
+      const days = calculateDiffDays(p.completedTime, p.settledTime)
+      if (days) return days
+    }
+  }
+  return 0
+})
+
+// 过滤后的项目状态列表
+const filteredProjectStatuses = computed(() => {
+  const isHistorical = isCreatingHistorical.value || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
+  if (isHistorical) {
+    return projectStatuses.value.filter(s => s.value === 'settling' || s.value === 'closed')
+  }
+  return projectStatuses.value
+})
+
+/**
+ * 获取特定行的可选状态列表
+ */
+const getRowProjectStatuses = (row) => {
+  if (row.isHistorical) {
+    return projectStatuses.value.filter(s => s.value === 'settling' || s.value === 'closed')
+  }
+  return projectStatuses.value
+}
+
+// 施工周期变更处理：联动回款周期开始日期
+const handleConstructionPeriodChange = (val) => {
+  if (val && val[1]) {
+    // 回款周期的开始日期默认是施工周期的结束日期
+    form.collectionPeriod = [val[1], val[1]]
+  }
+}
+
+// 回款周期变更处理
+const handleCollectionPeriodChange = (val) => {
+  // 可以在这里做一些校验
+}
+
+// 监听项目周期变更：联动施工周期开始日期
+watch(() => form.period, (newVal) => {
+  if (isCreatingHistorical.value && newVal && newVal[1]) {
+    // 施工周期的开始日期默认是项目周期的结束日期
+    if (!form.constructionPeriod) {
+      form.constructionPeriod = [newVal[1], newVal[1]]
+    }
+  }
 })
 
 /**
@@ -1225,40 +1447,71 @@ const compressImage = (file) => {
  * 列表内直接修改状态
  */
 const handleInlineStatusChange = async (row, newVal) => {
-  try {
-    // 准备更新数据
-    const updateData = {
-      id: row.id,
-      status: newVal
-    }
-    
-    // 调用接口更新
-    const res = await updateProject(updateData)
-    
-    if (res.code === 0) {
-      import('element-plus').then(({ ElMessage }) => {
-        ElMessage.success(`项目“${row.name}”状态已更新`)
-      })
-      
-      // 更新本地行数据中的 statusText 和 statusColor 以同步显示
-      const statusConfig = projectStatuses.value.find(s => s.value === newVal)
-      row.statusText = statusConfig ? statusConfig.label : (newVal === 'ongoing' ? '施工中' : '设计中')
-      row.statusColor = newVal === 'ongoing' || newVal === 'constructing' ? 'bg-primary' : 'bg-secondary'
-      
-      // 如果当前正在查看该项目，同步更新表单状态
-      if (selectedProjectId.value === row.id) {
-        form.status = newVal
+  // 状态回溯保护逻辑
+  const oldOrder = statusOrder[row.status] || 0
+  const newOrder = statusOrder[newVal] || 0
+  
+  const performUpdate = async () => {
+    try {
+      // 准备更新数据
+      const updateData = {
+        id: row.id,
+        status: newVal
       }
-    } else {
-      throw new Error(res.message)
+      
+      // 调用接口更新
+      const res = await updateProject(updateData)
+      
+      if (res.code === 0) {
+        import('element-plus').then(({ ElMessage }) => {
+          ElMessage.success(`项目“${row.name}”状态已更新`)
+        })
+        
+        // 更新本地行数据中的 statusText 和 statusColor 以同步显示
+        const statusConfig = projectStatuses.value.find(s => s.value === newVal)
+        row.statusText = statusConfig ? statusConfig.label : '未知状态'
+        row.statusColor = newVal === 'constructing' ? 'bg-primary' : 'bg-secondary'
+        
+        // 更新状态以供回溯校验
+        row.status = newVal
+
+        // 如果当前正在查看该项目，同步更新表单状态
+        if (selectedProjectId.value === row.id) {
+          form.status = newVal
+        }
+      } else {
+        throw new Error(res.message)
+      }
+    } catch (err) {
+      console.error('更新项目状态失败:', err)
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.error(`状态更新失败: ${err.message || '未知错误'}`)
+      })
+      // 失败时回滚本地状态
+      loadProjects()
     }
-  } catch (err) {
-    console.error('更新项目状态失败:', err)
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.error(`状态更新失败: ${err.message || '未知错误'}`)
+  }
+
+  // 如果是状态回溯，需要确认
+  if (newOrder < oldOrder) {
+    import('element-plus').then(({ ElMessageBox }) => {
+      ElMessageBox.confirm(
+        `确定要将项目状态从“${row.statusText}”回退到“${projectStatuses.value.find(s => s.value === newVal)?.label}”吗？这可能会影响周期统计数据的准确性。`,
+        '状态回退提醒',
+        {
+          confirmButtonText: '确认回退',
+          cancelButtonText: '取消',
+          type: 'warning',
+          customClass: 'custom-message-box'
+        }
+      ).then(() => {
+        performUpdate()
+      }).catch(() => {
+        // 取消回退
+      })
     })
-    // 失败时回滚本地状态（需要重新加载或记录旧值，这里简单处理为重新加载列表）
-    loadProjects()
+  } else {
+    performUpdate()
   }
 }
 
@@ -1339,13 +1592,16 @@ const handleViewProject = async (project) => {
   Object.assign(form, {
     name: project.name,
     period: project.period,
+    constructionPeriod: project.constructionPeriod,
+    collectionPeriod: project.collectionPeriod,
     client: project.client,
     role: project.role,
     clientSource: project.clientSource,
     status: project.status,
     staffCount: project.staffCount,
     amount: project.amount,
-    desc: project.desc
+    desc: project.desc,
+    isHistorical: !!project.isHistorical
   })
   
   // 回显成本项
@@ -1400,9 +1656,94 @@ const cancelEdit = () => {
 const enterCreateMode = () => {
   isViewMode.value = false
   isEditMode.value = false
+  isCreatingHistorical.value = false
   selectedProjectId.value = null
   resetForm()
+  form.isHistorical = false
 }
+
+/**
+ * 进入历史数据录入模式
+ */
+const enterHistoricalCreateMode = () => {
+  isViewMode.value = false
+  isEditMode.value = false
+  isCreatingHistorical.value = true
+  selectedProjectId.value = null
+  resetForm()
+  form.status = 'settling' // 历史数据默认结账中
+  form.isHistorical = true
+}
+
+/**
+ * 放弃创建新项目
+ */
+const handleAbandonCreate = () => {
+  import('element-plus').then(({ ElMessageBox, ElMessage, ElLoading }) => {
+    ElMessageBox.confirm(
+      '确定要放弃创建新项目吗？如果已上传凭证图片，这些图片将被永久删除。',
+      '放弃创建提示',
+      {
+        confirmButtonText: '确认放弃',
+        cancelButtonText: '返回继续',
+        type: 'warning',
+        confirmButtonClass: '!bg-red-500 !border-red-500 !text-white',
+        cancelButtonClass: '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white',
+        customClass: 'danger-message-box',
+        center: true,
+      }
+    ).then(async () => {
+      // 如果有已上传的凭证，需要清理
+      if (vouchers.value.length > 0) {
+        const loading = ElLoading.service({
+          lock: true,
+          text: '正在清理已上传的凭证...',
+          background: 'rgba(0, 0, 0, 0.7)',
+        })
+        
+        try {
+          // 循环删除凭证（包括云存储文件）
+          for (const voucher of vouchers.value) {
+            await deleteVoucher({ id: voucher.id, fileId: voucher.fileId })
+          }
+          ElMessage.success('已清理上传的凭证')
+        } catch (err) {
+          console.error('清理凭证失败:', err)
+          ElMessage.error('部分凭证清理失败，请手动检查')
+        } finally {
+          loading.close()
+        }
+      }
+      
+      // 重置状态
+      isViewMode.value = false
+      isEditMode.value = false
+      selectedProjectId.value = null
+      resetForm()
+      
+      // 如果列表有数据，默认选中第一项
+      if (projects.value.length > 0) {
+        handleViewProject(projects.value[0])
+      }
+      
+      ElMessage.info('已放弃创建')
+    }).catch(() => {
+      // 继续创建
+    })
+  })
+}
+
+/**
+ * 计算两个日期之间的天数
+ */
+const calculateDiffDays = (start, end) => {
+  if (!start || !end) return null;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+  const diffTime = Math.abs(e - s);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
 
 /**
  * 加载项目列表
@@ -1411,23 +1752,48 @@ const loadProjects = async () => {
   loadingProjects.value = true
   try {
     const res = await listProjects()
-    // Support both res.success and checking res.code
     if (res.success || res.code === 0) {
       projects.value = res.data.map(p => {
         const statusConfig = projectStatuses.value.find(s => s.value === p.status)
+        
+        // 计算周期
+        let pDays;
+        let conDays;
+        let colDays;
+
+        if (p.isHistorical) {
+          // 历史补录数据直接使用保存的周期
+          pDays = calculateDiffDays(p.period?.[0], p.period?.[1]);
+          conDays = calculateDiffDays(p.constructionPeriod?.[0], p.constructionPeriod?.[1]);
+          colDays = calculateDiffDays(p.collectionPeriod?.[0], p.collectionPeriod?.[1]);
+        } else {
+          // 活跃项目根据时间节点计算
+          pDays = calculateDiffDays(p.negotiatingTime || p.createTime, p.completedTime);
+          conDays = calculateDiffDays(p.constructingTime, p.completedTime);
+          colDays = calculateDiffDays(p.completedTime, p.settledTime);
+        }
+
         return {
           ...p,
-          id: p._id || p.id, // 确保有统一的 id 字段用于高亮匹配
-          statusColor: p.status === 'ongoing' || p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-          statusText: statusConfig ? statusConfig.label : (p.status === 'ongoing' ? '施工中' : '设计中'),
+          id: p._id || p.id,
+          statusColor: p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
+          statusText: statusConfig ? statusConfig.label : '未知状态',
           date: p.period ? new Date(p.period[0]).toLocaleDateString() : '-',
-          createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-'
+          createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-',
+          projectDaysText: pDays ? `${pDays}天` : '-',
+          constructionDaysText: conDays ? `${conDays}天` : '-',
+          collectionDaysText: colDays ? `${colDays}天` : '-'
         }
       })
       
-      // 如果有数据，默认选中最新的一条（假设后端返回的是按时间降序）
-      if (projects.value.length > 0 && !selectedProjectId.value) {
-        handleViewProject(projects.value[0])
+      // 如果有数据，默认选中最新的一条
+      if (projects.value.length > 0) {
+        if (!selectedProjectId.value) {
+          handleViewProject(projects.value[0])
+        }
+      } else {
+        // 如果项目列表为空，默认进入历史数据录入模式
+        enterHistoricalCreateMode()
       }
     }
   } catch (err) {
@@ -1444,13 +1810,17 @@ const resetForm = () => {
   Object.assign(form, {
     name: '',
     period: null,
+    startDate: new Date().toISOString().split('T')[0],
+    constructionPeriod: null,
+    collectionPeriod: null,
     client: '',
     role: '',
     clientSource: '',
     status: 'negotiating', // 默认谈判中
     staffCount: null,
     amount: '',
-    desc: ''
+    desc: '',
+    isHistorical: false
   })
   costs.value = []
   vouchers.value = []
@@ -1542,7 +1912,33 @@ const validateProjectForm = (checkVouchers = true) => {
   if (!form.name) return '请输入项目名称';
   if (!isSafeInput(form.name)) return '项目名称包含非法字符';
   
-  if (!form.period || form.period.length !== 2) return '请选择项目周期';
+  // 新建项目模式：校验开始日期
+  if (isCreating.value && !isCreatingHistorical.value) {
+    if (!form.startDate) return '请选择项目开始日期';
+  } else {
+    // 历史模式或编辑模式：校验项目周期
+    if (!form.period || form.period.length !== 2) return '请选择项目周期';
+  }
+
+  // 历史模式：校验施工周期和回款周期
+  if (isCreatingHistorical.value) {
+    if (!form.constructionPeriod || form.constructionPeriod.length !== 2) return '请选择施工周期';
+    if (!form.collectionPeriod || form.collectionPeriod.length !== 2) return '请选择回款周期';
+
+    // 校验日期逻辑顺序：项目开始 < 施工开始 < 竣工 < 完账
+    const pStart = new Date(form.period[0]).getTime();
+    const pEnd = new Date(form.period[1]).getTime();
+    const conStart = new Date(form.constructionPeriod[0]).getTime();
+    const conEnd = new Date(form.constructionPeriod[1]).getTime();
+    const colStart = new Date(form.collectionPeriod[0]).getTime();
+    const colEnd = new Date(form.collectionPeriod[1]).getTime();
+
+    if (pStart > pEnd) return '项目周期开始日期不能晚于结束日期';
+    if (pEnd > conStart) return '施工开始日期不能早于项目周期结束日期';
+    if (conStart > conEnd) return '施工周期开始日期不能晚于结束日期';
+    if (conEnd > colStart) return '回款开始日期不能早于施工周期结束日期';
+    if (colStart > colEnd) return '回款周期开始日期不能晚于结束日期';
+  }
   
   if (!form.client) return '请输入客户名称';
   if (!isSafeInput(form.client)) return '客户名称包含非法字符';
@@ -1614,7 +2010,6 @@ const handleSaveProject = async () => {
     // 1. 手动构建提交数据，彻底避免循环引用
     const projectData = {
       name: form.name,
-      period: form.period ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [],
       client: form.client,
       role: form.role,
       clientSource: form.clientSource,
@@ -1622,6 +2017,7 @@ const handleSaveProject = async () => {
       staffCount: Number(form.staffCount),
       amount: Number(form.amount),
       desc: form.desc,
+      isHistorical: isCreatingHistorical.value,
       costs: costs.value.map(item => ({
         category: item.category,
         supplier: item.supplier,
@@ -1635,6 +2031,20 @@ const handleSaveProject = async () => {
         costRate: String(costRate.value)
       }
     }
+
+    // 处理周期数据
+    if (isCreating.value && !isCreatingHistorical.value) {
+      // 新建项目模式：项目周期默认为开始日期当天
+      const date = new Date(form.startDate).toISOString();
+      projectData.period = [date, date];
+    } else {
+      // 历史模式或编辑模式
+      projectData.period = form.period ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+      if (isCreatingHistorical.value) {
+        projectData.constructionPeriod = form.constructionPeriod ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
+        projectData.collectionPeriod = form.collectionPeriod ? [new Date(form.collectionPeriod[0]).toISOString(), new Date(form.collectionPeriod[1]).toISOString()] : [];
+      }
+    }
     
     let res;
     if (isEditMode.value && selectedProjectId.value) {
@@ -1646,8 +2056,7 @@ const handleSaveProject = async () => {
     } else {
       // 创建项目
       res = await createProject({
-        ...projectData,
-        status: 'ongoing' // 初始状态
+        ...projectData
       })
     }
     
@@ -1687,9 +2096,10 @@ const handleSaveProject = async () => {
       const updatedItem = {
         ...projectData,
         id: projectId,
-        statusText: statusConfig ? statusConfig.label : (form.status === 'ongoing' ? '施工中' : '设计中'),
-        statusColor: form.status === 'ongoing' || form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-        date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-'
+        statusText: statusConfig ? statusConfig.label : '未知状态',
+        statusColor: form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
+        date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-',
+        createTimeText: new Date().toLocaleString() // 新建时默认当前时间，后续 loadProjects 会刷新为真实时间
       }
       
       const index = projects.value.findIndex(p => p.id === projectId)
@@ -1700,19 +2110,20 @@ const handleSaveProject = async () => {
         projects.value.unshift(updatedItem)
       }
 
+      const wasCreating = !selectedProjectId.value && !isEditMode.value;
+
       // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
       
-      if (!isEditMode.value && !selectedProjectId.value) {
-        resetForm()
-      }
-      
       // 异步加载最新列表，不阻塞 UI 响应
       loadProjects()
       
-      // 保持当前选中项
+      // 保持当前选中项并回显
       selectedProjectId.value = projectId
+      if (wasCreating) {
+        handleViewProject(updatedItem)
+      }
     } else {
       throw new Error(res.message)
     }
