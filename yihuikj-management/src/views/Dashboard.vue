@@ -135,6 +135,8 @@
           
           <div class="overflow-x-auto">
             <el-table 
+              v-loading="loadingProjects"
+              element-loading-background="rgba(19, 19, 20, 0.8)"
               :data="projects" 
               style="width: 100%"
               :row-class-name="tableRowClassName"
@@ -196,41 +198,65 @@
               </el-table-column>
               <el-table-column
                 label="当前状态"
-                min-width="100"
+                min-width="110"
               >
                 <template #default="{ row }">
-                  <div 
-                    class="inline-block px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border"
-                    :class="[
-                      row.statusText === '施工中' ? 'bg-primary/10 text-primary border-primary/20' : 
-                      row.statusText === '设计中' ? 'bg-secondary/10 text-secondary border-secondary/20' : 
-                      'bg-neutral-800 text-on-surface-variant border-white/5'
-                    ]"
+                  <el-dropdown 
+                    trigger="click" 
+                    popper-class="status-dropdown-popper"
+                    @command="(val) => handleInlineStatusChange(row, val)"
+                    @click.stop
                   >
-                    {{ row.statusText }}
-                  </div>
+                    <div 
+                      class="status-badge-trigger"
+                      :class="[
+                        row.status === 'ongoing' || row.status === 'constructing' ? 'is-active' : 'is-pending'
+                      ]"
+                    >
+                      <div class="status-dot"></div>
+                      <span class="status-text">{{ row.statusText }}</span>
+                      <el-icon class="status-chevron"><ArrowDown /></el-icon>
+                    </div>
+                    <template #dropdown>
+                      <el-dropdown-menu class="status-dropdown-menu">
+                        <el-dropdown-item
+                          v-for="item in projectStatuses"
+                          :key="item.value"
+                          :command="item.value"
+                          :class="{ 'is-selected': row.status === item.value }"
+                        >
+                          <span>{{ item.label }}</span>
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="创建时间"
+                min-width="120"
+              >
+                <template #default="{ row }">
+                  <span 
+                    class="font-mono text-xs"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.createTimeText }}</span>
                 </template>
               </el-table-column>
               <el-table-column
                 label="操作"
                 align="right"
-                width="120"
+                width="80"
                 fixed="right"
               >
                 <template #default="{ row }">
-                  <div class="flex justify-end pr-2 gap-3">
+                  <div class="flex justify-end pr-2">
                     <el-icon 
-                      class="cursor-pointer text-red-400/60 hover:text-red-500 transition-colors text-lg"
+                      class="cursor-pointer !text-red-500 hover:!text-red-600 transition-colors text-lg"
                       title="删除项目"
                       @click.stop="handleDeleteProject(row)"
                     >
                       <Delete />
-                    </el-icon>
-                    <el-icon 
-                      class="cursor-pointer text-on-surface-variant hover:text-primary transition-colors text-lg"
-                      @click.stop="handleViewProject(row)"
-                    >
-                      <ArrowRight />
                     </el-icon>
                   </div>
                 </template>
@@ -879,6 +905,7 @@ import {
   QuestionFilled, 
   Plus, 
   ArrowRight,
+  ArrowDown,
   Delete,
   Upload,
   View,
@@ -919,6 +946,7 @@ const originalProjectName = ref('')
 
 // 项目列表数据
 const projects = ref([])
+const loadingProjects = ref(false)
 
 // 项目录入表单响应式对象
 const form = reactive({
@@ -1194,23 +1222,72 @@ const compressImage = (file) => {
 }
 
 /**
+ * 列表内直接修改状态
+ */
+const handleInlineStatusChange = async (row, newVal) => {
+  try {
+    // 准备更新数据
+    const updateData = {
+      id: row.id,
+      status: newVal
+    }
+    
+    // 调用接口更新
+    const res = await updateProject(updateData)
+    
+    if (res.code === 0) {
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.success(`项目“${row.name}”状态已更新`)
+      })
+      
+      // 更新本地行数据中的 statusText 和 statusColor 以同步显示
+      const statusConfig = projectStatuses.value.find(s => s.value === newVal)
+      row.statusText = statusConfig ? statusConfig.label : (newVal === 'ongoing' ? '施工中' : '设计中')
+      row.statusColor = newVal === 'ongoing' || newVal === 'constructing' ? 'bg-primary' : 'bg-secondary'
+      
+      // 如果当前正在查看该项目，同步更新表单状态
+      if (selectedProjectId.value === row.id) {
+        form.status = newVal
+      }
+    } else {
+      throw new Error(res.message)
+    }
+  } catch (err) {
+    console.error('更新项目状态失败:', err)
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(`状态更新失败: ${err.message || '未知错误'}`)
+    })
+    // 失败时回滚本地状态（需要重新加载或记录旧值，这里简单处理为重新加载列表）
+    loadProjects()
+  }
+}
+
+/**
  * 删除项目
  */
 const handleDeleteProject = (project) => {
   if (!project) return
   
-  import('element-plus').then(({ ElMessageBox, ElMessage }) => {
+  import('element-plus').then(({ ElMessageBox, ElMessage, ElLoading }) => {
     ElMessageBox.confirm(
       `确定要删除项目“${project.name}”吗？此操作将永久删除该项目及其所有关联的成本记录和凭证图片，不可恢复。`,
       '危险操作提示',
       {
         confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
+        cancelButtonText: '取消返回',
         type: 'warning',
-        confirmButtonClass: '!bg-red-500 !border-red-500',
+        confirmButtonClass: '!bg-red-500 !border-red-500 !text-white',
+        cancelButtonClass: '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white',
+        customClass: 'danger-message-box',
         center: true,
       }
     ).then(async () => {
+      const loading = ElLoading.service({
+        lock: true,
+        text: '正在删除项目及其关联数据...',
+        background: 'rgba(0, 0, 0, 0.7)',
+      })
+      
       try {
         // 1. 删除项目关联的所有凭证（云存储文件 + 数据库记录）
         await deleteVouchersByProject({ projectId: project.id })
@@ -1239,6 +1316,8 @@ const handleDeleteProject = (project) => {
           console.error('删除项目失败:', err)
           ElMessage.error(`删除失败: ${err.message || '未知错误'}`)
         }
+      } finally {
+        loading.close()
       }
     }).catch(() => {
       // 取消删除
@@ -1329,6 +1408,7 @@ const enterCreateMode = () => {
  * 加载项目列表
  */
 const loadProjects = async () => {
+  loadingProjects.value = true
   try {
     const res = await listProjects()
     // Support both res.success and checking res.code
@@ -1340,7 +1420,8 @@ const loadProjects = async () => {
           id: p._id || p.id, // 确保有统一的 id 字段用于高亮匹配
           statusColor: p.status === 'ongoing' || p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
           statusText: statusConfig ? statusConfig.label : (p.status === 'ongoing' ? '施工中' : '设计中'),
-          date: p.period ? new Date(p.period[0]).toLocaleDateString() : '-'
+          date: p.period ? new Date(p.period[0]).toLocaleDateString() : '-',
+          createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-'
         }
       })
       
@@ -1351,6 +1432,8 @@ const loadProjects = async () => {
     }
   } catch (err) {
     console.error('加载项目列表失败:', err.message || err)
+  } finally {
+    loadingProjects.value = false
   }
 }
 
@@ -2137,5 +2220,173 @@ const handleLogout = () => {
 .custom-message-box .el-message-box__btns .el-button:not(.el-button--primary):hover {
   border-color: rgba(255, 255, 255, 0.3) !important;
   color: #fff !important;
+}
+
+/* 危险操作弹窗增强样式 */
+.danger-message-box {
+  background-color: #1a1a1a !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1), 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  overflow: hidden !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.danger-message-box .el-message-box__header {
+  background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), transparent) !important;
+  padding-top: 24px !important;
+}
+
+.danger-message-box .el-message-box__title {
+  color: #ef4444 !important;
+  font-weight: 800 !important;
+  font-size: 18px !important;
+}
+
+.danger-message-box .el-message-box__status.el-icon {
+  color: #ef4444 !important;
+  font-size: 24px !important;
+}
+
+.danger-message-box .el-message-box__content {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  padding: 24px 32px !important;
+}
+
+.danger-message-box .el-message-box__btns {
+  padding: 0 32px 32px !important;
+}
+
+.danger-message-box .el-message-box__btns .el-button {
+  height: 40px !important;
+  padding: 0 24px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  transition: all 0.2s !important;
+}
+
+/* 列表内状态选择器样式优化 */
+.status-badge-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.status-badge-trigger:hover,
+.el-dropdown-selfdefine:focus-visible .status-badge-trigger {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(82, 238, 138, 0.3);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.is-active .status-dot {
+  background-color: #52ee8a;
+  box-shadow: 0 0 8px rgba(82, 238, 138, 0.4);
+}
+
+.is-pending .status-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.status-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(229, 226, 227, 0.9);
+  letter-spacing: 0.5px;
+}
+
+.status-chevron {
+  font-size: 10px;
+  color: rgba(229, 226, 227, 0.3);
+  transition: transform 0.3s;
+}
+
+.status-badge-trigger:hover .status-chevron {
+  color: #52ee8a;
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单高级感样式 - 完美复刻截图效果 */
+.status-dropdown-popper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.status-dropdown-menu {
+  background-color: #1c1b1c !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(82, 238, 138, 0.15) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+  margin-top: 8px !important;
+}
+
+.status-dropdown-menu :deep(.el-dropdown-menu__item) {
+  color: rgba(229, 226, 227, 0.7) !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 14px !important;
+  background-color: transparent !important;
+  padding: 0 16px !important;
+  position: relative !important;
+}
+
+.status-dropdown-menu :deep(.el-dropdown-menu__item:last-child) {
+  margin-bottom: 0 !important;
+}
+
+/* 悬浮状态 */
+.status-dropdown-menu :deep(.el-dropdown-menu__item:hover) {
+  background-color: rgba(82, 238, 138, 0.1) !important;
+  color: #52ee8a !important;
+  padding-left: 28px !important;
+}
+
+/* 选中状态 */
+.status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected) {
+  background-color: rgba(82, 238, 138, 0.15) !important;
+  color: #52ee8a !important;
+  font-weight: 700 !important;
+  padding-left: 28px !important;
+}
+
+/* 侧边指示条 - 完美复刻基础信息下拉框效果 */
+.status-dropdown-menu :deep(.el-dropdown-menu__item:hover::before),
+.status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected::before) {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 12px;
+  background: #52ee8a;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(82, 238, 138, 0.5);
+}
+
+/* 隐藏默认图标 */
+.status-dropdown-menu :deep(.el-dropdown-menu__item i) {
+  display: none !important;
 }
 </style>
