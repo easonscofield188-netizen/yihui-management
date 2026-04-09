@@ -166,3 +166,33 @@ export function updateProject(data) {
     }
   });
 }
+
+/**
+ * 删除项目
+ * @param {Object} params - { id }
+ */
+export function deleteProject(params) {
+  return request({
+    url: '/projectService',
+    method: 'post',
+    data: {
+      action: 'delete',
+      data: params
+    }
+  });
+}
+
+/**
+ * 删除项目关联的所有凭证
+ * @param {Object} params - { projectId }
+ */
+export function deleteVouchersByProject(params) {
+  return request({
+    url: '/voucherService',
+    method: 'post',
+    data: {
+      action: 'deleteByProject',
+      data: params
+    }
+  });
+}

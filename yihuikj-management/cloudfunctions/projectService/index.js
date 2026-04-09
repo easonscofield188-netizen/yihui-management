@@ -32,6 +32,8 @@ exports.main = async (event, context) => {
         return await listProjects(data);
       case 'update':
         return await updateProject(data);
+      case 'delete':
+        return await deleteProject(data);
       default:
         return { code: 400, message: '未知操作' };
     }
@@ -47,6 +49,21 @@ const isSafeInput = (str) => {
   const unsafePattern = /[<>{}[\]\\^%`|]/;
   return !unsafePattern.test(str);
 };
+
+async function deleteProject(params) {
+  const { id } = params;
+  if (!id) {
+    return { code: 400, message: '缺少项目 ID' };
+  }
+
+  try {
+    await db.collection('projects').doc(id).remove();
+    return { code: 0, message: '删除成功' };
+  } catch (err) {
+    console.error('删除项目失败:', err);
+    return { code: 500, message: '删除失败', error: err.message };
+  }
+}
 
 async function updateProject(params) {
   const { id, name, period, client, role, staffCount, amount, desc, costs, status } = params;

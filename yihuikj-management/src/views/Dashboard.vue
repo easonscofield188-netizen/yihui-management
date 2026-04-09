@@ -214,12 +214,22 @@
               <el-table-column
                 label="操作"
                 align="right"
-                width="80"
+                width="120"
                 fixed="right"
               >
-                <template #default>
-                  <div class="flex justify-end pr-2">
-                    <el-icon class="cursor-pointer text-on-surface-variant hover:text-primary transition-colors text-lg">
+                <template #default="{ row }">
+                  <div class="flex justify-end pr-2 gap-3">
+                    <el-icon 
+                      class="cursor-pointer text-red-400/60 hover:text-red-500 transition-colors text-lg"
+                      title="删除项目"
+                      @click.stop="handleDeleteProject(row)"
+                    >
+                      <Delete />
+                    </el-icon>
+                    <el-icon 
+                      class="cursor-pointer text-on-surface-variant hover:text-primary transition-colors text-lg"
+                      @click.stop="handleViewProject(row)"
+                    >
                       <ArrowRight />
                     </el-icon>
                   </div>
@@ -858,7 +868,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -1179,6 +1189,59 @@ const compressImage = (file) => {
         console.error('图片压缩失败:', err.message || err)
         resolve(file)
       }
+    })
+  })
+}
+
+/**
+ * 删除项目
+ */
+const handleDeleteProject = (project) => {
+  if (!project) return
+  
+  import('element-plus').then(({ ElMessageBox, ElMessage }) => {
+    ElMessageBox.confirm(
+      `确定要删除项目“${project.name}”吗？此操作将永久删除该项目及其所有关联的成本记录和凭证图片，不可恢复。`,
+      '危险操作提示',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: '!bg-red-500 !border-red-500',
+        center: true,
+      }
+    ).then(async () => {
+      try {
+        // 1. 删除项目关联的所有凭证（云存储文件 + 数据库记录）
+        await deleteVouchersByProject({ projectId: project.id })
+        
+        // 2. 删除项目本身
+        const res = await deleteProject({ id: project.id })
+        
+        if (res.code === 0) {
+          ElMessage.success('项目已成功删除')
+          
+          // 如果删除的是当前选中的项目，重置状态
+          if (selectedProjectId.value === project.id) {
+            selectedProjectId.value = null
+            isViewMode.value = false
+            isEditMode.value = false
+            resetForm()
+          }
+          
+          // 刷新列表
+          loadProjects()
+        } else {
+          throw new Error(res.message)
+        }
+      } catch (err) {
+        if (err !== 'cancel') {
+          console.error('删除项目失败:', err)
+          ElMessage.error(`删除失败: ${err.message || '未知错误'}`)
+        }
+      }
+    }).catch(() => {
+      // 取消删除
     })
   })
 }
