@@ -1653,7 +1653,7 @@ const handleFileUpload = async (event) => {
         // 发送请求到云函数
         console.log(`📡 上传到云函数...`)
         const response = await axios.post(`${apiDomain}/voucherService`, formData, {
-          timeout: 30000, // 30秒超时
+          timeout: 60000, // 60秒超时
           headers: {
             'Content-Type': 'multipart/form-data'
           }

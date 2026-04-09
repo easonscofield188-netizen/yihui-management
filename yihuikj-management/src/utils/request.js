@@ -9,7 +9,7 @@ console.log('🌐 Current API BaseURL:', baseURL || '(local)');
 
 const service = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json'
   }

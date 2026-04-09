@@ -386,66 +386,64 @@ async function renameProjectVouchers(params) {
 
     console.log(`找到 ${vouchers.length} 个凭证需要处理`);
 
-    const results = [];
-    for (const voucher of vouchers) {
+    const processVoucher = async (voucher) => {
       const oldFileId = voucher.fileId;
-      
-      // 检查 fileId 是否包含旧项目名称路径
-      // 存储路径格式通常为: bill_voucher/项目名称/文件名
       const oldPathPart = `/bill_voucher/${oldName}/`;
       
-      if (oldFileId.includes(oldPathPart)) {
-        try {
-          const newPathPart = `/bill_voucher/${newName}/`;
-          const newFileId = oldFileId.replace(oldPathPart, newPathPart);
-          
-          // 提取 cloudPath (从 fileId 中提取相对路径)
-          // fileId 格式: cloud://env-id.7463-env-id-12345678/bill_voucher/OldName/filename.jpg
-          const pathStartIndex = newFileId.indexOf('/', 9); // 跳过 cloud:// 并找到第一个斜杠
-          const cloudPath = newFileId.substring(pathStartIndex + 1);
-          
-          console.log(`处理凭证 ${voucher._id}: ${oldFileId} -> ${cloudPath}`);
-
-          // 1. 下载原文件
-          const downloadRes = await cloud.downloadFile({
-            fileID: oldFileId
-          });
-
-          // 2. 上传到新路径
-          const uploadRes = await cloud.uploadFile({
-            cloudPath: cloudPath,
-            fileContent: downloadRes.fileContent
-          });
-
-          // 3. 获取新链接
-          const getUrlRes = await cloud.getTempFileURL({
-            fileList: [uploadRes.fileID]
-          });
-          const newUrl = getUrlRes.fileList[0].tempFileURL;
-
-          // 4. 更新数据库记录
-          await db.collection('project_vouchers').doc(voucher._id).update({
-            data: {
-              fileId: uploadRes.fileID,
-              fileUrl: newUrl,
-              updateTime: db.serverDate()
-            }
-          });
-
-          // 5. 删除旧文件
-          await cloud.deleteFile({
-            fileList: [oldFileId]
-          });
-
-          results.push({ id: voucher._id, success: true });
-        } catch (itemError) {
-          console.error(`处理凭证 ${voucher._id} 失败:`, itemError);
-          results.push({ id: voucher._id, success: false, error: itemError.message });
-        }
-      } else {
+      if (!oldFileId.includes(oldPathPart)) {
         console.log(`凭证 ${voucher._id} 路径不匹配，跳过`);
+        return { id: voucher._id, success: true, skipped: true };
       }
-    }
+
+      try {
+        const newPathPart = `/bill_voucher/${newName}/`;
+        const newFileId = oldFileId.replace(oldPathPart, newPathPart);
+        
+        const pathStartIndex = newFileId.indexOf('/', 9);
+        const cloudPath = newFileId.substring(pathStartIndex + 1);
+        
+        console.log(`处理凭证 ${voucher._id}: ${oldFileId} -> ${cloudPath}`);
+
+        // 1. 下载原文件
+        const downloadRes = await cloud.downloadFile({
+          fileID: oldFileId
+        });
+
+        // 2. 上传到新路径
+        const uploadRes = await cloud.uploadFile({
+          cloudPath: cloudPath,
+          fileContent: downloadRes.fileContent
+        });
+
+        // 3. 获取新链接
+        const getUrlRes = await cloud.getTempFileURL({
+          fileList: [uploadRes.fileID]
+        });
+        const newUrl = getUrlRes.fileList[0].tempFileURL;
+
+        // 4. 更新数据库记录
+        await db.collection('project_vouchers').doc(voucher._id).update({
+          data: {
+            fileId: uploadRes.fileID,
+            fileUrl: newUrl,
+            updateTime: db.serverDate()
+          }
+        });
+
+        // 5. 删除旧文件
+        await cloud.deleteFile({
+          fileList: [oldFileId]
+        });
+
+        return { id: voucher._id, success: true };
+      } catch (itemError) {
+        console.error(`处理凭证 ${voucher._id} 失败:`, itemError);
+        return { id: voucher._id, success: false, error: itemError.message };
+      }
+    };
+
+    // 并行处理所有凭证
+    const results = await Promise.all(vouchers.map(v => processVoucher(v)));
 
     return { 
       code: 0, 
