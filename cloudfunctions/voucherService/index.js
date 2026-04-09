@@ -229,6 +229,8 @@ exports.main = async (event, context) => {
         return await uploadImage(event);
       case 'updateBatch':
         return await updateVouchersProject(data);
+      case 'renameProjectVouchers':
+        return await renameProjectVouchers(data);
       default:
         // 处理未知操作
         return {
@@ -356,6 +358,107 @@ async function updateVouchersProject(params) {
   } catch (err) {
     console.error('批量更新凭证失败:', err);
     return { code: 500, message: '更新失败', error: err.message };
+  }
+}
+
+/**
+ * 当项目名称修改时，同步修改云存储中的路径（通过重新上传实现）
+ */
+async function renameProjectVouchers(params) {
+  const { projectId, oldName, newName } = params;
+  
+  if (!projectId || !oldName || !newName || oldName === newName) {
+    return { code: 0, message: '无需重命名' };
+  }
+
+  console.log(`开始重命名项目凭证路径: ${oldName} -> ${newName}`);
+
+  try {
+    // 1. 获取该项目的所有凭证
+    const vouchersRes = await db.collection('project_vouchers')
+      .where({ projectId })
+      .get();
+    
+    const vouchers = vouchersRes.data;
+    if (!vouchers || vouchers.length === 0) {
+      return { code: 0, message: '该项目暂无凭证，无需处理' };
+    }
+
+    console.log(`找到 ${vouchers.length} 个凭证需要处理`);
+
+    const results = [];
+    for (const voucher of vouchers) {
+      const oldFileId = voucher.fileId;
+      
+      // 检查 fileId 是否包含旧项目名称路径
+      // 存储路径格式通常为: bill_voucher/项目名称/文件名
+      const oldPathPart = `/bill_voucher/${oldName}/`;
+      
+      if (oldFileId.includes(oldPathPart)) {
+        try {
+          const newPathPart = `/bill_voucher/${newName}/`;
+          const newFileId = oldFileId.replace(oldPathPart, newPathPart);
+          
+          // 提取 cloudPath (从 fileId 中提取相对路径)
+          // fileId 格式: cloud://env-id.7463-env-id-12345678/bill_voucher/OldName/filename.jpg
+          const pathStartIndex = newFileId.indexOf('/', 9); // 跳过 cloud:// 并找到第一个斜杠
+          const cloudPath = newFileId.substring(pathStartIndex + 1);
+          
+          console.log(`处理凭证 ${voucher._id}: ${oldFileId} -> ${cloudPath}`);
+
+          // 1. 下载原文件
+          const downloadRes = await cloud.downloadFile({
+            fileID: oldFileId
+          });
+
+          // 2. 上传到新路径
+          const uploadRes = await cloud.uploadFile({
+            cloudPath: cloudPath,
+            fileContent: downloadRes.fileContent
+          });
+
+          // 3. 获取新链接
+          const getUrlRes = await cloud.getTempFileURL({
+            fileList: [uploadRes.fileID]
+          });
+          const newUrl = getUrlRes.fileList[0].tempFileURL;
+
+          // 4. 更新数据库记录
+          await db.collection('project_vouchers').doc(voucher._id).update({
+            data: {
+              fileId: uploadRes.fileID,
+              fileUrl: newUrl,
+              updateTime: db.serverDate()
+            }
+          });
+
+          // 5. 删除旧文件
+          await cloud.deleteFile({
+            fileList: [oldFileId]
+          });
+
+          results.push({ id: voucher._id, success: true });
+        } catch (itemError) {
+          console.error(`处理凭证 ${voucher._id} 失败:`, itemError);
+          results.push({ id: voucher._id, success: false, error: itemError.message });
+        }
+      } else {
+        console.log(`凭证 ${voucher._id} 路径不匹配，跳过`);
+      }
+    }
+
+    return { 
+      code: 0, 
+      message: '处理完成', 
+      data: { 
+        total: vouchers.length, 
+        processed: results.length,
+        successCount: results.filter(r => r.success).length
+      } 
+    };
+  } catch (err) {
+    console.error('重命名项目凭证失败:', err);
+    return { code: 500, message: '处理失败', error: err.message };
   }
 }
 
