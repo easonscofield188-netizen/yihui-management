@@ -255,8 +255,8 @@
                   基础项目信息
                 </h3>
                 
-                <!-- Edit/Save Button -->
-                <div v-if="selectedProjectId" class="flex gap-2">
+                <!-- Edit/Save/Cancel Buttons -->
+                <div v-if="selectedProjectId" class="flex gap-3">
                   <el-button
                     v-if="isViewMode"
                     type="default"
@@ -265,19 +265,27 @@
                     @click="enterEditMode"
                   >
                     <el-icon class="mr-1"><Edit /></el-icon>
-                    编辑项目
+                    编辑
                   </el-button>
-                  <el-button
-                    v-else-if="isEditMode"
-                    type="primary"
-                    size="small"
-                    class="!rounded-full !px-6 !text-black !border-none hover:scale-105 transition-all duration-300 font-bold shadow-lg shadow-primary/40 brightness-110"
-                    :loading="savingProject"
-                    @click="confirmSaveUpdate"
-                  >
-                    <el-icon class="mr-1"><Check /></el-icon>
-                    保存修改
-                  </el-button>
+                  <template v-else-if="isEditMode">
+                    <el-button
+                      size="small"
+                      class="!rounded-full !px-6 !bg-neutral-800 !border-white/10 !text-on-surface-variant hover:!bg-neutral-700 hover:!text-white transition-all duration-300"
+                      @click="cancelEdit"
+                    >
+                      放弃
+                    </el-button>
+                    <el-button
+                      type="primary"
+                      size="small"
+                      class="!rounded-full !px-6 !text-black !border-none hover:scale-105 transition-all duration-300 font-bold shadow-lg shadow-primary/40 brightness-110"
+                      :loading="savingProject"
+                      @click="confirmSaveUpdate"
+                    >
+                      <el-icon class="mr-1"><Check /></el-icon>
+                      保存
+                    </el-button>
+                  </template>
                 </div>
               </div>
 
@@ -460,7 +468,7 @@
                 </h3>
                 <button 
                   class="group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-primary/80 hover:text-primary hover:bg-primary/5 hover:border-primary/40 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="costs.length >= costCategories.length"
+                  :disabled="isViewMode || costs.length >= costCategories.length"
                   @click="addCost"
                 >
                   <el-icon class="text-sm">
@@ -621,9 +629,9 @@
                             <View />
                           </el-icon>
                           <el-icon
-                            class="text-red-400 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            v-if="!isViewMode"
+                            class="text-red-400 hover:text-red-500 transition-colors"
                             size="20"
-                            :disabled="isViewMode"
                             @click.stop="removeVoucher(idx)"
                           >
                             <Delete />
@@ -821,17 +829,8 @@
               创建新项目
             </el-button>
           </template>
-          <template v-else>
-            <el-button
-              v-if="projects.length > 0"
-              size="large"
-              class="!bg-neutral-800 !border-white/5 !text-on-surface-variant"
-              @click="cancelEdit"
-            >
-              放弃修改
-            </el-button>
+          <template v-else-if="!isEditMode">
             <el-button 
-              v-if="!isEditMode"
               type="primary" 
               size="large" 
               class="!px-10 !font-bold shadow-xl"
@@ -859,7 +858,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, deleteVoucher, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -905,6 +904,8 @@ const isViewMode = ref(false)
 const isEditMode = ref(false)
 // 当前选中的项目ID
 const selectedProjectId = ref(null)
+// 记录编辑前的项目名称，用于同步修改云存储路径
+const originalProjectName = ref('')
 
 // 项目列表数据
 const projects = ref([])
@@ -1185,7 +1186,7 @@ const compressImage = (file) => {
 /**
  * 查看项目详情
  */
-const handleViewProject = (project) => {
+const handleViewProject = async (project) => {
   if (!project) return
   
   isViewMode.value = true
@@ -1213,8 +1214,21 @@ const handleViewProject = (project) => {
     amount: c.amount
   })) : []
   
-  // 回显凭证
-  vouchers.value = project.vouchers || []
+  // 回显凭证：先清空，再从接口获取最新凭证
+  vouchers.value = []
+  try {
+    const res = await getVouchers({ projectId: project.id })
+    if (res.success || res.code === 0) {
+      vouchers.value = res.data.map(v => ({
+        id: v._id || v.id,
+        url: v.fileUrl,
+        name: v.fileName,
+        fileId: v.fileId
+      }))
+    }
+  } catch (err) {
+    console.error('获取凭证列表失败:', err)
+  }
 }
 
 /**
@@ -1223,6 +1237,7 @@ const handleViewProject = (project) => {
 const enterEditMode = () => {
   isViewMode.value = false
   isEditMode.value = true
+  originalProjectName.value = form.name
 }
 
 /**
@@ -1493,7 +1508,22 @@ const handleSaveProject = async () => {
     if (res.success || res.code === 0) {
       const projectId = isEditMode.value ? selectedProjectId.value : res.data.id
       
-      // 2. 关联凭证
+      // 2. 如果项目名称修改了，同步修改云存储中的路径
+      if (isEditMode.value && originalProjectName.value && originalProjectName.value !== form.name) {
+        console.log(`项目名称已修改: ${originalProjectName.value} -> ${form.name}，同步云存储路径...`)
+        try {
+          await renameProjectVouchers({
+            projectId,
+            oldName: originalProjectName.value,
+            newName: form.name
+          })
+        } catch (err) {
+          console.error('同步云存储路径失败:', err)
+          // 路径同步失败不应阻断项目保存，但记录错误
+        }
+      }
+
+      // 3. 关联凭证
       if (vouchers.value.length > 0) {
         const voucherIds = vouchers.value.map(v => v.id)
         await updateVouchersProject({
@@ -1506,6 +1536,24 @@ const handleSaveProject = async () => {
         ElMessage.success(isEditMode.value ? '项目更新成功' : '项目创建成功')
       })
       
+      // 立即更新本地列表数据，确保 UI 实时响应
+      const statusConfig = projectStatuses.value.find(s => s.value === form.status)
+      const updatedItem = {
+        ...projectData,
+        id: projectId,
+        statusText: statusConfig ? statusConfig.label : (form.status === 'ongoing' ? '施工中' : '设计中'),
+        statusColor: form.status === 'ongoing' || form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
+        date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-'
+      }
+      
+      const index = projects.value.findIndex(p => p.id === projectId)
+      if (index !== -1) {
+        // 使用 splice 确保响应式更新
+        projects.value.splice(index, 1, updatedItem)
+      } else {
+        projects.value.unshift(updatedItem)
+      }
+
       // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
@@ -1514,16 +1562,11 @@ const handleSaveProject = async () => {
         resetForm()
       }
       
-      await loadProjects()
+      // 异步加载最新列表，不阻塞 UI 响应
+      loadProjects()
       
-      // 保存后进入查看模式
-      const savedProject = projects.value.find(p => p.id === projectId)
-      if (savedProject) {
-        handleViewProject(savedProject)
-      } else {
-        // 如果 find 没找到（可能是异步延迟），手动设置 ID 触发高亮
-        selectedProjectId.value = projectId
-      }
+      // 保持当前选中项
+      selectedProjectId.value = projectId
     } else {
       throw new Error(res.message)
     }
@@ -1685,6 +1728,8 @@ const handleFileUpload = async (event) => {
  * 删除凭证
  */
 const removeVoucher = async (index) => {
+  if (isViewMode.value) return
+  
   const voucher = vouchers.value[index]
   if (!voucher) return
 

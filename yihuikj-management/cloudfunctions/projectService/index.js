@@ -48,6 +48,44 @@ const isSafeInput = (str) => {
   return !unsafePattern.test(str);
 };
 
+async function updateProject(params) {
+  const { id, name, period, client, role, staffCount, amount, desc, costs, status } = params;
+
+  if (!id) {
+    return { code: 400, message: '缺少项目 ID' };
+  }
+
+  // 安全校验
+  if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc)) {
+    return { code: 400, message: '输入包含非法字符' };
+  }
+
+  try {
+    const updateData = {
+      updateTime: db.serverDate()
+    };
+
+    if (name) updateData.name = name;
+    if (period) updateData.period = period;
+    if (client) updateData.client = client;
+    if (role) updateData.role = role;
+    if (staffCount !== undefined) updateData.staffCount = staffCount;
+    if (amount !== undefined) updateData.amount = amount;
+    if (desc !== undefined) updateData.desc = desc;
+    if (costs) updateData.costs = costs;
+    if (status) updateData.status = status;
+
+    await db.collection('projects').doc(id).update({
+      data: updateData
+    });
+
+    return { code: 0, message: '更新成功' };
+  } catch (err) {
+    console.error('更新项目失败:', err);
+    return { code: 500, message: '更新失败', error: err.message };
+  }
+}
+
 async function createProject(params) {
   const { name, period, client, role, staffCount, amount, desc, costs } = params;
 
@@ -90,30 +128,5 @@ async function listProjects(params) {
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
-  }
-}
-
-async function updateProject(params) {
-  const { id, ...updateData } = params;
-
-  if (!id) {
-    return { code: 400, message: '缺少项目ID' };
-  }
-
-  // 安全校验
-  if (updateData.name && !isSafeInput(updateData.name)) return { code: 400, message: '项目名称包含非法字符' };
-  if (updateData.client && !isSafeInput(updateData.client)) return { code: 400, message: '客户名称包含非法字符' };
-
-  try {
-    await db.collection('projects').doc(id).update({
-      data: {
-        ...updateData,
-        updateTime: db.serverDate()
-      }
-    });
-    return { code: 0, message: '更新成功' };
-  } catch (err) {
-    console.error('更新项目失败:', err);
-    return { code: 500, message: '更新失败', error: err.message };
   }
 }

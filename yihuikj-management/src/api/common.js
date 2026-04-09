@@ -110,6 +110,21 @@ export function updateVouchersProject(params) {
 }
 
 /**
+ * 当项目名称修改时，同步修改云存储中的路径
+ * @param {Object} params - { projectId: string, oldName: string, newName: string }
+ */
+export function renameProjectVouchers(params) {
+  return request({
+    url: '/voucherService',
+    method: 'post',
+    data: {
+      action: 'renameProjectVouchers',
+      data: params
+    }
+  });
+}
+
+/**
  * 创建新项目
  * @param {Object} data - 项目表单数据
  */
