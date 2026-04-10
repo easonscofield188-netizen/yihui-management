@@ -31,7 +31,7 @@
         "negotiatingTime": { "type": "string", "format": "date-time", "description": "进入谈判状态的时间节点" },
         "constructingTime": { "type": "string", "format": "date-time", "description": "进入施工状态的时间节点" },
         "completedTime": { "type": "string", "format": "date-time", "description": "进入竣工状态的时间节点" },
-        "settledTime": { "type": "string", "format": "date-time", "description": "进入完账状态的时间节点" },
+        "settledTime": { "type": "string", "format": "date-time", "description": "进入结清状态的时间节点" },
         "isHistorical": { "type": "boolean", "description": "是否为历史补录数据" },
         "constructionPeriod": { "type": "array", "description": "历史补录：施工周期日期范围" },
         "collectionPeriod": { "type": "array", "description": "历史补录：回款周期日期范围" },

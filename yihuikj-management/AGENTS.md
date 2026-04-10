@@ -57,5 +57,6 @@
 1. **RESTful**：GET/POST/PUT/DELETE
 2. 入参校验、统一响应格式
 3. 按照现在已经完成的云函数格式去开发
+4. **数据库同步**：若数据库增加新字段或新表，必须同步补充到数据库设计文档（如 `firebase-blueprint.json` 和 `/database/DATABASE_DESIGN.md`）中
 ## 对于我操作的数据
 1. 要删除我创建的文件之前，要经过我的同意

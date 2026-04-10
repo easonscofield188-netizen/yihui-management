@@ -9,7 +9,7 @@
   { "group": "PROJECT_STATUS", "label": "施工中", "value": "constructing", "sortOrder": 3, "isActive": true, "description": "现场进场施工、材料采购及工程实施" },
   { "group": "PROJECT_STATUS", "label": "已竣工", "value": "completed", "sortOrder": 4, "isActive": true, "description": "工程建设完毕，等待客户验收" },
   { "group": "PROJECT_STATUS", "label": "结账中", "value": "settling", "sortOrder": 5, "isActive": true, "description": "验收通过，进入财务结算及审计流程" },
-  { "group": "PROJECT_STATUS", "label": "已完账", "value": "closed", "sortOrder": 6, "isActive": true, "description": "款项全部结清，项目正式归档关闭" },
+  { "group": "PROJECT_STATUS", "label": "已结清", "value": "closed", "sortOrder": 6, "isActive": true, "description": "款项全部结清，项目正式归档关闭" },
 
   { "group": "COST_CATEGORY", "label": "真植物", "value": "real_plant", "sortOrder": 1, "isActive": true, "description": "苗木采购" },
   { "group": "COST_CATEGORY", "label": "仿真植物", "value": "fake_plant", "sortOrder": 2, "isActive": true, "description": "仿真绿植" },
@@ -21,5 +21,9 @@
   { "group": "CLIENT_SOURCE", "label": "行业展会", "value": "exhibition", "sortOrder": 2, "isActive": true, "description": "展会获客" },
   { "group": "CLIENT_SOURCE", "label": "线上搜索", "value": "online", "sortOrder": 3, "isActive": true, "description": "网络搜索" },
   { "group": "CLIENT_SOURCE", "label": "主动开发", "value": "outreach", "sortOrder": 4, "isActive": true, "description": "地推或电销" },
-  { "group": "CLIENT_SOURCE", "label": "其他", "value": "other", "sortOrder": 5, "isActive": true, "description": "其他渠道" }
+  { "group": "CLIENT_SOURCE", "label": "其他", "value": "other", "sortOrder": 5, "isActive": true, "description": "其他渠道" },
+
+  { "group": "PROJECT_TYPE", "label": "补录", "value": "historical", "sortOrder": 1, "isActive": true, "description": "历史数据录入" },
+  { "group": "PROJECT_TYPE", "label": "常规", "value": "normal", "sortOrder": 2, "isActive": true, "description": "常规项目" },
+  { "group": "PROJECT_TYPE", "label": "长期", "value": "long_term", "sortOrder": 3, "isActive": true, "description": "长期项目" }
 ]

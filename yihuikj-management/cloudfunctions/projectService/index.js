@@ -66,7 +66,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
+  const { id, name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -103,13 +103,20 @@ async function updateProject(params) {
     if (constructionPeriod) updateData.constructionPeriod = constructionPeriod;
     if (collectionPeriod) updateData.collectionPeriod = collectionPeriod;
 
-    // 状态变更时间节点记录
+    // 时间节点显式更新
+    if (negotiatingTime) updateData.negotiatingTime = negotiatingTime;
+    if (constructingTime) updateData.constructingTime = constructingTime;
+    if (completedTime) updateData.completedTime = completedTime;
+    if (settlingTime) updateData.settlingTime = settlingTime;
+    if (settledTime) updateData.settledTime = settledTime;
+
+    // 状态变更自动记录时间节点（仅当参数中未提供时）
     if (status && status !== oldProject.status) {
       const now = new Date().toISOString();
-      if (status === 'negotiating') updateData.negotiatingTime = now;
-      if (status === 'constructing') updateData.constructingTime = now;
-      if (status === 'completed') updateData.completedTime = now;
-      if (status === 'closed') updateData.settledTime = now;
+      if (status === 'negotiating' && !negotiatingTime) updateData.negotiatingTime = now;
+      if (status === 'constructing' && !constructingTime) updateData.constructingTime = now;
+      if (status === 'completed' && !completedTime) updateData.completedTime = now;
+      if (status === 'closed' && !settledTime) updateData.settledTime = now;
     }
 
     await db.collection('projects').doc(id).update({
@@ -151,10 +158,10 @@ async function createProject(params) {
 
     // 初始化时间节点
     const initialStatus = status || 'negotiating';
-    if (initialStatus === 'negotiating') data.negotiatingTime = now;
-    if (initialStatus === 'constructing') data.constructingTime = now;
-    if (initialStatus === 'completed') data.completedTime = now;
-    if (initialStatus === 'closed') data.settledTime = now;
+    if (initialStatus === 'negotiating' && !data.negotiatingTime) data.negotiatingTime = now;
+    if (initialStatus === 'constructing' && !data.constructingTime) data.constructingTime = now;
+    if (initialStatus === 'completed' && !data.completedTime) data.completedTime = now;
+    if (initialStatus === 'closed' && !data.settledTime) data.settledTime = now;
 
     const res = await db.collection('projects').add({
       data
