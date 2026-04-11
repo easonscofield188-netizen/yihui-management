@@ -285,7 +285,7 @@
                   <el-dropdown 
                     trigger="click" 
                     popper-class="status-dropdown-popper"
-                    :disabled="isCreating"
+                    :disabled="isCreating || row.status === 'closed'"
                     @command="(val) => handleInlineStatusChange(row, val)"
                     @click.stop
                   >
@@ -496,7 +496,7 @@
                     v-model="form.name"
                     placeholder="请输入项目名称"
                     class="custom-input"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('name')"
                   />
                 </div>
 
@@ -508,7 +508,7 @@
                     placeholder="请选择项目类型" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || form.isHistorical || isCreatingHistorical"
+                    :disabled="isViewMode || form.isHistorical || isCreatingHistorical || isFieldReadOnly('type')"
                   >
                     <el-option 
                       v-for="item in (form.isHistorical || isCreatingHistorical ? projectTypes : projectTypes.filter(t => t.value !== 'historical'))" 
@@ -527,7 +527,7 @@
                     placeholder="请选择项目状态" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('status')"
                     @change="handleFormStatusChange"
                   >
                     <el-option 
@@ -577,7 +577,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
                       :disabled-date="disabledHistoricalProjectDate"
                     />
                     <span class="text-on-surface-variant/40">至</span>
@@ -588,7 +588,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
                       :disabled-date="disabledHistoricalProjectDate"
                     />
                   </div>
@@ -614,7 +614,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
                       :disabled-date="disabledHistoricalConstructionDate"
                     />
                     <span class="text-on-surface-variant/40">至</span>
@@ -625,7 +625,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
                       :disabled-date="disabledHistoricalConstructionDate"
                       @change="(val) => handleConstructionPeriodChange([form.constructionPeriod[0], val])"
                     />
@@ -652,7 +652,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
                       :disabled-date="disabledHistoricalCollectionDate"
                     />
                     <span class="text-on-surface-variant/40">至</span>
@@ -663,7 +663,7 @@
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
                       :disabled-date="disabledHistoricalCollectionDate"
                       @change="(val) => handleCollectionPeriodChange([form.collectionPeriod[0], val])"
                     />
@@ -682,7 +682,7 @@
                     class="w-full custom-select"
                     popper-class="custom-dropdown"
                     :loading="clientLoading"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('client')"
                     @change="handleClientChange"
                     @visible-change="handleClientVisibleChange"
                   >
@@ -715,7 +715,8 @@
                     placeholder="请选择客户角色" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || !isNewClient"
+                    :disabled="isViewMode || !isNewClient || isFieldReadOnly('role')"
+                    :class="{ 'is-disabled-cursor': !isNewClient }"
                   >
                     <el-option 
                       v-for="item in clientRoles" 
@@ -737,7 +738,8 @@
                     placeholder="请选择客户来源" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || !isNewClient"
+                    :disabled="isViewMode || !isNewClient || isFieldReadOnly('clientSource')"
+                    :class="{ 'is-disabled-cursor': !isNewClient }"
                   >
                     <el-option 
                       v-for="item in clientSources" 
@@ -757,7 +759,7 @@
                     :controls="false"
                     placeholder="请输入预计施工及管理人员数量"
                     class="!w-full custom-number-input"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('staffCount')"
                   />
                 </div>
 
@@ -781,7 +783,7 @@
                     :rows="4" 
                     placeholder="在此详细说明园林项目的设计要求与技术难点..."
                     class="custom-textarea"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('desc')"
                   />
                 </div>
               </div>
@@ -792,14 +794,14 @@
               <div class="p-6 md:p-8 pb-4">
                 <h3 class="text-lg font-bold flex items-center gap-2">
                   <span class="w-1.5 h-6 bg-tertiary rounded-full" />
-                  资金管理
+                  项目资金管理
                 </h3>
               </div>
-              <div class="px-6 md:px-8 pb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div class="px-6 md:px-8 pb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Order Amount (Display Only) -->
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
-                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-on-surface">
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(form.amount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
                 </div>
@@ -811,14 +813,14 @@
                     v-model="form.receivedAmount"
                     placeholder="请输入已收金额"
                     class="custom-input"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
                   />
                 </div>
 
                 <!-- Unreceived Amount -->
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未收账款 (¥)</label>
-                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-warning/80">
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
                     {{ Number(unreceivedAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
                 </div>
@@ -826,7 +828,7 @@
                 <!-- Payable Amount -->
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付账款 (¥)</label>
-                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-on-surface">
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(payableAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
                 </div>
@@ -834,8 +836,16 @@
                 <!-- Paid Amount -->
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付账款 (¥)</label>
-                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-success/80">
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-success/80 cursor-not-allowed">
                     {{ Number(paidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+
+                <!-- Unpaid Amount -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付账款 (¥)</label>
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
+                    {{ Number(unpaidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
                 </div>
               </div>
@@ -850,7 +860,7 @@
                 </h3>
                 <button 
                   class="group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-primary/80 hover:text-primary hover:bg-primary/5 hover:border-primary/40 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="isViewMode || costs.length >= costCategories.length"
+                  :disabled="isViewMode || costs.length >= costCategories.length || isFieldReadOnly('costs')"
                   @click="addCost"
                 >
                   <el-icon class="text-sm">
@@ -894,7 +904,7 @@
                             placeholder="请选择类目" 
                             class="w-full custom-select-small"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isFieldReadOnly('costs')"
                           >
                             <el-option 
                               v-for="cat in costCategories" 
@@ -911,7 +921,7 @@
                             placeholder="请选择供应商" 
                             class="w-full custom-select-small supplier-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isFieldReadOnly('costs')"
                           >
                             <el-option 
                               v-for="sup in suppliers" 
@@ -929,7 +939,7 @@
                               type="number"
                               class="bg-transparent border-none p-0 focus:ring-0 text-sm font-mono w-full outline-none cost-amount-input"
                               placeholder="0.00"
-                              :disabled="isViewMode"
+                              :disabled="isViewMode || isFieldReadOnly('costs')"
                             >
                           </div>
                         </td>
@@ -940,13 +950,13 @@
                             inactive-text="否"
                             inline-prompt
                             style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isFieldReadOnly('costs')"
                           />
                         </td>
                         <td class="px-4 py-4 text-right rounded-r-lg">
                           <button 
                             class="text-red-400/40 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isFieldReadOnly('costs')"
                             @click="costs.splice(index, 1)"
                           >
                             <el-icon class="text-lg">
@@ -974,7 +984,7 @@
                       单据凭证列表 (多图上传)
                     </h4>
                     <button 
-                      :disabled="isViewMode || uploadingVoucher"
+                      :disabled="isViewMode || uploadingVoucher || isFieldReadOnly('vouchers')"
                       class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
                       @click="triggerUpload"
                     >
@@ -1024,7 +1034,7 @@
                             <View />
                           </el-icon>
                           <el-icon
-                            v-if="!isViewMode"
+                            v-if="!isViewMode && !isFieldReadOnly('vouchers')"
                             class="text-red-400 hover:text-red-500 transition-colors"
                             size="20"
                             @click.stop="removeVoucher(idx)"
@@ -1038,7 +1048,7 @@
                     <!-- Upload Placeholder -->
                     <button 
                       v-if="vouchers.length < 20"
-                      :disabled="isViewMode || uploadingVoucher"
+                      :disabled="isViewMode || uploadingVoucher || isFieldReadOnly('vouchers')"
                       class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
                       @click="triggerUpload"
                     >
@@ -1788,6 +1798,13 @@ const paidAmount = computed(() => {
     .filter(item => item.isSettled === true || item.isSettled === '是')
     .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
     .toFixed(2);
+});
+
+// 计算属性：未付账款 (应付账款 - 已付账款)
+const unpaidAmount = computed(() => {
+  const payable = parseFloat(payableAmount.value) || 0;
+  const paid = parseFloat(paidAmount.value) || 0;
+  return Math.max(0, payable - paid).toFixed(2);
 });
 
 // 计算属性：判断当前项目是否为已结清状态
@@ -2783,14 +2800,7 @@ const handleSaveProject = async () => {
         supplier: item.supplier,
         amount: Number(item.amount),
         isSettled: item.isSettled
-      })),
-      financials: {
-        totalIncome: Number(totalIncome.value),
-        totalCost: Number(totalCost.value),
-        estimatedProfit: Number(estimatedProfit.value),
-        profitMargin: String(profitMargin.value),
-        costRate: String(costRate.value)
-      }
+      }))
     }
 
     // 处理周期数据

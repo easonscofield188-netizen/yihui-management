@@ -197,14 +197,31 @@ async function updateProject(params) {
 
     // 已结清状态权限控制
     if (oldProject.status === 'closed') {
-      const allowedFields = ['name', 'desc', 'costs', 'vouchers']; 
+      const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
-      const illegalFields = incomingFields.filter(field => !allowedFields.includes(field) && field !== 'receivedAmount'); 
       
-      const strictlyIllegal = illegalFields.filter(f => !['receivedAmount'].includes(f));
-      
-      if (strictlyIllegal.length > 0) {
-        return { code: 403, message: '已结清项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款' };
+      // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
+      const illegalChanges = incomingFields.filter(field => {
+        if (allowedFields.includes(field)) return false;
+        
+        // 检查值是否真的发生了变化
+        const newValue = params[field];
+        const oldValue = oldProject[field];
+        
+        // 处理数组/对象比较
+        if (Array.isArray(newValue) || (newValue && typeof newValue === 'object')) {
+          return JSON.stringify(newValue) !== JSON.stringify(oldValue);
+        }
+        
+        return newValue != oldValue;
+      });
+
+      if (illegalChanges.length > 0) {
+        return { 
+          code: 403, 
+          message: '已结清项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款',
+          details: `非法修改了字段: ${illegalChanges.join(', ')}`
+        };
       }
     }
 

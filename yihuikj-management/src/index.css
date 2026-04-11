@@ -124,6 +124,13 @@
 .el-input__wrapper {
   background-color: #0e0e0f !important;
   box-shadow: 0 0 0 1px #3c4a3e inset !important;
+  cursor: text !important;
+}
+
+.el-input.is-disabled .el-input__wrapper,
+.el-input.is-disabled .el-input__inner {
+  cursor: not-allowed !important;
+  background-color: #0e0e0f !important;
 }
 
 .el-card {
@@ -150,6 +157,20 @@
   padding: 0 16px !important;
   transition: all 0.3s !important;
   box-sizing: border-box !important;
+  cursor: text !important;
+}
+
+.custom-select .el-select__wrapper,
+.custom-date-picker .el-input__wrapper {
+  cursor: pointer !important;
+}
+
+.custom-input.is-disabled .el-input__wrapper,
+.custom-date-picker.is-disabled .el-input__wrapper,
+.custom-select.is-disabled .el-select__wrapper,
+.custom-number-input.is-disabled .el-input__wrapper {
+  cursor: not-allowed !important;
+  background-color: #0e0e0f !important;
 }
 
 .custom-textarea .el-textarea__inner {
@@ -159,6 +180,12 @@
   padding: 12px 16px !important;
   transition: all 0.3s !important;
   box-sizing: border-box !important;
+  cursor: text !important;
+}
+
+.custom-textarea.is-disabled .el-textarea__inner {
+  cursor: not-allowed !important;
+  background-color: #0e0e0f !important;
 }
 
 .custom-input .el-input__wrapper:hover,
@@ -260,4 +287,22 @@
 
 .custom-select .el-select__wrapper {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+/* Global cursor helpers */
+.cursor-pointer, 
+.el-button, 
+button,
+.el-dropdown, 
+.el-switch,
+.el-table__row {
+  cursor: pointer !important;
+}
+
+.el-button.is-disabled,
+button:disabled,
+.el-switch.is-disabled,
+.is-disabled-cursor .el-select__wrapper {
+  cursor: not-allowed !important;
 }
