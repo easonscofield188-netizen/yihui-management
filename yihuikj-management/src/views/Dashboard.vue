@@ -148,6 +148,15 @@
               活跃项目列表
             </h3>
             <div class="flex gap-2">
+              <button 
+                class="px-3 py-1.5 bg-neutral-800 text-[10px] text-on-surface-variant rounded-md hover:text-primary transition-colors uppercase tracking-wider flex items-center gap-1"
+                :disabled="syncingAllHistory"
+                @click="handleSyncAllHistory"
+              >
+                <el-icon v-if="syncingAllHistory" class="is-loading"><Loading /></el-icon>
+                <el-icon v-else><Refresh /></el-icon>
+                同步历史数据
+              </button>
               <button class="px-3 py-1.5 bg-neutral-800 text-[10px] text-on-surface-variant rounded-md hover:text-primary transition-colors uppercase tracking-wider">
                 全部项目
               </button>
@@ -430,18 +439,31 @@
                   v-if="selectedProjectId"
                   class="flex gap-3"
                 >
-                  <el-button
-                    v-if="isViewMode"
-                    type="default"
-                    size="small"
-                    class="!rounded-full !px-6 !bg-emerald-500/10 !text-primary !border !border-primary/30 hover:!bg-primary/20 hover:scale-105 transition-all duration-300 font-bold shadow-[0_0_15px_rgba(82,238,138,0.1)]"
-                    @click="enterEditMode"
-                  >
-                    <el-icon class="mr-1">
-                      <Edit />
-                    </el-icon>
-                    编辑
-                  </el-button>
+                  <template v-if="isViewMode">
+                    <el-button
+                      type="info"
+                      size="small"
+                      class="!rounded-full !px-4 !bg-neutral-800 !text-on-surface-variant !border-white/10 hover:!bg-neutral-700"
+                      :loading="syncingFinancials"
+                      @click="handleSyncFinancials"
+                    >
+                      <el-icon class="mr-1">
+                        <Refresh />
+                      </el-icon>
+                      同步资金
+                    </el-button>
+                    <el-button
+                      type="default"
+                      size="small"
+                      class="!rounded-full !px-6 !bg-emerald-500/10 !text-primary !border !border-primary/30 hover:!bg-primary/20 hover:scale-105 transition-all duration-300 font-bold shadow-[0_0_15px_rgba(82,238,138,0.1)]"
+                      @click="enterEditMode"
+                    >
+                      <el-icon class="mr-1">
+                        <Edit />
+                      </el-icon>
+                      编辑
+                    </el-button>
+                  </template>
                   <template v-else-if="isEditMode">
                     <el-button
                       size="small"
@@ -547,16 +569,27 @@
                       class="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20"
                     >共 {{ projectDays }} 天</span>
                   </div>
-                  <div class="relative">
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <el-date-picker
-                      v-model="form.period"
-                      type="daterange"
-                      range-separator="至"
-                      start-placeholder="开始日期"
-                      end-placeholder="结束日期"
+                      v-model="form.period[0]"
+                      type="date"
+                      placeholder="开始日期"
                       class="!w-full custom-date-picker"
-                      :disabled="isViewMode || !form.isHistorical"
-                      :disabled-date="disabledFutureDate"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalProjectDate"
+                    />
+                    <span class="text-on-surface-variant/40">至</span>
+                    <el-date-picker
+                      v-model="form.period[1]"
+                      type="date"
+                      placeholder="结束日期"
+                      class="!w-full custom-date-picker"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalProjectDate"
                     />
                   </div>
                 </div>
@@ -573,22 +606,35 @@
                       class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
                     >共 {{ constructionDays }} 天</span>
                   </div>
-                  <el-date-picker
-                    v-model="form.constructionPeriod"
-                    type="daterange"
-                    range-separator="至"
-                    start-placeholder="开始施工"
-                    end-placeholder="竣工日期"
-                    class="!w-full custom-date-picker"
-                    :disabled="isViewMode || !form.isHistorical"
-                    :disabled-date="disabledFutureDate"
-                    @change="handleConstructionPeriodChange"
-                  />
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <el-date-picker
+                      v-model="form.constructionPeriod[0]"
+                      type="date"
+                      placeholder="开始施工"
+                      class="!w-full custom-date-picker"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalConstructionDate"
+                    />
+                    <span class="text-on-surface-variant/40">至</span>
+                    <el-date-picker
+                      v-model="form.constructionPeriod[1]"
+                      type="date"
+                      placeholder="竣工日期"
+                      class="!w-full custom-date-picker"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalConstructionDate"
+                      @change="(val) => handleConstructionPeriodChange([form.constructionPeriod[0], val])"
+                    />
+                  </div>
                 </div>
 
                 <!-- Collection Period -->
                 <div
-                  v-if="(form.isHistorical && (form.status === 'closed' || (form.collectionPeriod && form.collectionPeriod.length === 2))) || collectionDays > 0"
+                  v-if="(!form.isHistorical && collectionDays > 0) || (form.isHistorical && form.status === 'closed')"
                   class="space-y-2"
                 >
                   <div class="flex justify-between items-center px-1">
@@ -598,17 +644,30 @@
                       class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
                     >共 {{ collectionDays }} 天</span>
                   </div>
-                  <el-date-picker
-                    v-model="form.collectionPeriod"
-                    type="daterange"
-                    range-separator="至"
-                    start-placeholder="竣工日期"
-                    end-placeholder="结清日期"
-                    class="!w-full custom-date-picker"
-                    :disabled="isViewMode || !form.isHistorical"
-                    :disabled-date="disabledFutureDate"
-                    @change="handleCollectionPeriodChange"
-                  />
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <el-date-picker
+                      v-model="form.collectionPeriod[0]"
+                      type="date"
+                      placeholder="竣工日期"
+                      class="!w-full custom-date-picker"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalCollectionDate"
+                    />
+                    <span class="text-on-surface-variant/40">至</span>
+                    <el-date-picker
+                      v-model="form.collectionPeriod[1]"
+                      type="date"
+                      placeholder="结清日期"
+                      class="!w-full custom-date-picker"
+                      format="YYYY-MM-DD"
+                      value-format="YYYY-MM-DD"
+                      :disabled="isHistoricalPeriodDisabled"
+                      :disabled-date="disabledHistoricalCollectionDate"
+                      @change="(val) => handleCollectionPeriodChange([form.collectionPeriod[0], val])"
+                    />
+                  </div>
                 </div>
 
                 <!-- Client Name -->
@@ -709,7 +768,7 @@
                     v-model="form.amount"
                     placeholder="请输入总签约金额"
                     class="custom-input amount-input"
-                    :disabled="isViewMode"
+                    :disabled="isViewMode || isFieldReadOnly('amount')"
                   />
                 </div>
 
@@ -724,6 +783,60 @@
                     class="custom-textarea"
                     :disabled="isViewMode"
                   />
+                </div>
+              </div>
+            </section>
+
+            <!-- Fund Management Section -->
+            <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5">
+              <div class="p-6 md:p-8 pb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                  <span class="w-1.5 h-6 bg-tertiary rounded-full" />
+                  资金管理
+                </h3>
+              </div>
+              <div class="px-6 md:px-8 pb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <!-- Order Amount (Display Only) -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
+                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-on-surface">
+                    {{ Number(form.amount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+
+                <!-- Received Amount -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
+                  <el-input
+                    v-model="form.receivedAmount"
+                    placeholder="请输入已收金额"
+                    class="custom-input"
+                    :disabled="isViewMode"
+                  />
+                </div>
+
+                <!-- Unreceived Amount -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未收账款 (¥)</label>
+                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-warning/80">
+                    {{ Number(unreceivedAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+
+                <!-- Payable Amount -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付账款 (¥)</label>
+                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-on-surface">
+                    {{ Number(payableAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+
+                <!-- Paid Amount -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付账款 (¥)</label>
+                  <div class="bg-neutral-900/40 px-4 py-2.5 rounded-lg border border-white/5 text-sm font-mono text-success/80">
+                    {{ Number(paidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
                 </div>
               </div>
             </section>
@@ -752,14 +865,17 @@
                   <table class="w-full text-left border-separate border-spacing-y-3 min-w-[600px]">
                     <thead>
                       <tr class="text-[10px] text-on-surface-variant uppercase tracking-[0.2em]">
-                        <th class="px-4 py-2 font-medium w-[30%]">
+                        <th class="px-4 py-2 font-medium w-[25%]">
                           类目
                         </th>
-                        <th class="px-4 py-2 font-medium w-[30%]">
+                        <th class="px-4 py-2 font-medium w-[25%]">
                           供应商
                         </th>
-                        <th class="px-4 py-2 font-medium w-[30%] text-center">
+                        <th class="px-4 py-2 font-medium w-[20%] text-center">
                           成本金额 (¥)
+                        </th>
+                        <th class="px-4 py-2 font-medium w-[20%] text-center">
+                          是否结清
                         </th>
                         <th class="px-4 py-2 font-medium text-right w-[10%]">
                           操作
@@ -816,6 +932,16 @@
                               :disabled="isViewMode"
                             >
                           </div>
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                          <el-switch
+                            v-model="item.isSettled"
+                            active-text="是"
+                            inactive-text="否"
+                            inline-prompt
+                            style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                            :disabled="isViewMode"
+                          />
                         </td>
                         <td class="px-4 py-4 text-right rounded-r-lg">
                           <button 
@@ -1126,7 +1252,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, syncHistoryFinancials } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -1199,6 +1325,47 @@ const isCreating = computed(() => !selectedProjectId.value && !isViewMode.value 
 const disabledFutureDate = (time) => {
   return time.getTime() > Date.now()
 }
+
+// 补录单据：项目周期禁用规则
+const disabledHistoricalProjectDate = (time) => {
+  return time.getTime() > Date.now()
+}
+
+// 补录单据：施工周期禁用规则
+const disabledHistoricalConstructionDate = (time) => {
+  if (time.getTime() > Date.now()) return true
+  if (form.period && form.period.length === 2) {
+    const pStart = new Date(form.period[0]).setHours(0,0,0,0)
+    const pEnd = new Date(form.period[1]).setHours(23,59,59,999)
+    if (time.getTime() < pStart || time.getTime() > pEnd) {
+      return true
+    }
+  }
+  return false
+}
+
+// 补录单据：回款周期禁用规则
+const disabledHistoricalCollectionDate = (time) => {
+  if (time.getTime() > Date.now()) return true
+  if (form.constructionPeriod && form.constructionPeriod.length === 2) {
+    const cEnd = new Date(form.constructionPeriod[1]).setHours(0,0,0,0)
+    if (time.getTime() < cEnd) {
+      return true
+    }
+  }
+  return false
+}
+
+// 补录单据周期是否禁用
+const isHistoricalPeriodDisabled = computed(() => {
+  if (isViewMode.value) return true
+  if (!form.isHistorical) return true
+  if (isEditMode.value && form.isHistorical && originalProjectStatus.value === 'settling' && form.status === 'closed') {
+    return true
+  }
+  return false
+})
+
 // 记录编辑前的项目名称，用于同步修改云存储路径
 const originalProjectName = ref('')
 
@@ -1247,16 +1414,17 @@ watch(projects, (newVal) => {
 const form = reactive({
   name: '',           // 项目名称
   type: 'normal',     // 项目类型
-  period: null,       // 项目周期（日期范围数组）
+  period: [null, null],       // 项目周期（日期范围数组）
   startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
-  constructionPeriod: null, // 施工周期（历史模式）
-  collectionPeriod: null,   // 回款周期（历史模式）
+  constructionPeriod: [null, null], // 施工周期（历史模式）
+  collectionPeriod: [null, null],   // 回款周期（历史模式）
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
   status: '',         // 项目状态
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
+  receivedAmount: 0,  // 已收账款
   desc: '',           // 项目描述
   isHistorical: false // 标识是否为历史补录项目
 })
@@ -1454,7 +1622,7 @@ onMounted(() => {
 // 计算属性：根据选择的日期范围自动计算项目总天数
 const projectDays = computed(() => {
   // 如果有表单数据（编辑/历史模式）
-  if (form.period && Array.isArray(form.period) && form.period.length === 2) {
+  if (form.period && Array.isArray(form.period) && form.period[0] && form.period[1]) {
     return calculateDiffDays(form.period[0], form.period[1]) || 0
   }
   
@@ -1473,7 +1641,7 @@ const projectDays = computed(() => {
 
 // 计算属性：施工周期天数
 const constructionDays = computed(() => {
-  if (form.constructionPeriod && Array.isArray(form.constructionPeriod) && form.constructionPeriod.length === 2) {
+  if (form.constructionPeriod && Array.isArray(form.constructionPeriod) && form.constructionPeriod[0] && form.constructionPeriod[1]) {
     return calculateDiffDays(form.constructionPeriod[0], form.constructionPeriod[1]) || 0
   }
 
@@ -1490,7 +1658,7 @@ const constructionDays = computed(() => {
 
 // 计算属性：回款周期天数
 const collectionDays = computed(() => {
-  if (form.collectionPeriod && Array.isArray(form.collectionPeriod) && form.collectionPeriod.length === 2) {
+  if (form.collectionPeriod && Array.isArray(form.collectionPeriod) && form.collectionPeriod[0] && form.collectionPeriod[1]) {
     return calculateDiffDays(form.collectionPeriod[0], form.collectionPeriod[1]) || 0
   }
 
@@ -1526,14 +1694,14 @@ const getRowProjectStatuses = (row) => {
 
 // 施工周期变更处理：联动回款周期开始日期
 const handleConstructionPeriodChange = (val) => {
-  if (val && val[1]) {
+  if (val && val[1] && (!form.collectionPeriod || !form.collectionPeriod[0])) {
     // 回款周期的开始日期默认是施工周期的结束日期
     form.collectionPeriod = [val[1], val[1]]
   }
 }
 
 // 回款周期变更处理
-const handleCollectionPeriodChange = (val) => {
+const handleCollectionPeriodChange = () => {
   // 可以在这里做一些校验
 }
 
@@ -1602,6 +1770,44 @@ const handleClientChange = (val) => {
 // 成本支出项列表
 const costs = ref([])
 
+// 计算属性：未收账款
+const unreceivedAmount = computed(() => {
+  const total = parseFloat(form.amount) || 0;
+  const received = parseFloat(form.receivedAmount) || 0;
+  return Math.max(0, total - received).toFixed(2);
+});
+
+// 计算属性：应付账款 (所有成本项总和)
+const payableAmount = computed(() => {
+  return costs.value.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2);
+});
+
+// 计算属性：已付账款 (已结清成本项总和)
+const paidAmount = computed(() => {
+  return costs.value
+    .filter(item => item.isSettled === true || item.isSettled === '是')
+    .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+    .toFixed(2);
+});
+
+// 计算属性：判断当前项目是否为已结清状态
+const isProjectClosed = computed(() => {
+  if (isEditMode.value && selectedProjectId.value) {
+    const p = projects.value.find(item => item.id === selectedProjectId.value);
+    return p && p.status === 'closed';
+  }
+  return false;
+});
+
+// 计算属性：根据项目状态判断字段是否只读
+const isFieldReadOnly = (fieldName) => {
+  if (!isProjectClosed.value) return false;
+  
+  // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账款
+  const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
+  return !allowedFields.includes(fieldName);
+};
+
 /**
  * 添加成本项
  */
@@ -1613,10 +1819,11 @@ const addCost = () => {
     return
   }
   costs.value.push({
-    id: Date.now() + Math.random(), // 增加唯一ID以解决Vue渲染Key的问题
+    id: Date.now() + Math.random(), 
     category: '',
     supplier: '无',
-    amount: 0
+    amount: 0,
+    isSettled: true // 默认设为已结清
   })
 }
 
@@ -1729,9 +1936,15 @@ const handleInlineStatusChange = async (row, newVal) => {
         const conEnd = row.constructionPeriod?.[1] ? new Date(row.constructionPeriod[1]) : null;
         if (conEnd && !isNaN(conEnd.getTime())) {
           const now = new Date();
+          const formatDateLocal = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
           // 规则：当前时间 - 施工周期的竣工时间，不满一天算一天
           // 自动计算的回款周期：[竣工时间, 当前时间]
-          updateData.collectionPeriod = [conEnd.toISOString(), now.toISOString()];
+          updateData.collectionPeriod = [formatDateLocal(conEnd) + 'T00:00:00.000Z', formatDateLocal(now) + 'T00:00:00.000Z'];
         }
       } else if (row.isHistorical && newVal === 'settling') {
         // 如果改回结账中，清空回款周期
@@ -1873,6 +2086,20 @@ const handleFormStatusChange = (newVal) => {
         }
       ).then(() => {
         // 确认修改，无需额外操作，v-model已更新
+        // 补录单子编辑时状态从“结账中”改为“已结清”
+        if (form.isHistorical && originalProjectStatus.value === 'settling' && newVal === 'closed') {
+          const conEnd = form.constructionPeriod?.[1] ? new Date(form.constructionPeriod[1]) : null;
+          if (conEnd && !isNaN(conEnd.getTime())) {
+            const now = new Date();
+            const formatDateLocal = (date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+            form.collectionPeriod = [formatDateLocal(conEnd), formatDateLocal(now)];
+          }
+        }
       }).catch(() => {
         // 取消修改，回退表单状态
         form.status = originalProjectStatus.value
@@ -1960,16 +2187,17 @@ const handleViewProject = async (project) => {
   Object.assign(form, {
     name: project.name,
     type: project.type || (project.isHistorical ? 'historical' : 'normal'),
-    period: project.isHistorical ? project.period : [pStart, project.completedTime || now],
+    period: project.isHistorical ? (project.period || [null, null]) : [pStart, project.completedTime || now],
     startDate: pStart ? new Date(pStart).toISOString().split('T')[0] : null,
-    constructionPeriod: project.isHistorical ? project.constructionPeriod : (project.constructingTime ? [project.constructingTime, project.completedTime || now] : null),
-    collectionPeriod: project.isHistorical ? project.collectionPeriod : (project.settlingTime ? [project.settlingTime, project.settledTime || now] : null),
+    constructionPeriod: project.isHistorical ? (project.constructionPeriod || [null, null]) : (project.constructingTime ? [project.constructingTime, project.completedTime || now] : [null, null]),
+    collectionPeriod: project.isHistorical ? (project.collectionPeriod || [null, null]) : (project.settlingTime ? [project.settlingTime, project.settledTime || now] : [null, null]),
     client: project.client,
     role: project.role,
     clientSource: project.clientSource,
     status: project.status,
     staffCount: project.staffCount,
     amount: project.amount,
+    receivedAmount: project.receivedAmount || 0,
     desc: project.desc,
     isHistorical: !!project.isHistorical
   })
@@ -1982,7 +2210,8 @@ const handleViewProject = async (project) => {
     id: Date.now() + Math.random(),
     category: c.category,
     supplier: c.supplier,
-    amount: c.amount
+    amount: c.amount,
+    isSettled: c.isSettled !== undefined ? c.isSettled : true // 历史数据默认为已结清
   })) : []
   
   // 回显凭证：先清空，再从接口获取最新凭证
@@ -2243,10 +2472,10 @@ const resetForm = () => {
   Object.assign(form, {
     name: '',
     type: 'normal',
-    period: null,
+    period: [null, null],
     startDate: new Date().toISOString().split('T')[0],
-    constructionPeriod: null,
-    collectionPeriod: null,
+    constructionPeriod: [null, null],
+    collectionPeriod: [null, null],
     client: '',
     role: '',
     clientSource: '',
@@ -2351,35 +2580,40 @@ const validateProjectForm = (checkVouchers = true) => {
     if (!form.startDate) return '请选择项目开始日期';
   } else {
     // 历史模式或编辑模式：校验项目周期
-    if (!form.period || form.period.length !== 2) return '请选择项目周期';
+    if (!form.period || !form.period[0] || !form.period[1]) return '请选择项目周期';
   }
 
   // 历史模式：校验施工周期和回款周期
   if (isCreatingHistorical.value || form.isHistorical) {
-    if (!form.constructionPeriod || form.constructionPeriod.length !== 2) return '请选择施工周期';
+    if (!form.constructionPeriod || !form.constructionPeriod[0] || !form.constructionPeriod[1]) return '请选择施工周期';
     
     // 只有状态为“已结清”时才强制要求回款周期
     const isClosed = form.status === 'closed';
-    if (isClosed && (!form.collectionPeriod || form.collectionPeriod.length !== 2)) {
+    if (isClosed && (!form.collectionPeriod || !form.collectionPeriod[0] || !form.collectionPeriod[1])) {
       return '项目已结清，请选择回款周期';
     }
 
-    // 校验日期逻辑顺序：项目开始 < 施工开始 < 竣工
-    const pStart = new Date(form.period[0]).getTime();
-    const pEnd = new Date(form.period[1]).getTime();
-    const conStart = new Date(form.constructionPeriod[0]).getTime();
-    const conEnd = new Date(form.constructionPeriod[1]).getTime();
+    // 校验日期逻辑顺序
+    const pStart = new Date(form.period[0]).setHours(0,0,0,0);
+    const pEnd = new Date(form.period[1]).setHours(0,0,0,0);
+    const conStart = new Date(form.constructionPeriod[0]).setHours(0,0,0,0);
+    const conEnd = new Date(form.constructionPeriod[1]).setHours(0,0,0,0);
+    const now = new Date().setHours(0,0,0,0);
 
+    if (pEnd > now) return '项目周期结束日期不能晚于当前日期';
     if (pStart > pEnd) return '项目周期开始日期不能晚于结束日期';
-    if (pEnd > conStart) return '施工开始日期不能早于项目周期结束日期';
+    
+    if (conStart < pStart) return '施工开始日期不能早于项目周期开始日期';
+    if (conEnd > pEnd) return '施工结束日期不能晚于项目周期结束日期';
     if (conStart > conEnd) return '施工周期开始日期不能晚于结束日期';
 
     // 如果有回款周期，校验回款周期逻辑
     if (form.collectionPeriod && form.collectionPeriod.length === 2) {
-      const colStart = new Date(form.collectionPeriod[0]).getTime();
-      const colEnd = new Date(form.collectionPeriod[1]).getTime();
+      const colStart = new Date(form.collectionPeriod[0]).setHours(0,0,0,0);
+      const colEnd = new Date(form.collectionPeriod[1]).setHours(0,0,0,0);
       
-      if (conEnd > colStart) return '回款开始日期不能早于施工周期结束日期';
+      if (colStart < conEnd) return '回款开始日期不能早于施工结束日期';
+      if (colEnd > now) return '回款结束日期不能晚于当前日期';
       if (colStart > colEnd) return '回款周期开始日期不能晚于结束日期';
     }
   }
@@ -2398,6 +2632,8 @@ const validateProjectForm = (checkVouchers = true) => {
   if (!form.amount) return '请输入订单金额';
   if (isNaN(parseFloat(form.amount))) return '订单金额必须为数字';
 
+  if (parseFloat(form.receivedAmount) > parseFloat(form.amount)) return '已收账款不可超过订单金额';
+
   if (!form.desc) return '请输入项目描述';
   if (!isSafeInput(form.desc)) return '项目描述包含非法字符';
   
@@ -2414,6 +2650,84 @@ const validateProjectForm = (checkVouchers = true) => {
   
   return null;
 }
+
+// 资金同步状态
+const syncingFinancials = ref(false);
+const syncingAllHistory = ref(false);
+
+/**
+ * 同步当前项目资金数据
+ */
+const handleSyncFinancials = async () => {
+  if (!selectedProjectId.value) return;
+  
+  syncingFinancials.value = true;
+  try {
+    const res = await syncFinancials({ projectId: selectedProjectId.value });
+    if (res.code === 0) {
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.success('资金数据同步成功');
+      });
+      // 刷新列表以获取最新数据
+      await loadProjects();
+      // 重新加载当前项目详情
+      const updatedProject = projects.value.find(p => p.id === selectedProjectId.value);
+      if (updatedProject) {
+        handleViewProject(updatedProject);
+      }
+    } else {
+      throw new Error(res.message);
+    }
+  } catch (err) {
+    console.error('同步资金失败:', err);
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error('同步失败: ' + err.message);
+    });
+  } finally {
+    syncingFinancials.value = false;
+  }
+};
+
+/**
+ * 同步所有历史项目资金数据
+ */
+const handleSyncAllHistory = async () => {
+  import('element-plus').then(({ ElMessageBox }) => {
+    ElMessageBox.confirm(
+      '此操作将重新计算所有项目的资金数据（未收、应付、已付），是否继续？',
+      '同步确认',
+      {
+        confirmButtonText: '开始同步',
+        cancelButtonText: '取消',
+        type: 'info',
+        customClass: 'custom-message-box'
+      }
+    ).then(async () => {
+      syncingAllHistory.value = true;
+      try {
+        const res = await syncHistoryFinancials({});
+        if (res.code === 0) {
+          const { successCount, failCount } = res.data;
+          ElMessageBox.alert(
+            `同步完成！成功: ${successCount} 个，失败: ${failCount} 个`,
+            '同步结果',
+            { confirmButtonText: '确定', customClass: 'custom-message-box' }
+          );
+          await loadProjects();
+        } else {
+          throw new Error(res.message);
+        }
+      } catch (err) {
+        console.error('同步历史数据失败:', err);
+        import('element-plus').then(({ ElMessage }) => {
+          ElMessage.error('同步失败: ' + err.message);
+        });
+      } finally {
+        syncingAllHistory.value = false;
+      }
+    }).catch(() => {});
+  });
+};
 
 /**
  * 确认保存修改（带弹窗提醒）
@@ -2461,12 +2775,14 @@ const handleSaveProject = async () => {
       status: form.status,
       staffCount: Number(form.staffCount),
       amount: Number(form.amount),
+      receivedAmount: Number(form.receivedAmount),
       desc: form.desc,
       isHistorical: !!form.isHistorical,
       costs: costs.value.map(item => ({
         category: item.category,
         supplier: item.supplier,
-        amount: Number(item.amount)
+        amount: Number(item.amount),
+        isSettled: item.isSettled
       })),
       financials: {
         totalIncome: Number(totalIncome.value),
@@ -2487,16 +2803,16 @@ const handleSaveProject = async () => {
       projectData.createTime = new Date().toISOString();
     } else {
       // 历史模式或编辑模式
-      projectData.period = form.period ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+      projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
       
       // 如果是编辑活跃项目，确保保留或更新开始时间
       if (!isCreatingHistorical.value && form.startDate) {
         projectData.negotiatingTime = new Date(form.startDate).toISOString();
       }
 
-      if (isCreatingHistorical.value) {
-        projectData.constructionPeriod = form.constructionPeriod ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
-        projectData.collectionPeriod = form.collectionPeriod ? [new Date(form.collectionPeriod[0]).toISOString(), new Date(form.collectionPeriod[1]).toISOString()] : [];
+      if (form.isHistorical) {
+        projectData.constructionPeriod = (form.constructionPeriod && form.constructionPeriod[0] && form.constructionPeriod[1]) ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
+        projectData.collectionPeriod = (form.collectionPeriod && form.collectionPeriod[0] && form.collectionPeriod[1]) ? [new Date(form.collectionPeriod[0]).toISOString(), new Date(form.collectionPeriod[1]).toISOString()] : [];
       }
     }
     
@@ -3074,22 +3390,6 @@ const handleLogout = () => {
     rgba(255, 255, 255, 0.03) 5px
   );
   pointer-events: none;
-}
-
-/* 优化输入框禁用状态 */
-.custom-date-picker.is-disabled .el-input__wrapper {
-  background-color: rgba(255, 255, 255, 0.03) !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: none !important;
-}
-
-.custom-date-picker.is-disabled .el-range-input {
-  background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.custom-date-picker.is-disabled .el-range-separator {
-  color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .el-date-table td.current:not(.disabled) .el-date-table-cell__text {

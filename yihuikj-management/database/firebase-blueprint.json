@@ -25,6 +25,10 @@
         "endDate": { "type": "string", "format": "date", "description": "项目结束日期" },
         "staffCount": { "type": "number", "description": "投入人员数量" },
         "totalAmount": { "type": "number", "description": "项目总订单金额" },
+        "receivedAmount": { "type": "number", "description": "已收账款金额" },
+        "unreceivedAmount": { "type": "number", "description": "未收账款金额 (自动计算)" },
+        "payableAmount": { "type": "number", "description": "应付账款金额 (自动计算)" },
+        "paidAmount": { "type": "number", "description": "已付账款金额 (自动计算)" },
         "description": { "type": "string", "description": "项目详细描述" },
         "statusCode": { "type": "string", "description": "项目状态标识 (对应系统配置中的 PROJECT_STATUS)" },
         "statusLabel": { "type": "string", "description": "项目状态名称 (冗余显示)" },
@@ -80,6 +84,7 @@
         "categoryLabel": { "type": "string", "description": "成本类目名称 (冗余显示)" },
         "supplier": { "type": "string", "description": "供应商名称" },
         "amount": { "type": "number", "description": "支出金额" },
+        "isSettled": { "type": "boolean", "description": "是否已结清" },
         "createdAt": { "type": "string", "format": "date-time", "description": "记录时间" }
       },
       "required": ["projectId", "categoryCode", "amount"]

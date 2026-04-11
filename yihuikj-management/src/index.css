@@ -140,7 +140,7 @@
 }
 
 .custom-input .el-input__wrapper,
-.custom-date-picker.el-range-editor.el-input__wrapper,
+.custom-date-picker .el-input__wrapper,
 .custom-select .el-select__wrapper,
 .custom-number-input .el-input__wrapper {
   background-color: #0e0e0f !important;
@@ -162,7 +162,7 @@
 }
 
 .custom-input .el-input__wrapper:hover,
-.custom-date-picker.el-range-editor.el-input__wrapper:hover,
+.custom-date-picker .el-input__wrapper:hover,
 .custom-select .el-select__wrapper:hover,
 .custom-number-input .el-input__wrapper:hover,
 .custom-textarea .el-textarea__inner:hover {
@@ -170,7 +170,7 @@
 }
 
 .custom-input .el-input__wrapper.is-focus,
-.custom-date-picker.el-range-editor.is-active,
+.custom-date-picker .el-input__wrapper.is-focus,
 .custom-select .el-select__wrapper.is-focused,
 .custom-number-input .el-input__wrapper.is-focus,
 .custom-textarea .el-textarea__inner:focus {
@@ -179,7 +179,7 @@
 }
 
 .custom-input .el-input__inner,
-.custom-date-picker .el-range-input,
+.custom-date-picker .el-input__inner,
 .custom-textarea .el-textarea__inner {
   color: #e5e2e3 !important;
   font-size: 14px !important;

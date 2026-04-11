@@ -34,6 +34,10 @@ exports.main = async (event, context) => {
         return await updateProject(data);
       case 'delete':
         return await deleteProject(data);
+      case 'syncFinancials':
+        return await syncFinancials(data);
+      case 'syncHistoryFinancials':
+        return await syncHistoryFinancials(data);
       default:
         return { code: 400, message: '未知操作' };
     }
@@ -42,6 +46,113 @@ exports.main = async (event, context) => {
     return { code: 500, message: '操作失败', error: error.message };
   }
 };
+
+// 计算资金相关字段
+function calculateFinancials(amount, receivedAmount, costs) {
+  const totalAmount = parseFloat(amount) || 0;
+  const received = parseFloat(receivedAmount) || 0;
+  const unreceived = Math.max(0, totalAmount - received);
+  
+  let payable = 0;
+  let paid = 0;
+  
+  if (costs && Array.isArray(costs)) {
+    costs.forEach(cost => {
+      const costAmount = parseFloat(cost.amount) || 0;
+      payable += costAmount;
+      if (cost.isSettled === true || cost.isSettled === '是') {
+        paid += costAmount;
+      }
+    });
+  }
+  
+  return {
+    unreceivedAmount: parseFloat(unreceived.toFixed(2)),
+    payableAmount: parseFloat(payable.toFixed(2)),
+    paidAmount: parseFloat(paid.toFixed(2))
+  };
+}
+
+// 资金计算同步接口
+async function syncFinancials(params) {
+  const { projectId } = params;
+  if (!projectId) return { code: 400, message: '缺少项目 ID' };
+
+  try {
+    const projectDoc = await db.collection('projects').doc(projectId).get();
+    if (!projectDoc.data) return { code: 404, message: '项目不存在' };
+    
+    const project = projectDoc.data;
+    const financials = calculateFinancials(project.amount, project.receivedAmount, project.costs);
+    
+    await db.collection('projects').doc(projectId).update({
+      data: {
+        ...financials,
+        updateTime: db.serverDate()
+      }
+    });
+    
+    return { code: 0, message: '同步成功', data: financials };
+  } catch (err) {
+    console.error('同步资金失败:', err);
+    return { code: 500, message: '同步失败', error: err.message };
+  }
+}
+
+// 历史数据同步接口
+async function syncHistoryFinancials(params) {
+  const { projectId } = params;
+  try {
+    let query = db.collection('projects');
+    if (projectId) {
+      query = query.doc(projectId);
+    }
+    
+    const res = await query.get();
+    const projects = Array.isArray(res.data) ? res.data : [res.data];
+    
+    let successCount = 0;
+    let failCount = 0;
+    const failures = [];
+
+    for (const project of projects) {
+      try {
+        const amount = project.amount || 0;
+        const receivedAmount = project.receivedAmount !== undefined ? project.receivedAmount : 0;
+        
+        // 历史成本项默认设为已结清
+        const updatedCosts = (project.costs || []).map(cost => ({
+          ...cost,
+          isSettled: cost.isSettled !== undefined ? cost.isSettled : true
+        }));
+
+        const financials = calculateFinancials(amount, receivedAmount, updatedCosts);
+        
+        await db.collection('projects').doc(project._id).update({
+          data: {
+            receivedAmount,
+            costs: updatedCosts,
+            ...financials,
+            updateTime: db.serverDate()
+          }
+        });
+        successCount++;
+      } catch (err) {
+        failCount++;
+        failures.push({ id: project._id, reason: err.message });
+      }
+    }
+    
+    return { 
+      code: 0, 
+      message: '同步完成', 
+      data: { successCount, failCount, failures } 
+    };
+  } catch (err) {
+    console.error('历史数据同步失败:', err);
+    return { code: 500, message: '同步失败', error: err.message };
+  }
+}
 
 // 安全校验：拦截特殊字符
 const isSafeInput = (str) => {
@@ -66,7 +177,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime } = params;
+  const { id, name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -84,6 +195,19 @@ async function updateProject(params) {
     }
     const oldProject = projectDoc.data;
 
+    // 已结清状态权限控制
+    if (oldProject.status === 'closed') {
+      const allowedFields = ['name', 'desc', 'costs', 'vouchers']; 
+      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
+      const illegalFields = incomingFields.filter(field => !allowedFields.includes(field) && field !== 'receivedAmount'); 
+      
+      const strictlyIllegal = illegalFields.filter(f => !['receivedAmount'].includes(f));
+      
+      if (strictlyIllegal.length > 0) {
+        return { code: 403, message: '已结清项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款' };
+      }
+    }
+
     const updateData = {
       updateTime: db.serverDate()
     };
@@ -94,6 +218,12 @@ async function updateProject(params) {
     if (role) updateData.role = role;
     if (staffCount !== undefined) updateData.staffCount = staffCount;
     if (amount !== undefined) updateData.amount = amount;
+    if (receivedAmount !== undefined) {
+      if (receivedAmount > (amount || oldProject.amount)) {
+        return { code: 400, message: '已收账款不可超过订单金额' };
+      }
+      updateData.receivedAmount = receivedAmount;
+    }
     if (desc !== undefined) updateData.desc = desc;
     if (costs) updateData.costs = costs;
     if (status) updateData.status = status;
@@ -119,6 +249,13 @@ async function updateProject(params) {
       if (status === 'closed' && !settledTime) updateData.settledTime = now;
     }
 
+    // 重新计算资金
+    const finalAmount = amount !== undefined ? amount : oldProject.amount;
+    const finalReceived = receivedAmount !== undefined ? receivedAmount : (oldProject.receivedAmount || 0);
+    const finalCosts = costs || oldProject.costs || [];
+    const financials = calculateFinancials(finalAmount, finalReceived, finalCosts);
+    Object.assign(updateData, financials);
+
     await db.collection('projects').doc(id).update({
       data: updateData
     });
@@ -131,7 +268,7 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, period, client, role, staffCount, amount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
+  const { name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
@@ -148,10 +285,21 @@ async function createProject(params) {
     return { code: 400, message: '订单金额格式不正确' };
   }
 
+  const received = receivedAmount !== undefined ? parseFloat(receivedAmount) : 0;
+  if (received > parseFloat(amount)) {
+    return { code: 400, message: '已收账款不可超过订单金额' };
+  }
+
   try {
     const now = new Date().toISOString();
+    
+    // 计算资金
+    const financials = calculateFinancials(amount, received, costs);
+    
     const data = {
       ...params,
+      receivedAmount: received,
+      ...financials,
       createTime: db.serverDate(),
       updateTime: db.serverDate()
     };

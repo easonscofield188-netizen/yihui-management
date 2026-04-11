@@ -196,3 +196,33 @@ export function deleteVouchersByProject(params) {
     }
   });
 }
+
+/**
+ * 同步项目资金数据
+ * @param {Object} params - { projectId }
+ */
+export function syncFinancials(params) {
+  return request({
+    url: '/projectService',
+    method: 'post',
+    data: {
+      action: 'syncFinancials',
+      data: params
+    }
+  });
+}
+
+/**
+ * 同步所有历史项目资金数据
+ * @param {Object} params - {}
+ */
+export function syncHistoryFinancials(params) {
+  return request({
+    url: '/projectService',
+    method: 'post',
+    data: {
+      action: 'syncHistoryFinancials',
+      data: params
+    }
+  });
+}
