@@ -291,8 +291,8 @@ async function updateProject(params) {
     if (settlingTime) updateData.settlingTime = settlingTime;
     if (settledTime) updateData.settledTime = settledTime;
 
-    // 状态变更自动记录时间节点及周期联动
-    if (status && status !== oldProject.status) {
+    // 状态变更自动记录时间节点及周期联动 (仅针对常规项目)
+    if (status && status !== oldProject.status && oldProject.type !== 'historical') {
       const now = new Date().toISOString();
       const today = now.split('T')[0];
       
@@ -435,12 +435,17 @@ async function createProject(params) {
       updateTime: db.serverDate()
     };
 
-    // 初始化时间节点
-    const initialStatus = status || 'negotiating';
-    if (initialStatus === 'negotiating' && !data.negotiatingTime) data.negotiatingTime = now;
-    if (initialStatus === 'constructing' && !data.constructingTime) data.constructingTime = now;
-    if (initialStatus === 'completed' && !data.completedTime) data.completedTime = now;
-    if (initialStatus === 'closed' && !data.settledTime) data.settledTime = now;
+    // 初始化时间节点 (仅针对常规项目)
+    if (type !== 'historical') {
+      const initialStatus = status || 'negotiating';
+      if (initialStatus === 'negotiating' && !data.negotiatingTime) data.negotiatingTime = now;
+      if (initialStatus === 'constructing' && !data.constructingTime) data.constructingTime = now;
+      if (initialStatus === 'completed' && !data.completedTime) data.completedTime = now;
+      if (initialStatus === 'closed' && !data.settledTime) data.settledTime = now;
+    } else {
+      // 补录单仅记录完结时间
+      if (!data.settledTime) data.settledTime = now;
+    }
 
     const res = await db.collection('projects').add({
       data
