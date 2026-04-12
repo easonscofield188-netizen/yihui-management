@@ -226,3 +226,93 @@ export function syncHistoryFinancials(params) {
     }
   });
 }
+
+/**
+ * 获取项目合同列表
+ * @param {Object} params - { projectId }
+ */
+export function getContracts(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'list',
+      data: { ...params, type: 'contract' }
+    }
+  });
+}
+
+/**
+ * 获取项目预览图列表
+ * @param {Object} params - { projectId }
+ */
+export function getPreviews(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'list',
+      data: { ...params, type: 'preview' }
+    }
+  });
+}
+
+/**
+ * 删除项目合同
+ * @param {Object} params - { id, fileId }
+ */
+export function deleteContract(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'delete',
+      data: { ...params, type: 'contract' }
+    }
+  });
+}
+
+/**
+ * 删除项目预览图
+ * @param {Object} params - { id, fileId }
+ */
+export function deletePreview(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'delete',
+      data: { ...params, type: 'preview' }
+    }
+  });
+}
+
+/**
+ * 批量更新合同所属项目 ID
+ * @param {Object} params - { fileIds: string[], projectId: string }
+ */
+export function updateContractsProject(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'updateBatch',
+      data: { ...params, type: 'contract' }
+    }
+  });
+}
+
+/**
+ * 批量更新预览图所属项目 ID
+ * @param {Object} params - { fileIds: string[], projectId: string }
+ */
+export function updatePreviewsProject(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'updateBatch',
+      data: { ...params, type: 'preview' }
+    }
+  });
+}

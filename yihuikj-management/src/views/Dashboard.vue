@@ -147,25 +147,111 @@
               <span class="w-1.5 h-6 bg-primary rounded-full" />
               活跃项目列表
             </h3>
-            <div class="flex gap-2">
+            <div class="flex gap-2 p-1 bg-surface-container-lowest rounded-lg border border-white/5">
               <button 
-                class="px-3 py-1.5 bg-neutral-800 text-[10px] text-on-surface-variant rounded-md hover:text-primary transition-colors uppercase tracking-wider flex items-center gap-1"
-                :disabled="syncingAllHistory"
-                @click="handleSyncAllHistory"
+                class="px-3 py-1.5 text-[10px] rounded-md transition-all uppercase tracking-wider"
+                :class="projectFilters.tab === 'all' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
+                @click="projectFilters.tab = 'all'; currentPage = 1"
               >
-                <el-icon v-if="syncingAllHistory" class="is-loading"><Loading /></el-icon>
-                <el-icon v-else><Refresh /></el-icon>
-                同步历史数据
-              </button>
-              <button class="px-3 py-1.5 bg-neutral-800 text-[10px] text-on-surface-variant rounded-md hover:text-primary transition-colors uppercase tracking-wider">
                 全部项目
               </button>
-              <button class="px-3 py-1.5 bg-primary/10 text-[10px] text-primary rounded-md font-bold border border-primary/20 uppercase tracking-wider">
+              <button 
+                class="px-3 py-1.5 text-[10px] rounded-md transition-all uppercase tracking-wider"
+                :class="projectFilters.tab === 'ongoing' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
+                @click="projectFilters.tab = 'ongoing'; currentPage = 1"
+              >
                 进行中
               </button>
-              <button class="px-3 py-1.5 bg-neutral-800 text-[10px] text-on-surface-variant rounded-md hover:text-primary transition-colors uppercase tracking-wider">
+              <button 
+                class="px-3 py-1.5 text-[10px] rounded-md transition-all uppercase tracking-wider"
+                :class="projectFilters.tab === 'completed' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
+                @click="projectFilters.tab = 'completed'; currentPage = 1"
+              >
                 已交付
               </button>
+            </div>
+          </div>
+          
+          <!-- 高级筛选栏 -->
+          <div class="p-6 pt-0 border-b border-white/5">
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <!-- 项目名称搜索 -->
+              <div class="col-span-3">
+                <el-input
+                  v-model="projectFilters.search"
+                  placeholder="搜索项目名称..."
+                  class="custom-filter-input"
+                  clearable
+                  @keyup.enter="handleSearch"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+              </div>
+              <!-- 类别筛选 -->
+              <div class="col-span-2">
+                <el-select
+                  v-model="projectFilters.type"
+                  placeholder="项目类别"
+                  class="custom-filter-select"
+                  clearable
+                >
+                  <el-option label="全部类别" value="" />
+                  <el-option
+                    v-for="item in projectTypes"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </el-select>
+              </div>
+              <!-- 状态筛选 -->
+              <div class="col-span-2">
+                <el-select
+                  v-model="projectFilters.status"
+                  placeholder="项目状态"
+                  class="custom-filter-select"
+                  clearable
+                >
+                  <el-option label="全部状态" value="" />
+                  <el-option
+                    v-for="item in projectStatuses"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </el-select>
+              </div>
+              <!-- 日期范围 -->
+              <div class="col-span-3">
+                <el-date-picker
+                  v-model="projectFilters.dateRange"
+                  type="daterange"
+                  range-separator="-"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  class="custom-filter-date"
+                  value-format="YYYY-MM-DD"
+                />
+              </div>
+              <!-- 操作按钮 -->
+              <div class="col-span-2 flex items-center gap-2">
+                <el-button 
+                  type="primary" 
+                  class="flex-1 !h-9 !bg-primary !text-black !border-none !font-bold shadow-lg hover:brightness-110"
+                  @click="handleSearch"
+                >
+                  <el-icon class="mr-1"><Search /></el-icon>
+                  查询
+                </el-button>
+                <el-button 
+                  class="!h-9 !w-9 !p-0 !bg-neutral-800 !text-on-surface-variant !border-white/10 hover:!bg-neutral-700 hover:!text-white"
+                  @click="handleResetFilters"
+                >
+                  <el-icon><Refresh /></el-icon>
+                </el-button>
+              </div>
             </div>
           </div>
           
@@ -200,7 +286,13 @@
                           v-if="row.type" 
                           size="small" 
                           effect="dark" 
-                          class="!bg-neutral-800 !border-white/10 !text-[10px] !text-on-surface-variant/60 !px-1.5 !h-5 !leading-5"
+                          class="!border-white/10 !text-[10px] !px-1.5 !h-5 !leading-5"
+                          :class="[
+                            row.type === 'normal' ? '!bg-emerald-500/10 !text-emerald-400 !border-emerald-500/20' : 
+                            row.type === 'historical' ? '!bg-amber-500/10 !text-amber-400 !border-amber-500/20' : 
+                            row.type === 'long_term' ? '!bg-cyan-500/10 !text-cyan-400 !border-cyan-500/20' :
+                            '!bg-neutral-800 !text-on-surface-variant/60'
+                          ]"
                         >
                           {{ row.typeLabel }}
                         </el-tag>
@@ -292,7 +384,7 @@
                     <div 
                       class="status-badge-trigger"
                       :class="[
-                        row.status === 'constructing' ? 'is-active' : 'is-pending',
+                        `is-${row.status}`,
                         isCreating ? 'opacity-50 cursor-not-allowed' : ''
                       ]"
                     >
@@ -363,7 +455,7 @@
               class="px-6 py-4 border-t border-white/5 flex items-center justify-between"
             >
               <div class="text-xs text-on-surface-variant">
-                显示第 <span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> 到 <span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, projects.length) }}</span> 条，共 <span class="font-bold text-on-surface">{{ projects.length }}</span> 条记录
+                显示第 <span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> 到 <span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, totalProjectsCount) }}</span> 条，共 <span class="font-bold text-on-surface">{{ totalProjectsCount }}</span> 条记录
               </div>
               <nav
                 aria-label="Pagination"
@@ -428,10 +520,42 @@
               <!-- Decorative Arc in Top Right -->
               <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors duration-500" />
               
-              <div class="flex items-center justify-between mb-8 relative z-10">
+              <!-- Project Category Ribbon Tag -->
+              <div class="absolute top-0 right-0 w-24 h-24 overflow-hidden pointer-events-none z-20">
+                <div class="absolute top-0 right-0 w-full h-full">
+                  <!-- The ribbon background -->
+                  <div 
+                    class="absolute top-[18px] right-[-32px] w-[140%] py-1 text-black text-[9px] font-black uppercase tracking-[0.2em] text-center rotate-45 shadow-[0_4px_10px_rgba(0,0,0,0.5)] border-y border-white/10 transition-all duration-500"
+                    :class="projectTypeRibbon.color"
+                    style="color: #000000;"
+                  >
+                    {{ projectTypeRibbon.label }}
+                  </div>
+                  <!-- Corner fold shadow for 3D effect -->
+                  <div 
+                    class="absolute top-0 right-0 w-0 h-0 border-l-[35px] border-l-transparent transition-all duration-500"
+                    :class="projectTypeRibbon.shadow"
+                    style="border-top-width: 35px;"
+                  ></div>
+                </div>
+              </div>
+
+              <div 
+                class="flex items-center justify-between relative z-10 transition-all duration-300 pr-12"
+                :class="isBasicInfoCollapsed ? 'mb-0' : 'mb-8'"
+              >
                 <h3 class="text-lg font-bold text-on-surface flex items-center gap-2">
                   <span class="w-1.5 h-6 bg-primary rounded-full" />
                   基础项目信息
+                  <el-button 
+                    link 
+                    class="!p-1 !h-auto ml-1 hover:!text-primary transition-colors"
+                    @click="isBasicInfoCollapsed = !isBasicInfoCollapsed"
+                  >
+                    <el-icon :size="16">
+                      <component :is="isBasicInfoCollapsed ? ArrowDown : ArrowUp" />
+                    </el-icon>
+                  </el-button>
                 </h3>
                 
                 <!-- Edit/Save/Cancel Buttons -->
@@ -488,17 +612,21 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <!-- Project Name -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目名称</label>
-                  <el-input
-                    v-model="form.name"
-                    placeholder="请输入项目名称"
-                    class="custom-input"
-                    :disabled="isViewMode || isFieldReadOnly('name')"
-                  />
-                </div>
+              <el-collapse-transition>
+                <div 
+                  v-show="!isBasicInfoCollapsed" 
+                  class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
+                >
+                  <!-- Project Name -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目名称</label>
+                    <el-input
+                      v-model="form.name"
+                      placeholder="请输入项目名称"
+                      class="custom-input"
+                      :disabled="isViewMode || isFieldReadOnly('name')"
+                    />
+                  </div>
 
                 <!-- Project Type -->
                 <div class="space-y-2">
@@ -774,6 +902,36 @@
                   />
                 </div>
 
+                <!-- Has Contract -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
+                  <el-select 
+                    v-model="form.isHasContract" 
+                    placeholder="请选择" 
+                    class="w-full custom-select" 
+                    popper-class="custom-dropdown"
+                    :disabled="isViewMode || isFieldReadOnly('isHasContract')"
+                  >
+                    <el-option label="是" value="是" />
+                    <el-option label="否" value="否" />
+                  </el-select>
+                </div>
+
+                <!-- Has Preview -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有预览图</label>
+                  <el-select 
+                    v-model="form.isHasPreview" 
+                    placeholder="请选择" 
+                    class="w-full custom-select" 
+                    popper-class="custom-dropdown"
+                    :disabled="isViewMode || isFieldReadOnly('isHasPreview')"
+                  >
+                    <el-option label="是" value="是" />
+                    <el-option label="否" value="否" />
+                  </el-select>
+                </div>
+
                 <!-- Project Description -->
                 <div class="md:col-span-2 space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目描述</label>
@@ -787,7 +945,8 @@
                   />
                 </div>
               </div>
-            </section>
+            </el-collapse-transition>
+          </section>
 
             <!-- Fund Management Section -->
             <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5">
@@ -852,25 +1011,44 @@
             </section>
 
             <!-- Cost Management Section -->
-            <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5">
-              <div class="p-6 md:p-8 pb-4 flex justify-between items-center">
+            <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300">
+              <div 
+                class="p-6 md:p-8 flex justify-between items-center cursor-pointer"
+                :class="isCostInfoCollapsed ? 'pb-6' : 'pb-4'"
+                @click="isCostInfoCollapsed = !isCostInfoCollapsed"
+              >
                 <h3 class="text-lg font-bold flex items-center gap-2">
                   <span class="w-1.5 h-6 bg-secondary rounded-full" />
                   成本支出管理
-                </h3>
-                <button 
-                  class="group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-primary/80 hover:text-primary hover:bg-primary/5 hover:border-primary/40 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="isViewMode || costs.length >= costCategories.length || isFieldReadOnly('costs')"
-                  @click="addCost"
-                >
-                  <el-icon class="text-sm">
-                    <Plus />
+                  <el-icon 
+                    class="text-on-surface-variant transition-transform duration-300 ml-1"
+                    :class="{ 'rotate-180': !isCostInfoCollapsed }"
+                  >
+                    <ArrowDown />
                   </el-icon>
-                  <span class="text-xs font-medium tracking-tight">{{ costs.length >= costCategories.length ? '已达类目上限' : '添加成本项' }}</span>
-                </button>
+                </h3>
+                <div 
+                  class="flex items-center gap-3"
+                  @click.stop
+                >
+                  <button 
+                    class="group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-primary/80 hover:text-primary hover:bg-primary/5 hover:border-primary/40 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="isViewMode || costs.length >= costCategories.length || isFieldReadOnly('costs')"
+                    @click="addCost"
+                  >
+                    <el-icon class="text-sm">
+                      <Plus />
+                    </el-icon>
+                    <span class="text-xs font-medium tracking-tight">{{ costs.length >= costCategories.length ? '已达类目上限' : '添加成本项' }}</span>
+                  </button>
+                </div>
               </div>
 
-              <div class="px-6 md:px-8 pb-8">
+              <el-collapse-transition>
+                <div 
+                  v-show="!isCostInfoCollapsed" 
+                  class="px-6 md:px-8 pb-8"
+                >
                 <div class="overflow-x-auto mb-6">
                   <table class="w-full text-left border-separate border-spacing-y-3 min-w-[600px]">
                     <thead>
@@ -977,6 +1155,181 @@
                   </table>
                 </div>
 
+                <!-- Project Contract Management -->
+                <div v-if="form.isHasContract === '是'" class="mt-8 border-t border-white/5 pt-6">
+                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+                      项目合同管理 (图片/PDF)
+                    </h4>
+                    <button 
+                      :disabled="isViewMode || uploadingContract || isFieldReadOnly('isHasContract')"
+                      class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
+                      @click="triggerContractUpload"
+                    >
+                      <el-icon v-if="!uploadingContract">
+                        <Upload />
+                      </el-icon>
+                      <el-icon
+                        v-else
+                        class="animate-spin"
+                      >
+                        <Refresh />
+                      </el-icon>
+                      <span>{{ uploadingContract ? '正在上传...' : '上传合同' }}</span>
+                    </button>
+                  </div>
+                  
+                  <input 
+                    ref="contractInputRef"
+                    type="file" 
+                    multiple 
+                    accept="image/*,application/pdf" 
+                    class="hidden" 
+                    @change="handleContractUpload"
+                  >
+
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div 
+                      v-for="(c, idx) in contracts" 
+                      :key="c.id || idx"
+                      class="aspect-square rounded-lg bg-surface-container-lowest border border-white/10 overflow-hidden relative group cursor-pointer"
+                    >
+                      <div v-if="c.type === 'application/pdf'" class="w-full h-full flex flex-col items-center justify-center bg-surface-container-high/30 gap-2 p-2">
+                        <el-icon size="32" class="text-red-400"><Document /></el-icon>
+                        <span class="text-[10px] text-on-surface-variant text-center line-clamp-2 px-1">{{ c.name }}</span>
+                      </div>
+                      <img 
+                        v-else
+                        :src="c.url" 
+                        :alt="c.name" 
+                        class="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      >
+                      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
+                        <div class="flex gap-3">
+                          <el-icon
+                            class="text-white hover:text-primary transition-colors"
+                            size="20"
+                            @click.stop="handleContractPreview(idx)"
+                          >
+                            <View />
+                          </el-icon>
+                          <el-icon
+                            v-if="!isViewMode && !isFieldReadOnly('isHasContract')"
+                            class="text-red-400 hover:text-red-500 transition-colors"
+                            size="20"
+                            @click.stop="removeContract(idx)"
+                          >
+                            <Delete />
+                          </el-icon>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      v-if="contracts.length < 10"
+                      :disabled="isViewMode || uploadingContract || isFieldReadOnly('isHasContract')"
+                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
+                      @click="triggerContractUpload"
+                    >
+                      <el-icon v-if="!uploadingContract" size="24" class="group-hover:scale-110 transition-transform">
+                        <Plus />
+                      </el-icon>
+                      <el-icon v-else size="24" class="animate-spin">
+                        <Refresh />
+                      </el-icon>
+                      <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold">{{ uploadingContract ? '上传中' : '继续添加' }}</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Preview Image Management -->
+                <div v-if="form.isHasPreview === '是'" class="mt-8 border-t border-white/5 pt-6">
+                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+                      预览图管理 (最多4张)
+                    </h4>
+                    <button 
+                      :disabled="isViewMode || uploadingPreview || isFieldReadOnly('isHasPreview')"
+                      class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
+                      @click="triggerPreviewUpload"
+                    >
+                      <el-icon v-if="!uploadingPreview">
+                        <Upload />
+                      </el-icon>
+                      <el-icon
+                        v-else
+                        class="animate-spin"
+                      >
+                        <Refresh />
+                      </el-icon>
+                      <span>{{ uploadingPreview ? '正在上传...' : '上传预览图' }}</span>
+                    </button>
+                  </div>
+                  
+                  <input 
+                    ref="previewInputRef"
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    class="hidden" 
+                    @change="handlePreviewUpload"
+                  >
+
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div 
+                      v-for="(p, idx) in previews" 
+                      :key="p.id || idx"
+                      class="aspect-square rounded-lg bg-surface-container-lowest border border-white/10 overflow-hidden relative group cursor-pointer"
+                    >
+                      <img 
+                        :src="p.url" 
+                        class="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      >
+                      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
+                        <div class="flex gap-3">
+                          <el-icon
+                            class="text-white hover:text-primary transition-colors"
+                            size="20"
+                            @click.stop="handlePreviewImagePreview(idx)"
+                          >
+                            <View />
+                          </el-icon>
+                          <el-icon
+                            v-if="!isViewMode && !isFieldReadOnly('isHasPreview')"
+                            class="text-red-400 hover:text-red-500 transition-colors"
+                            size="20"
+                            @click.stop="removePreview(idx)"
+                          >
+                            <Delete />
+                          </el-icon>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      v-if="previews.length < 4"
+                      :disabled="isViewMode || uploadingPreview || isFieldReadOnly('isHasPreview')"
+                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
+                      @click="triggerPreviewUpload"
+                    >
+                      <el-icon v-if="!uploadingPreview" size="24" class="group-hover:scale-110 transition-transform">
+                        <Plus />
+                      </el-icon>
+                      <el-icon v-else size="24" class="animate-spin">
+                        <Refresh />
+                      </el-icon>
+                      <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold">{{ uploadingPreview ? '上传中' : '继续添加' }}</span>
+                        <span class="text-[8px] opacity-40">{{ previews.length }}/4</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <!-- Vouchers Section -->
                 <div class="mt-8 border-t border-white/5 pt-6">
                   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -1008,7 +1361,7 @@
                     multiple 
                     accept="image/*" 
                     class="hidden" 
-                    @change="handleFileUpload"
+                    @change="handleVoucherUpload"
                   >
 
                   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -1074,75 +1427,76 @@
                   </div>
                 </div>
               </div>
-            </section>
+            </el-collapse-transition>
+          </section>
           </div>
 
           <!-- Right: Analysis -->
           <div class="lg:col-span-4 space-y-8">
-            <el-card class="!p-6 relative overflow-hidden">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
-              <h3 class="text-lg font-bold mb-6 font-space">
-                项目财务快报
-              </h3>
-              <div class="space-y-6">
-                <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-primary shadow-xl flex justify-between items-center group/item">
-                  <div>
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                      预计利润
-                    </p>
-                    <p class="text-2xl font-mono font-black text-primary">
-                      ¥ {{ formatNumber(estimatedProfit) }}
-                    </p>
+            <!-- Project Financial Quick Report -->
+            <div class="bg-surface-container-high rounded-xl p-8 relative overflow-hidden border border-white/5">
+              <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+              <h3 class="text-lg font-bold text-on-surface mb-6 font-headline tracking-tight">项目财务快报</h3>
+              <div class="space-y-4">
+                <!-- Card 1: Estimated Profit -->
+                <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-primary shadow-lg hover:shadow-primary/5 transition-all">
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">预计利润</p>
+                      <p class="text-2xl font-mono font-black text-primary">¥ {{ formatNumber(estimatedProfit) }}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-primary/40 text-2xl">trending_up</span>
                   </div>
-                  <div class="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center transition-all duration-500 group-hover/item:bg-primary/20 group-hover/item:scale-110 shadow-[0_0_15px_rgba(82,238,138,0.1)]">
-                    <el-icon
-                      size="24"
-                      class="text-primary drop-shadow-[0_0_8px_rgba(82,238,138,0.5)]"
-                    >
-                      <TrendCharts />
-                    </el-icon>
-                  </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="p-4 bg-surface-container-lowest rounded-lg">
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                      利润率
-                    </p>
-                    <p class="text-xl font-mono font-bold text-secondary">
-                      {{ profitMargin }}%
-                    </p>
-                    <el-progress
-                      :percentage="Math.max(0, Math.min(100, parseFloat(profitMargin)))"
-                      :show-text="false"
-                      color="#00daf3"
-                      class="mt-2"
-                    />
-                  </div>
-                  <div class="p-4 bg-surface-container-lowest rounded-lg">
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                      成本率
-                    </p>
-                    <p class="text-xl font-mono font-bold">
-                      {{ costRate }}%
-                    </p>
-                    <el-progress
-                      :percentage="Math.max(0, Math.min(100, parseFloat(costRate)))"
-                      :show-text="false"
-                      color="#666"
-                      class="mt-2"
-                    />
+                  <div class="flex items-center gap-2 mt-2">
+                    <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-primary" :style="{ width: Math.max(0, Math.min(100, parseFloat(profitMargin))) + '%' }"></div>
+                    </div>
+                    <span class="text-[10px] font-bold text-primary">{{ profitMargin }}%</span>
                   </div>
                 </div>
 
-                <div class="pt-6 border-t border-white/5 space-y-3 text-xs">
+                <!-- Card 2: Uncollected Accounts -->
+                <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-amber-500 shadow-lg hover:shadow-amber-500/5 transition-all">
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">未收账款 (订单总额 - 已收)</p>
+                      <p class="text-2xl font-mono font-black text-amber-500">¥ {{ formatNumber(unreceivedAmount) }}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-amber-500/40 text-2xl">account_balance_wallet</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-2">
+                    <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-amber-500" :style="{ width: unreceivedPercent + '%' }"></div>
+                    </div>
+                    <span class="text-[10px] font-bold text-amber-500">{{ unreceivedPercent }}%</span>
+                  </div>
+                </div>
+
+                <!-- Card 3: Accounts Payable -->
+                <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-rose-500 shadow-lg hover:shadow-rose-500/5 transition-all">
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">未付账款 (总成本 - 已付)</p>
+                      <p class="text-2xl font-mono font-black text-rose-500">¥ {{ formatNumber(unpaidAmount) }}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-rose-500/40 text-2xl">payments</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-2">
+                    <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-rose-500" :style="{ width: unpaidPercent + '%' }"></div>
+                    </div>
+                    <span class="text-[10px] font-bold text-rose-500">{{ unpaidPercent }}%</span>
+                  </div>
+                </div>
+
+                <div class="pt-6 border-t border-white/5 space-y-2 text-xs">
                   <div class="flex justify-between">
                     <span class="text-on-surface-variant">总预算收入</span>
-                    <span class="font-mono">¥ {{ formatNumber(totalIncome) }}</span>
+                    <span class="text-on-surface font-mono">¥ {{ formatNumber(totalIncome) }}</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-on-surface-variant">已核算成本</span>
-                    <span class="text-red-400 font-mono">- ¥ {{ formatNumber(totalCost) }}</span>
+                    <span class="text-red-400/80 font-mono">- ¥ {{ formatNumber(totalCost) }}</span>
                   </div>
                   <div class="flex justify-between font-bold">
                     <span class="text-on-surface-variant">预估净得</span>
@@ -1150,7 +1504,7 @@
                   </div>
                 </div>
               </div>
-            </el-card>
+            </div>
 
             <div class="rounded-xl overflow-hidden aspect-square relative group border border-white/5 flex flex-col items-center justify-center bg-surface-container-high">
               <div class="absolute inset-0 bg-neutral-900/40 flex flex-col items-center justify-center gap-4">
@@ -1256,13 +1610,30 @@
       teleported
       @close="previewVisible = false"
     />
+
+    <!-- 悬浮回到顶部按钮 -->
+    <div 
+      class="fixed z-[9999] cursor-move select-none group"
+      :style="{ left: floatBtnPos.x + 'px', top: floatBtnPos.y + 'px' }"
+      @mousedown="startDrag"
+    >
+      <button 
+        class="w-12 h-12 rounded-full bg-surface-container-high/80 backdrop-blur-xl border border-white/20 text-primary shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] flex items-center justify-center transition-all active:scale-95 active:shadow-inner group-hover:bg-primary group-hover:text-black group-hover:border-primary/50"
+        title="回到顶部"
+        @click="scrollToTop"
+      >
+        <el-icon class="text-xl group-hover:-translate-y-0.5 transition-transform">
+          <ArrowUp />
+        </el-icon>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, syncHistoryFinancials } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -1273,12 +1644,12 @@ import {
   QuestionFilled, 
   Plus, 
   ArrowDown,
+  ArrowUp,
   Delete,
   Close,
   Upload,
   View,
   Picture,
-  TrendCharts,
   Management,
   Briefcase,
   Box,
@@ -1292,6 +1663,71 @@ import {
 
 // 获取API域名
 const apiDomain = import.meta.env.VITE_TCB_BASE_URL || ''
+
+// 基础项目信息折叠状态
+const isBasicInfoCollapsed = ref(false)
+
+// 成本支出管理折叠状态
+const isCostInfoCollapsed = ref(false)
+
+// 悬浮回到顶部按钮逻辑
+const floatBtnPos = ref({ x: window.innerWidth - 80, y: window.innerHeight - 80 })
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const hasMoved = ref(false)
+
+const startDrag = (e) => {
+  isDragging.value = true
+  hasMoved.value = false
+  dragOffset.value = {
+    x: e.clientX - floatBtnPos.value.x,
+    y: e.clientY - floatBtnPos.value.y
+  }
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+}
+
+const onDrag = (e) => {
+  if (!isDragging.value) return
+  hasMoved.value = true
+  floatBtnPos.value = {
+    x: e.clientX - dragOffset.value.x,
+    y: e.clientY - dragOffset.value.y
+  }
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  
+  // 边界检查
+  const margin = 20
+  const btnSize = 48
+  floatBtnPos.value.x = Math.max(margin, Math.min(window.innerWidth - btnSize - margin, floatBtnPos.value.x))
+  floatBtnPos.value.y = Math.max(margin, Math.min(window.innerHeight - btnSize - margin, floatBtnPos.value.y))
+}
+
+const scrollToTop = () => {
+  if (hasMoved.value) return // 如果是拖拽则不触发点击
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// 监听窗口大小变化，防止按钮跑出屏幕
+const handleResize = () => {
+  const margin = 20
+  const btnSize = 48
+  floatBtnPos.value.x = Math.min(floatBtnPos.value.x, window.innerWidth - btnSize - margin)
+  floatBtnPos.value.y = Math.min(floatBtnPos.value.y, window.innerHeight - btnSize - margin)
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 const router = useRouter()
 
@@ -1383,16 +1819,83 @@ const originalProjectName = ref('')
 const projects = ref([])
 const loadingProjects = ref(false)
 
+// 项目列表筛选状态
+const projectFilters = reactive({
+  search: '',
+  type: '',
+  status: '',
+  dateRange: [],
+  tab: 'all' // 'all', 'ongoing', 'completed'
+})
+
+// 过滤后的项目列表
+const filteredProjects = computed(() => {
+  return projects.value.filter(p => {
+    // 1. Tab 标签过滤
+    if (projectFilters.tab === 'ongoing') {
+      // 进行中：排除已竣工和已结清
+      if (p.status === 'completed' || p.status === 'closed') return false
+    } else if (projectFilters.tab === 'completed') {
+      // 已交付：包含已竣工和已结清
+      if (p.status !== 'completed' && p.status !== 'closed') return false
+    }
+    
+    // 2. 搜索词过滤 (项目名称或客户名称)
+    if (projectFilters.search) {
+      const search = projectFilters.search.toLowerCase()
+      const nameMatch = p.name?.toLowerCase().includes(search)
+      const clientMatch = p.client?.toLowerCase().includes(search)
+      if (!nameMatch && !clientMatch) return false
+    }
+    
+    // 3. 项目类型过滤
+    if (projectFilters.type && p.type !== projectFilters.type) {
+      return false
+    }
+    
+    // 4. 项目状态过滤
+    if (projectFilters.status && p.status !== projectFilters.status) {
+      return false
+    }
+    
+    // 5. 日期范围过滤
+    if (projectFilters.dateRange && projectFilters.dateRange.length === 2) {
+      const start = new Date(projectFilters.dateRange[0]).setHours(0,0,0,0)
+      const end = new Date(projectFilters.dateRange[1]).setHours(23,59,59,999)
+      const pDate = new Date(p.period?.[0] || p.negotiatingTime || p.createTime).getTime()
+      if (pDate < start || pDate > end) return false
+    }
+    
+    return true
+  })
+})
+
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(6)
 const paginatedProjects = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
-  return projects.value.slice(start, end)
+  return filteredProjects.value.slice(start, end)
 })
 
-const totalPages = computed(() => Math.ceil(projects.value.length / pageSize.value) || 1)
+const totalProjectsCount = computed(() => filteredProjects.value.length)
+
+const totalPages = computed(() => Math.ceil(totalProjectsCount.value / pageSize.value) || 1)
+
+// 执行查询
+const handleSearch = () => {
+  currentPage.value = 1
+}
+
+// 重置查询
+const handleResetFilters = () => {
+  projectFilters.search = ''
+  projectFilters.type = ''
+  projectFilters.status = ''
+  projectFilters.dateRange = []
+  currentPage.value = 1
+}
 
 const paginationPages = computed(() => {
   const total = totalPages.value
@@ -1413,7 +1916,7 @@ const paginationPages = computed(() => {
   return pages
 })
 
-watch(projects, (newVal) => {
+watch(filteredProjects, (newVal) => {
   const maxPage = Math.ceil(newVal.length / pageSize.value) || 1
   if (currentPage.value > maxPage) {
     currentPage.value = maxPage
@@ -1436,8 +1939,15 @@ const form = reactive({
   amount: '',         // 订单金额
   receivedAmount: 0,  // 已收账款
   desc: '',           // 项目描述
-  isHistorical: false // 标识是否为历史补录项目
+  isHistorical: false, // 标识是否为历史补录项目
+  isHasContract: '否', // 是否有合同
+  isHasPreview: '否'   // 是否有预览图
 })
+
+// 项目合同列表
+const contracts = ref([])
+// 项目预览图列表
+const previews = ref([])
 
 // 是否为新客户标识：用于控制“客户来源”显示及“客户角色”是否可编辑
 const isNewClient = ref(true)
@@ -1683,6 +2193,72 @@ const collectionDays = computed(() => {
   return 0
 })
 
+// 监听是否有合同切换
+watch(() => form.isHasContract, async (newVal, oldVal) => {
+  if (newVal === '否' && oldVal === '是') {
+    if (contracts.value.length > 0) {
+      try {
+        await import('element-plus').then(async ({ ElMessageBox, ElMessage }) => {
+          try {
+            await ElMessageBox.confirm('切换为“否”将自动删除已上传的所有合同文件，是否继续？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            // 调用清理接口
+            const projectId = selectedProjectId.value || 'TEMP_UNASSOCIATED'
+            await axios.post(`${apiDomain}/contractPreviewService`, {
+              action: 'deleteAllByProject',
+              data: { projectId, type: 'contract' }
+            })
+            contracts.value = []
+            ElMessage.success('合同文件已清理')
+          } catch (e) {
+            // 用户取消，恢复为“是”
+            form.isHasContract = '是'
+          }
+        })
+      } catch (err) {
+        console.error('清理合同失败:', err)
+      }
+    }
+  }
+})
+
+// 监听是否有预览图切换
+watch(() => form.isHasPreview, async (newVal, oldVal) => {
+  if (newVal === '否' && oldVal === '是') {
+    if (previews.value.length > 0) {
+      try {
+        await import('element-plus').then(async ({ ElMessageBox, ElMessage }) => {
+          try {
+            await ElMessageBox.confirm('切换为“否”将自动删除已上传的所有预览图，是否继续？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            // 调用清理接口
+            const projectId = selectedProjectId.value || 'TEMP_UNASSOCIATED'
+            await axios.post(`${apiDomain}/contractPreviewService`, {
+              action: 'deleteAllByProject',
+              data: { projectId, type: 'preview' }
+            })
+            previews.value = []
+            ElMessage.success('预览图已清理')
+          } catch (e) {
+            // 用户取消，恢复为“是”
+            form.isHasPreview = '是'
+          }
+        })
+      } catch (err) {
+        console.error('清理预览图失败:', err)
+      }
+    }
+  }
+})
+
 // 过滤后的项目状态列表
 const filteredProjectStatuses = computed(() => {
   const isHistorical = isCreatingHistorical.value || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
@@ -1807,6 +2383,33 @@ const unpaidAmount = computed(() => {
   return Math.max(0, payable - paid).toFixed(2);
 });
 
+// 计算属性：未收账款百分比
+const unreceivedPercent = computed(() => {
+  const total = parseFloat(form.amount) || 0;
+  if (total === 0) return 0;
+  const unreceived = parseFloat(unreceivedAmount.value) || 0;
+  return Math.max(0, Math.min(100, (unreceived / total) * 100)).toFixed(1);
+});
+
+// 计算属性：未付账款百分比
+const unpaidPercent = computed(() => {
+  const total = parseFloat(totalCost.value) || 0;
+  if (total === 0) return 0;
+  const unpaid = parseFloat(unpaidAmount.value) || 0;
+  return Math.max(0, Math.min(100, (unpaid / total) * 100)).toFixed(1);
+});
+
+// 计算属性：项目类型右上角丝带标签配置
+const projectTypeRibbon = computed(() => {
+  const type = form.type || 'normal';
+  const config = {
+    'normal': { label: '常规', color: 'bg-emerald-500', shadow: 'border-t-emerald-600/30' },
+    'historical': { label: '补录', color: 'bg-amber-500', shadow: 'border-t-amber-600/30' },
+    'long_term': { label: '长期', color: 'bg-cyan-400', shadow: 'border-t-cyan-600/30' }
+  };
+  return config[type] || config['normal'];
+});
+
 // 计算属性：判断当前项目是否为已结清状态
 const isProjectClosed = computed(() => {
   if (isEditMode.value && selectedProjectId.value) {
@@ -1854,7 +2457,11 @@ const isCategorySelected = (categoryValue, currentIndex) => {
 // 单据凭证列表
 const vouchers = ref([])
 const uploadingVoucher = ref(false)
+const uploadingContract = ref(false)
+const uploadingPreview = ref(false)
 const fileInputRef = ref(null)
+const contractInputRef = ref(null)
+const previewInputRef = ref(null)
 
 // 图片预览状态
 const previewVisible = ref(false)
@@ -2216,7 +2823,9 @@ const handleViewProject = async (project) => {
     amount: project.amount,
     receivedAmount: project.receivedAmount || 0,
     desc: project.desc,
-    isHistorical: !!project.isHistorical
+    isHistorical: !!project.isHistorical,
+    isHasContract: project.isHasContract || '否',
+    isHasPreview: project.isHasPreview || '否'
   })
 
   // 标记为非新客户，隐藏提示文案
@@ -2245,6 +2854,42 @@ const handleViewProject = async (project) => {
     }
   } catch (err) {
     console.error('获取凭证列表失败:', err)
+  }
+
+  // 回显合同
+  contracts.value = []
+  if (form.isHasContract === '是') {
+    try {
+      const res = await getContracts({ projectId: project.id })
+      if (res.code === 0) {
+        contracts.value = res.data.map(c => ({
+          id: c._id || c.id,
+          url: c.url,
+          name: c.name,
+          fileId: c.fileId,
+          type: c.type
+        }))
+      }
+    } catch (err) {
+      console.error('获取合同列表失败:', err)
+    }
+  }
+
+  // 回显预览图
+  previews.value = []
+  if (form.isHasPreview === '是') {
+    try {
+      const res = await getPreviews({ projectId: project.id })
+      if (res.code === 0) {
+        previews.value = res.data.map(p => ({
+          id: p._id || p.id,
+          url: p.url,
+          fileId: p.fileId
+        }))
+      }
+    } catch (err) {
+      console.error('获取预览图列表失败:', err)
+    }
   }
 }
 
@@ -2305,7 +2950,7 @@ const enterHistoricalCreateMode = () => {
 const handleAbandonCreate = () => {
   import('element-plus').then(({ ElMessageBox, ElMessage, ElLoading }) => {
     ElMessageBox.confirm(
-      '确定要放弃创建新项目吗？如果已上传凭证图片，这些图片将被永久删除。',
+      '确定要放弃创建新项目吗？如果已上传凭证、合同或预览图，这些文件将被永久删除。',
       '放弃创建提示',
       {
         confirmButtonText: '确认放弃',
@@ -2317,23 +2962,31 @@ const handleAbandonCreate = () => {
         center: true,
       }
     ).then(async () => {
-      // 如果有已上传的凭证，需要清理
-      if (vouchers.value.length > 0) {
+      // 如果有已上传的凭证、合同或预览图，需要清理
+      if (vouchers.value.length > 0 || contracts.value.length > 0 || previews.value.length > 0) {
         const loading = ElLoading.service({
           lock: true,
-          text: '正在清理已上传的凭证...',
+          text: '正在清理已上传的文件...',
           background: 'rgba(0, 0, 0, 0.7)',
         })
         
         try {
-          // 循环删除凭证（包括云存储文件）
+          // 循环删除凭证
           for (const voucher of vouchers.value) {
             await deleteVoucher({ id: voucher.id, fileId: voucher.fileId })
           }
-          ElMessage.success('已清理上传的凭证')
+          // 循环删除合同
+          for (const contract of contracts.value) {
+            await deleteContract({ id: contract.id, fileId: contract.fileId })
+          }
+          // 循环删除预览图
+          for (const preview of previews.value) {
+            await deletePreview({ id: preview.id, fileId: preview.fileId })
+          }
+          ElMessage.success('已清理上传的文件')
         } catch (err) {
-          console.error('清理凭证失败:', err)
-          ElMessage.error('部分凭证清理失败，请手动检查')
+          console.error('清理文件失败:', err)
+          ElMessage.error('部分文件清理失败，请手动检查')
         } finally {
           loading.close()
         }
@@ -2500,10 +3153,14 @@ const resetForm = () => {
     staffCount: null,
     amount: '',
     desc: '',
-    isHistorical: false
+    isHistorical: false,
+    isHasContract: '否',
+    isHasPreview: '否'
   })
   costs.value = []
   vouchers.value = []
+  contracts.value = []
+  previews.value = []
   isNewClient.value = true
 }
 
@@ -2537,11 +3194,6 @@ const estimatedProfit = computed(() => {
 const profitMargin = computed(() => {
   if (totalIncome.value === 0) return '0.00';
   return ((estimatedProfit.value / totalIncome.value) * 100).toFixed(2);
-});
-
-const costRate = computed(() => {
-  if (totalIncome.value === 0) return '0.00';
-  return ((totalCost.value / totalIncome.value) * 100).toFixed(2);
 });
 
 // 成本构成分析数据
@@ -2634,6 +3286,11 @@ const validateProjectForm = (checkVouchers = true) => {
       if (colStart > colEnd) return '回款周期开始日期不能晚于结束日期';
     }
   }
+
+  if (checkVouchers) {
+    if (form.isHasContract === '是' && contracts.value.length === 0) return '请上传至少一个合同文件';
+    if (form.isHasPreview === '是' && previews.value.length === 0) return '请上传至少一张预览图';
+  }
   
   if (!form.client) return '请输入客户名称';
   if (!isSafeInput(form.client)) return '客户名称包含非法字符';
@@ -2670,7 +3327,6 @@ const validateProjectForm = (checkVouchers = true) => {
 
 // 资金同步状态
 const syncingFinancials = ref(false);
-const syncingAllHistory = ref(false);
 
 /**
  * 同步当前项目资金数据
@@ -2703,47 +3359,6 @@ const handleSyncFinancials = async () => {
   } finally {
     syncingFinancials.value = false;
   }
-};
-
-/**
- * 同步所有历史项目资金数据
- */
-const handleSyncAllHistory = async () => {
-  import('element-plus').then(({ ElMessageBox }) => {
-    ElMessageBox.confirm(
-      '此操作将重新计算所有项目的资金数据（未收、应付、已付），是否继续？',
-      '同步确认',
-      {
-        confirmButtonText: '开始同步',
-        cancelButtonText: '取消',
-        type: 'info',
-        customClass: 'custom-message-box'
-      }
-    ).then(async () => {
-      syncingAllHistory.value = true;
-      try {
-        const res = await syncHistoryFinancials({});
-        if (res.code === 0) {
-          const { successCount, failCount } = res.data;
-          ElMessageBox.alert(
-            `同步完成！成功: ${successCount} 个，失败: ${failCount} 个`,
-            '同步结果',
-            { confirmButtonText: '确定', customClass: 'custom-message-box' }
-          );
-          await loadProjects();
-        } else {
-          throw new Error(res.message);
-        }
-      } catch (err) {
-        console.error('同步历史数据失败:', err);
-        import('element-plus').then(({ ElMessage }) => {
-          ElMessage.error('同步失败: ' + err.message);
-        });
-      } finally {
-        syncingAllHistory.value = false;
-      }
-    }).catch(() => {});
-  });
 };
 
 /**
@@ -2795,6 +3410,8 @@ const handleSaveProject = async () => {
       receivedAmount: Number(form.receivedAmount),
       desc: form.desc,
       isHistorical: !!form.isHistorical,
+      isHasContract: form.isHasContract,
+      isHasPreview: form.isHasPreview,
       costs: costs.value.map(item => ({
         category: item.category,
         supplier: item.supplier,
@@ -2842,7 +3459,9 @@ const handleSaveProject = async () => {
     } else {
       // 创建项目
       res = await createProject({
-        ...projectData
+        ...projectData,
+        contractFileIds: contracts.value.map(c => c.id),
+        previewFileIds: previews.value.map(p => p.id)
       })
     }
     
@@ -2869,6 +3488,24 @@ const handleSaveProject = async () => {
         const voucherIds = vouchers.value.map(v => v.id)
         await updateVouchersProject({
           voucherIds,
+          projectId
+        })
+      }
+
+      // 4. 关联合同
+      if (contracts.value.length > 0) {
+        const fileIds = contracts.value.map(c => c.id)
+        await updateContractsProject({
+          fileIds,
+          projectId
+        })
+      }
+
+      // 5. 关联预览图
+      if (previews.value.length > 0) {
+        const fileIds = previews.value.map(p => p.id)
+        await updatePreviewsProject({
+          fileIds,
           projectId
         })
       }
@@ -2924,9 +3561,253 @@ const handleSaveProject = async () => {
 }
 
 /**
- * 处理文件上传
+ * 处理合同上传
  */
-const handleFileUpload = async (event) => {
+const handleContractUpload = async (event) => {
+  const error = validateProjectForm(false);
+  if (error) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning(`请先完善项目基础信息：${error}`)
+    })
+    event.target.value = ''
+    return
+  }
+
+  const files = Array.from(event.target.files)
+  if (!files.length) return
+
+  if (contracts.value.length + files.length > 10) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('合同文件最多只能上传 10 个')
+    })
+    return
+  }
+
+  uploadingContract.value = true
+  
+  try {
+    const uploadPromises = files.map(async (file) => {
+      try {
+        // 校验类型
+        const isPdf = file.type === 'application/pdf';
+        const isImage = file.type.startsWith('image/');
+        if (!isPdf && !isImage) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.error(`文件 ${file.name} 格式不支持，仅支持图片或PDF`)
+          })
+          return null
+        }
+
+        // 校验大小
+        if (isPdf && file.size > 10 * 1024 * 1024) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.error(`PDF文件 ${file.name} 超过10MB限制`)
+          })
+          return null
+        }
+        if (isImage && file.size > 5 * 1024 * 1024) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.error(`图片文件 ${file.name} 超过5MB限制`)
+          })
+          return null
+        }
+
+        let uploadFile = file;
+        if (isImage) {
+          uploadFile = await compressImage(file);
+        }
+
+        const formData = new FormData()
+        formData.append('file', uploadFile, file.name)
+        formData.append('type', 'contract')
+        formData.append('projectId', selectedProjectId.value || 'TEMP_UNASSOCIATED')
+        formData.append('projectName', form.name)
+        
+        const response = await axios.post(`${apiDomain}/contractPreviewService`, formData, {
+          timeout: 60000,
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        
+        if (response.data.code === 0) {
+          return {
+            id: response.data.data.id,
+            fileId: response.data.data.fileId,
+            url: response.data.data.url,
+            name: response.data.data.name,
+            type: response.data.data.type
+          }
+        } else {
+          throw new Error(response.data.message)
+        }
+      } catch (err) {
+        console.error(`上传合同 ${file.name} 失败:`, err)
+        return null
+      }
+    })
+
+    const results = await Promise.all(uploadPromises)
+    const successfulUploads = results.filter(Boolean)
+    if (successfulUploads.length > 0) {
+      contracts.value.push(...successfulUploads)
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.success(`成功上传 ${successfulUploads.length} 个合同文件`)
+      })
+    }
+  } catch (error) {
+    console.error('上传合同失败:', error)
+  } finally {
+    uploadingContract.value = false
+    event.target.value = ''
+  }
+}
+
+/**
+ * 处理预览图上传
+ */
+const handlePreviewUpload = async (event) => {
+  const error = validateProjectForm(false);
+  if (error) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning(`请先完善项目基础信息：${error}`)
+    })
+    event.target.value = ''
+    return
+  }
+
+  const files = Array.from(event.target.files)
+  if (!files.length) return
+
+  if (previews.value.length + files.length > 4) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('预览图最多只能上传 4 张')
+    })
+    return
+  }
+
+  uploadingPreview.value = true
+  
+  try {
+    const uploadPromises = files.map(async (file) => {
+      try {
+        if (!file.type.startsWith('image/')) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.error(`文件 ${file.name} 不是图片格式`)
+          })
+          return null
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.error(`图片 ${file.name} 超过5MB限制`)
+          })
+          return null
+        }
+
+        const compressedFile = await compressImage(file);
+
+        const formData = new FormData()
+        formData.append('file', compressedFile, file.name)
+        formData.append('type', 'preview')
+        formData.append('projectId', selectedProjectId.value || 'TEMP_UNASSOCIATED')
+        formData.append('projectName', form.name)
+        
+        const response = await axios.post(`${apiDomain}/contractPreviewService`, formData, {
+          timeout: 60000,
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        
+        if (response.data.code === 0) {
+          return {
+            id: response.data.data.id,
+            fileId: response.data.data.fileId,
+            url: response.data.data.url,
+            name: response.data.data.name,
+            type: response.data.data.type
+          }
+        } else {
+          throw new Error(response.data.message)
+        }
+      } catch (err) {
+        console.error(`上传预览图 ${file.name} 失败:`, err)
+        return null
+      }
+    })
+
+    const results = await Promise.all(uploadPromises)
+    const successfulUploads = results.filter(Boolean)
+    if (successfulUploads.length > 0) {
+      previews.value.push(...successfulUploads)
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.success(`成功上传 ${successfulUploads.length} 张预览图`)
+      })
+    }
+  } catch (error) {
+    console.error('上传预览图失败:', error)
+  } finally {
+    uploadingPreview.value = false
+    event.target.value = ''
+  }
+}
+
+/**
+ * 删除合同
+ */
+const removeContract = async (index) => {
+  const item = contracts.value[index]
+  try {
+    await deleteContract({ id: item.id, fileId: item.fileId })
+    contracts.value.splice(index, 1)
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.success('合同文件已删除')
+    })
+  } catch (err) {
+    console.error('删除合同失败:', err)
+  }
+}
+
+/**
+ * 删除预览图
+ */
+const removePreview = async (index) => {
+  const item = previews.value[index]
+  try {
+    await deletePreview({ id: item.id, fileId: item.fileId })
+    previews.value.splice(index, 1)
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.success('预览图已删除')
+    })
+  } catch (err) {
+    console.error('删除预览图失败:', err)
+  }
+}
+
+/**
+ * 预览合同
+ */
+const handleContractPreview = (index) => {
+  const item = contracts.value[index]
+  if (item.type === 'application/pdf') {
+    window.open(item.url, '_blank')
+  } else {
+    previewList.value = contracts.value.filter(c => c.type !== 'application/pdf').map(c => c.url)
+    const currentUrl = item.url
+    initialIndex.value = previewList.value.indexOf(currentUrl)
+    previewVisible.value = true
+  }
+}
+
+/**
+ * 预览预览图
+ */
+const handlePreviewImagePreview = (index) => {
+  previewList.value = previews.value.map(p => p.url)
+  initialIndex.value = index
+  previewVisible.value = true
+}
+/**
+ * 上传凭证
+ */
+const handleVoucherUpload = async (event) => {
   // 0. 拦截校验：必须先填写基础信息和成本
   const error = validateProjectForm(false);
   if (error) {
@@ -3519,16 +4400,44 @@ const handleLogout = () => {
   height: 6px;
   border-radius: 50%;
   transition: all 0.3s;
+  background-color: #9ca3af; /* 默认灰色 */
 }
 
-.is-active .status-dot {
+/* 谈判中 - 蓝色 */
+.is-negotiating .status-dot {
+  background-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+.is-negotiating.status-badge-trigger:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* 施工中 - 绿色 */
+.is-constructing .status-dot {
   background-color: #52ee8a;
   box-shadow: 0 0 8px rgba(82, 238, 138, 0.4);
 }
+.is-constructing.status-badge-trigger:hover {
+  border-color: rgba(82, 238, 138, 0.3);
+}
 
-.is-pending .status-dot {
+/* 结账中 - 橙色 */
+.is-settling .status-dot {
   background-color: #f59e0b;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+.is-settling.status-badge-trigger:hover {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* 已结清 - 灰色 */
+.is-closed .status-dot {
+  background-color: #9ca3af;
+  box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
+}
+.is-closed.status-badge-trigger {
+  cursor: not-allowed;
+  opacity: 0.8;
 }
 
 .status-text {
@@ -3616,5 +4525,86 @@ const handleLogout = () => {
 /* 隐藏默认图标 */
 .status-dropdown-menu :deep(.el-dropdown-menu__item i) {
   display: none !important;
+}
+
+/* 高级筛选栏自定义样式 */
+.custom-filter-input, .custom-filter-select, .custom-filter-date {
+  :deep(.el-input__wrapper), :deep(.el-select__wrapper), :deep(.el-input) {
+    background-color: #0e0e0f !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    height: 36px !important;
+    transition: all 0.2s;
+    
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    &.is-focus, &.is-focused {
+      border-color: #52ee8a !important;
+      box-shadow: 0 0 0 1px #52ee8a !important;
+    }
+  }
+  
+  :deep(.el-input__inner), :deep(.el-select__placeholder), :deep(.el-select__selected-item) {
+    color: #e5e2e3 !important;
+    font-size: 12px !important;
+    
+    &::placeholder {
+      color: #525252 !important;
+    }
+  }
+}
+
+.custom-filter-date {
+  width: 100% !important;
+  :deep(.el-input__wrapper) {
+    background-color: #0e0e0f !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    height: 36px !important;
+    transition: all 0.2s;
+    
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    &.is-active {
+      border-color: #52ee8a !important;
+      box-shadow: 0 0 0 1px #52ee8a !important;
+    }
+  }
+  
+  :deep(.el-range-input) {
+    background-color: transparent !important;
+    color: #e5e2e3 !important;
+    font-size: 12px !important;
+  }
+  
+  :deep(.el-range-separator) {
+    color: #525252 !important;
+  }
+
+  :deep(.el-range__icon), :deep(.el-range__close-icon) {
+    color: #525252 !important;
+  }
+}
+
+/* 调整 Element Plus 下拉框在深色模式下的样式 */
+:deep(.el-select-dropdown__item) {
+  font-size: 12px !important;
+  padding: 8px 12px !important;
+}
+
+:deep(.el-select-dropdown__item.is-hovering) {
+  background-color: rgba(82, 238, 138, 0.1) !important;
+  color: #52ee8a !important;
+}
+
+:deep(.el-select-dropdown__item.is-selected) {
+  color: #52ee8a !important;
+  font-weight: bold !important;
 }
 </style>

@@ -177,7 +177,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime } = params;
+  const { id, name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -249,6 +249,9 @@ async function updateProject(params) {
     if (isHistorical !== undefined) updateData.isHistorical = isHistorical;
     if (constructionPeriod) updateData.constructionPeriod = constructionPeriod;
     if (collectionPeriod) updateData.collectionPeriod = collectionPeriod;
+    
+    if (isHasContract !== undefined) updateData.isHasContract = isHasContract;
+    if (isHasPreview !== undefined) updateData.isHasPreview = isHasPreview;
 
     // 时间节点显式更新
     if (negotiatingTime) updateData.negotiatingTime = negotiatingTime;
@@ -273,6 +276,30 @@ async function updateProject(params) {
     const financials = calculateFinancials(finalAmount, finalReceived, finalCosts);
     Object.assign(updateData, financials);
 
+    // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
+    if (oldProject.isHasContract === '是' && isHasContract === '否') {
+      console.log(`项目 ${id} 合同状态由 是 改为 否，触发清理逻辑...`);
+      try {
+        await cloud.callFunction({
+          name: 'contractPreviewService',
+          data: { action: 'deleteAllByProject', data: { projectId: id, type: 'contract' } }
+        });
+      } catch (err) {
+        console.error('清理合同文件失败:', err);
+      }
+    }
+    if (oldProject.isHasPreview === '是' && isHasPreview === '否') {
+      console.log(`项目 ${id} 预览图状态由 是 改为 否，触发清理逻辑...`);
+      try {
+        await cloud.callFunction({
+          name: 'contractPreviewService',
+          data: { action: 'deleteAllByProject', data: { projectId: id, type: 'preview' } }
+        });
+      } catch (err) {
+        console.error('清理预览图失败:', err);
+      }
+    }
+
     await db.collection('projects').doc(id).update({
       data: updateData
     });
@@ -285,11 +312,23 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod } = params;
+  const { name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, isHasContract, isHasPreview, contractFileIds, previewFileIds } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
+  }
+
+  // 合同/预览图校验
+  if (isHasContract === '是') {
+    if (!contractFileIds || !Array.isArray(contractFileIds) || contractFileIds.length === 0) {
+      return { code: 400, message: '请上传合同文件后再创建项目' };
+    }
+  }
+  if (isHasPreview === '是') {
+    if (!previewFileIds || !Array.isArray(previewFileIds) || previewFileIds.length === 0) {
+      return { code: 400, message: '请上传预览图后再创建项目' };
+    }
   }
 
   // 2. 安全校验

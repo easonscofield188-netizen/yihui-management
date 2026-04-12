@@ -45,6 +45,8 @@
 - `description` (string): 项目详细描述
 - `statusCode` (string): 项目状态标识 (对应 `system_configs` 中的 `value`)
 - `statusLabel` (string): 项目状态名称 (冗余显示)
+- `isHasContract` (string): 是否有合同 (是/否)
+- `isHasPreview` (string): 是否有预览图 (是/否)
 - `createdAt` (timestamp): 创建时间
 - `updatedAt` (timestamp): 更新时间
 
@@ -68,6 +70,22 @@
 - `uploadTime` (number): 上传时间戳
 - `createTime` (timestamp): 记录创建时间
 - `updateTime` (timestamp): 记录更新时间
+
+### 1.7 项目合同表 (`project_contracts`)
+存储项目相关的合同文件。
+- `projectId` (string): 关联的项目 ID (外键)
+- `name` (string): 文件名称
+- `fileId` (string): 腾讯云存储中的 FileID
+- `url` (string): 文件的访问 URL
+- `type` (string): 文件类型 (image/pdf)
+- `createdAt` (timestamp): 上传时间
+
+### 1.8 项目预览图表 (`project_previews`)
+存储项目效果预览图。
+- `projectId` (string): 关联的项目 ID (外键)
+- `fileId` (string): 腾讯云存储中的 FileID
+- `url` (string): 图片的访问 URL
+- `createdAt` (timestamp): 上传时间
 
 ---
 
