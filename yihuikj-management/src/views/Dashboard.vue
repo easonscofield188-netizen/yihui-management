@@ -694,7 +694,7 @@
 
                 <!-- Project Period -->
                 <div
-                  v-if="form.type === 'historical' || !isCreating"
+                  v-if="form.type !== 'historical' && !isCreating"
                   class="space-y-2"
                 >
                   <div class="flex justify-between items-center px-1">
@@ -1962,7 +1962,7 @@ const form = reactive({
   status: '',         // 项目状态
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
-  receivedAmount: 0,  // 已收账款
+  receivedAmount: null,  // 已收账款
   desc: '',           // 项目描述
   isHistorical: false, // 标识是否为历史补录项目
   isHasContract: '否', // 是否有合同
@@ -2334,16 +2334,6 @@ watch(() => form.type, (newVal) => {
     }
   }
 });
-
-// 监听项目周期变更：联动施工周期开始日期
-watch(() => form.period, (newVal) => {
-  if (form.type === 'historical' && newVal && newVal[1]) {
-    // 施工周期的开始日期默认是项目周期的结束日期
-    if (!form.constructionPeriod) {
-      form.constructionPeriod = [newVal[1], newVal[1]]
-    }
-  }
-})
 
 /**
  * 接口：查询客户名称列表
@@ -3212,6 +3202,7 @@ const resetForm = () => {
     status: 'negotiating', // 默认谈判中
     staffCount: null,
     amount: '',
+    receivedAmount: null,
     desc: '',
     isHistorical: false,
     isHasContract: '否',
@@ -3322,41 +3313,6 @@ const validateProjectForm = (checkVouchers = true) => {
     }
   }
 
-  // 历史模式：校验施工周期和回款周期
-  if (form.type !== 'historical' && form.isHistorical) {
-    if (!form.constructionPeriod || !form.constructionPeriod[0] || !form.constructionPeriod[1]) return '请选择施工周期';
-    
-    // 只有状态为“已结清”时才强制要求回款周期
-    const isClosed = form.status === 'closed';
-    if (isClosed && (!form.collectionPeriod || !form.collectionPeriod[0] || !form.collectionPeriod[1])) {
-      return '项目已结清，请选择回款周期';
-    }
-
-    // 校验日期逻辑顺序
-    const pStart = new Date(form.period[0]).setHours(0,0,0,0);
-    const pEnd = new Date(form.period[1]).setHours(0,0,0,0);
-    const conStart = new Date(form.constructionPeriod[0]).setHours(0,0,0,0);
-    const conEnd = new Date(form.constructionPeriod[1]).setHours(0,0,0,0);
-    const now = new Date().setHours(0,0,0,0);
-
-    if (pEnd > now) return '项目周期结束日期不能晚于当前日期';
-    if (pStart > pEnd) return '项目周期开始日期不能晚于结束日期';
-    
-    if (conStart < pStart) return '施工开始日期不能早于项目周期开始日期';
-    if (conEnd > pEnd) return '施工结束日期不能晚于项目周期结束日期';
-    if (conStart > conEnd) return '施工周期开始日期不能晚于结束日期';
-
-    // 如果有回款周期，校验回款周期逻辑
-    if (form.collectionPeriod && form.collectionPeriod.length === 2) {
-      const colStart = new Date(form.collectionPeriod[0]).setHours(0,0,0,0);
-      const colEnd = new Date(form.collectionPeriod[1]).setHours(0,0,0,0);
-      
-      if (colStart < conEnd) return '回款开始日期不能早于施工结束日期';
-      if (colEnd > now) return '回款结束日期不能晚于当前日期';
-      if (colStart > colEnd) return '回款周期开始日期不能晚于结束日期';
-    }
-  }
-
   if (checkVouchers) {
     if (form.isHasContract === '是' && contracts.value.length === 0) return '请上传至少一个合同文件';
     if (form.isHasPreview === '是' && previews.value.length === 0) return '请上传至少一张预览图';
@@ -3376,7 +3332,9 @@ const validateProjectForm = (checkVouchers = true) => {
   if (!form.amount) return '请输入订单金额';
   if (isNaN(parseFloat(form.amount))) return '订单金额必须为数字';
 
-  if (parseFloat(form.receivedAmount) > parseFloat(form.amount)) return '已收账款不可超过订单金额';
+  const received = parseFloat(form.receivedAmount) || 0;
+  const total = parseFloat(form.amount) || 0;
+  if (received > total) return '已收账款不可超过订单金额';
 
   if (!form.desc) return '请输入项目描述';
   if (!isSafeInput(form.desc)) return '项目描述包含非法字符';
@@ -3498,11 +3456,12 @@ const handleSaveProject = async () => {
       projectData.collectionPeriod = null;
       projectData.negotiatingTime = null;
     } else if (isCreating.value) {
-      // 新建项目模式：项目周期默认为开始日期当天
+      // 新建项目模式：项目周期开始日期为选择日期，结束日期为系统当前日期
       const startDateStr = form.startDate || new Date().toISOString().split('T')[0];
       const date = new Date(startDateStr).toISOString();
       const today = startDateStr;
-      projectData.period = [today, today];
+      const systemToday = new Date().toISOString().split('T')[0];
+      projectData.period = [today, systemToday];
       projectData.negotiatingTime = date; // 记录项目周期开始时间
       projectData.createTime = new Date().toISOString();
       
@@ -3523,16 +3482,24 @@ const handleSaveProject = async () => {
       }
     } else {
       // 历史模式或编辑模式
-      projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+      // 常规项目编辑模式下，不发送项目类型及三大周期，由后端逻辑自动处理
+      if (form.type !== 'historical' && isEditMode.value) {
+        delete projectData.type;
+        delete projectData.period;
+        delete projectData.constructionPeriod;
+        delete projectData.collectionPeriod;
+      } else {
+        projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+        
+        if (form.isHistorical) {
+          projectData.constructionPeriod = (form.constructionPeriod && form.constructionPeriod[0] && form.constructionPeriod[1]) ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
+          projectData.collectionPeriod = (form.collectionPeriod && form.collectionPeriod[0] && form.collectionPeriod[1]) ? [new Date(form.collectionPeriod[0]).toISOString(), new Date(form.collectionPeriod[1]).toISOString()] : [];
+        }
+      }
       
       // 如果是编辑活跃项目，确保保留或更新开始时间
       if (form.startDate) {
         projectData.negotiatingTime = new Date(form.startDate).toISOString();
-      }
-
-      if (form.isHistorical) {
-        projectData.constructionPeriod = (form.constructionPeriod && form.constructionPeriod[0] && form.constructionPeriod[1]) ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
-        projectData.collectionPeriod = (form.collectionPeriod && form.collectionPeriod[0] && form.collectionPeriod[1]) ? [new Date(form.collectionPeriod[0]).toISOString(), new Date(form.collectionPeriod[1]).toISOString()] : [];
       }
     }
     
