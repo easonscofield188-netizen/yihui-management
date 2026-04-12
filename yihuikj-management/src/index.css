@@ -132,7 +132,10 @@
 }
 
 .el-input.is-disabled .el-input__wrapper,
-.el-input.is-disabled .el-input__inner {
+.el-input.is-disabled .el-input__inner,
+.el-input.is-disabled .el-input__icon,
+.el-input.is-disabled .el-input__suffix,
+.el-input.is-disabled .el-input__prefix {
   cursor: not-allowed !important;
   background-color: #0e0e0f !important;
 }
@@ -172,7 +175,17 @@
 .custom-input.is-disabled .el-input__wrapper,
 .custom-date-picker.is-disabled .el-input__wrapper,
 .custom-select.is-disabled .el-select__wrapper,
-.custom-number-input.is-disabled .el-input__wrapper {
+.custom-number-input.is-disabled .el-input__wrapper,
+.custom-input.is-disabled .el-input__inner,
+.custom-date-picker.is-disabled .el-input__inner,
+.custom-select.is-disabled .el-select__inner,
+.custom-number-input.is-disabled .el-input__inner,
+.is-disabled .el-input__icon,
+.is-disabled .el-range__icon,
+.is-disabled .el-range-separator,
+.is-disabled .el-select__caret,
+.is-disabled .el-input__suffix,
+.is-disabled .el-input__prefix {
   cursor: not-allowed !important;
   background-color: #0e0e0f !important;
 }
@@ -294,6 +307,10 @@
   cursor: pointer !important;
 }
 
+.custom-select.is-disabled .el-select__wrapper {
+  cursor: not-allowed !important;
+}
+
 /* Global cursor helpers */
 .cursor-pointer, 
 .el-button, 
@@ -304,9 +321,15 @@ button,
   cursor: pointer !important;
 }
 
+.is-disabled,
+.is-disabled *,
 .el-button.is-disabled,
+.el-button.is-disabled *,
 button:disabled,
+button:disabled *,
 .el-switch.is-disabled,
-.is-disabled-cursor .el-select__wrapper {
+.el-switch.is-disabled *,
+.is-disabled-cursor,
+.is-disabled-cursor * {
   cursor: not-allowed !important;
 }

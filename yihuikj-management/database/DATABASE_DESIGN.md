@@ -35,7 +35,8 @@
 存储园林景观项目的核心业务数据。
 - `clientId` (string): 关联的客户 ID (外键)
 - `name` (string): 项目名称
-- `type` (string): 项目类型 (historical: 补录, normal: 常规, long_term: 长期)
+- `type` (string): 项目类型 (historical: 补录, normal: 常规)
+- `completionTime` (timestamp): 补录单：完结时间
 - `client` (string): 客户单位 (冗余显示)
 - `clientRole` (string): 客户角色 (冗余显示)
 - `startDate` (string): 开始日期 (YYYY-MM-DD)

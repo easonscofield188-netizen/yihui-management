@@ -100,7 +100,7 @@
             </div>
           </div>
           <div
-            v-if="projects.length > 0 && !isCreating"
+            v-if="!isCreating"
             class="flex gap-3"
           >
             <el-button 
@@ -113,17 +113,6 @@
                 <Plus />
               </el-icon>
               新建项目
-            </el-button>
-            <el-button 
-              type="info" 
-              size="large" 
-              class="!bg-neutral-800 !text-on-surface-variant !border-white/10 !font-bold shadow-lg hover:!bg-neutral-700 hover:!text-white"
-              @click="enterHistoricalCreateMode"
-            >
-              <el-icon class="mr-2">
-                <Management />
-              </el-icon>
-              历史数据录入
             </el-button>
           </div>
           <el-button 
@@ -636,10 +625,10 @@
                     placeholder="请选择项目类型" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || form.isHistorical || isCreatingHistorical || isFieldReadOnly('type')"
+                    :disabled="isViewMode || form.type === 'historical' || isFieldReadOnly('type')"
                   >
                     <el-option 
-                      v-for="item in (form.isHistorical || isCreatingHistorical ? projectTypes : projectTypes.filter(t => t.value !== 'historical'))" 
+                      v-for="item in projectTypes" 
                       :key="item.value" 
                       :label="item.label" 
                       :value="item.value" 
@@ -670,7 +659,7 @@
 
                 <!-- Start Date (Only for New Project Mode) -->
                 <div
-                  v-if="isCreating && !isCreatingHistorical"
+                  v-if="isCreating && form.type !== 'historical'"
                   class="space-y-2"
                 >
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
@@ -685,9 +674,27 @@
                   />
                 </div>
 
+                <!-- Completion Time (Only for Historical Project) -->
+                <div
+                  v-if="form.type === 'historical'"
+                  class="space-y-2"
+                >
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">完结时间</label>
+                  <el-date-picker
+                    v-model="form.completionTime"
+                    type="date"
+                    placeholder="选择完结时间"
+                    class="!w-full custom-date-picker"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    :disabled="isViewMode || isFieldReadOnly('completionTime')"
+                    :disabled-date="disabledFutureDate"
+                  />
+                </div>
+
                 <!-- Project Period -->
                 <div
-                  v-if="!isCreating || isCreatingHistorical"
+                  v-if="form.type === 'historical' || !isCreating"
                   class="space-y-2"
                 >
                   <div class="flex justify-between items-center px-1">
@@ -724,7 +731,7 @@
 
                 <!-- Construction Period -->
                 <div
-                  v-if="form.isHistorical || isCreatingHistorical || constructionDays > 0"
+                  v-if="form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'closed'].includes(form.status)"
                   class="space-y-2"
                 >
                   <div class="flex justify-between items-center px-1">
@@ -762,7 +769,7 @@
 
                 <!-- Collection Period -->
                 <div
-                  v-if="(!form.isHistorical && collectionDays > 0) || (form.isHistorical && form.status === 'closed')"
+                  v-if="form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
                   class="space-y-2"
                 >
                   <div class="flex justify-between items-center px-1">
@@ -843,8 +850,8 @@
                     placeholder="请选择客户角色" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || !isNewClient || isFieldReadOnly('role')"
-                    :class="{ 'is-disabled-cursor': !isNewClient }"
+                    :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('role')"
+                    :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
                   >
                     <el-option 
                       v-for="item in clientRoles" 
@@ -866,8 +873,8 @@
                     placeholder="请选择客户来源" 
                     class="w-full custom-select" 
                     popper-class="custom-dropdown"
-                    :disabled="isViewMode || !isNewClient || isFieldReadOnly('clientSource')"
-                    :class="{ 'is-disabled-cursor': !isNewClient }"
+                    :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('clientSource')"
+                    :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
                   >
                     <el-option 
                       v-for="item in clientSources" 
@@ -899,6 +906,17 @@
                     placeholder="请输入总签约金额"
                     class="custom-input amount-input"
                     :disabled="isViewMode || isFieldReadOnly('amount')"
+                  />
+                </div>
+
+                <!-- Received Amount (Added here) -->
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
+                  <el-input
+                    v-model="form.receivedAmount"
+                    placeholder="请输入已收金额"
+                    class="custom-input"
+                    :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
                   />
                 </div>
 
@@ -965,15 +983,12 @@
                   </div>
                 </div>
 
-                <!-- Received Amount -->
+                <!-- Received Amount (Read-only) -->
                 <div class="space-y-2">
                   <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
-                  <el-input
-                    v-model="form.receivedAmount"
-                    placeholder="请输入已收金额"
-                    class="custom-input"
-                    :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
-                  />
+                  <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
+                    {{ Number(form.receivedAmount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                  </div>
                 </div>
 
                 <!-- Unreceived Amount -->
@@ -1588,7 +1603,7 @@
             :loading="savingProject"
             @click="handleSaveProject"
           >
-            {{ isCreatingHistorical ? '保存历史档案' : '创建新项目' }}
+            {{ form.type === 'historical' ? '保存补录档案' : '创建新项目' }}
           </el-button>
           <el-button 
             type="info" 
@@ -1761,8 +1776,6 @@ const originalProjectStatus = computed(() => {
 const isViewMode = ref(false)
 // 是否为编辑模式（针对已存在的项目）
 const isEditMode = ref(false)
-// 是否为历史数据录入模式
-const isCreatingHistorical = ref(false)
 // 当前选中的项目ID
 const selectedProjectId = ref(null)
 // 是否正在新建项目
@@ -1831,13 +1844,24 @@ const projectFilters = reactive({
 // 过滤后的项目列表
 const filteredProjects = computed(() => {
   return projects.value.filter(p => {
+    // 0. 补录单完结时间限制：完结时间 <= 当前系统时间时才展示
+    if (p.type === 'historical' && p.completionTime) {
+      const completion = new Date(p.completionTime).getTime();
+      const now = new Date().getTime();
+      if (completion > now) return false;
+    }
+
     // 1. Tab 标签过滤
     if (projectFilters.tab === 'ongoing') {
-      // 进行中：排除已竣工和已结清
-      if (p.status === 'completed' || p.status === 'closed') return false
+      // 进行中：常规项目排除已竣工和已结清；补录单始终显示（因为已通过上面的时间过滤）
+      if (p.type !== 'historical' && (p.status === 'completed' || p.status === 'closed')) {
+        return false;
+      }
     } else if (projectFilters.tab === 'completed') {
-      // 已交付：包含已竣工和已结清
-      if (p.status !== 'completed' && p.status !== 'closed') return false
+      // 已交付：常规项目包含已竣工和已结清；补录单不显示在已交付（因为它们在活跃列表中）
+      if (p.type === 'historical' || (p.status !== 'completed' && p.status !== 'closed')) {
+        return false;
+      }
     }
     
     // 2. 搜索词过滤 (项目名称或客户名称)
@@ -1931,6 +1955,7 @@ const form = reactive({
   startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
   constructionPeriod: [null, null], // 施工周期（历史模式）
   collectionPeriod: [null, null],   // 回款周期（历史模式）
+  completionTime: null, // 完结时间（补录单专用）
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
@@ -2261,10 +2286,16 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
 
 // 过滤后的项目状态列表
 const filteredProjectStatuses = computed(() => {
-  const isHistorical = isCreatingHistorical.value || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
+  const isHistorical = form.type === 'historical' || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
   if (isHistorical) {
     return projectStatuses.value.filter(s => s.value === 'settling' || s.value === 'closed')
   }
+  
+  // 常规项目新建时，禁止选择「已结清」状态
+  if (isCreating.value && form.type !== 'historical') {
+    return projectStatuses.value.filter(s => s.value !== 'closed')
+  }
+  
   return projectStatuses.value
 })
 
@@ -2291,9 +2322,22 @@ const handleCollectionPeriodChange = () => {
   // 可以在这里做一些校验
 }
 
+// 监听项目类型变更
+watch(() => form.type, (newVal) => {
+  if (newVal === 'historical') {
+    form.status = 'closed'; // 补录单默认已结清
+    form.isHistorical = true;
+  } else {
+    if (!isEditMode.value && !isViewMode.value) {
+      form.status = 'negotiating';
+      form.isHistorical = false;
+    }
+  }
+});
+
 // 监听项目周期变更：联动施工周期开始日期
 watch(() => form.period, (newVal) => {
-  if (isCreatingHistorical.value && newVal && newVal[1]) {
+  if (form.type === 'historical' && newVal && newVal[1]) {
     // 施工周期的开始日期默认是项目周期的结束日期
     if (!form.constructionPeriod) {
       form.constructionPeriod = [newVal[1], newVal[1]]
@@ -2421,6 +2465,29 @@ const isProjectClosed = computed(() => {
 
 // 计算属性：根据项目状态判断字段是否只读
 const isFieldReadOnly = (fieldName) => {
+  // 补录单特殊逻辑：项目类型和项目状态始终只读
+  if (form.type === 'historical') {
+    if (fieldName === 'type' || fieldName === 'status') {
+      return true;
+    }
+    // 其余字段均可正常修改
+    return false;
+  }
+
+  // 常规项目逻辑
+  if (!isCreating.value) {
+    // 创建成功后，项目类型和三大周期禁止编辑
+    const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
+    if (lockedFields.includes(fieldName)) {
+      return true;
+    }
+  }
+
+  // 编辑模式下，项目类型不可修改
+  if (isEditMode.value && fieldName === 'type') {
+    return true;
+  }
+
   if (!isProjectClosed.value) return false;
   
   // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账款
@@ -2824,6 +2891,7 @@ const handleViewProject = async (project) => {
     receivedAmount: project.receivedAmount || 0,
     desc: project.desc,
     isHistorical: !!project.isHistorical,
+    completionTime: project.completionTime ? new Date(project.completionTime).toISOString().split('T')[0] : null,
     isHasContract: project.isHasContract || '否',
     isHasPreview: project.isHasPreview || '否'
   })
@@ -2920,26 +2988,9 @@ const cancelEdit = () => {
 const enterCreateMode = () => {
   isViewMode.value = false
   isEditMode.value = false
-  isCreatingHistorical.value = false
   selectedProjectId.value = null
   resetForm()
   form.isHistorical = false
-  // 预加载客户列表，用于匹配已有客户
-  handleClientVisibleChange(true)
-}
-
-/**
- * 进入历史数据录入模式
- */
-const enterHistoricalCreateMode = () => {
-  isViewMode.value = false
-  isEditMode.value = false
-  isCreatingHistorical.value = true
-  selectedProjectId.value = null
-  resetForm()
-  form.status = 'settling' // 历史数据默认结账中
-  form.type = 'historical' // 历史数据默认类型为补录
-  form.isHistorical = true
   // 预加载客户列表，用于匹配已有客户
   handleClientVisibleChange(true)
 }
@@ -3065,7 +3116,15 @@ const loadProjects = async () => {
 
         const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
 
-        if (isHistorical) {
+        if (p.type === 'historical') {
+          // 补录单周期固定展示 -
+          pDays = null;
+          conDays = null;
+          colDays = null;
+          pRange = '-';
+          conRange = '-';
+          colRange = '-';
+        } else if (isHistorical) {
           // 历史补录数据直接使用保存的周期
           pDays = calculateDiffDays(p.period?.[0], p.period?.[1]);
           conDays = calculateDiffDays(p.constructionPeriod?.[0], p.constructionPeriod?.[1]);
@@ -3124,8 +3183,8 @@ const loadProjects = async () => {
           handleViewProject(projects.value[0])
         }
       } else {
-        // 如果项目列表为空，默认进入历史数据录入模式
-        enterHistoricalCreateMode()
+        // 如果项目列表为空，默认进入新建项目模式
+        enterCreateMode()
       }
     }
   } catch (err) {
@@ -3146,6 +3205,7 @@ const resetForm = () => {
     startDate: new Date().toISOString().split('T')[0],
     constructionPeriod: [null, null],
     collectionPeriod: [null, null],
+    completionTime: null,
     client: '',
     role: '',
     clientSource: '',
@@ -3244,16 +3304,26 @@ const validateProjectForm = (checkVouchers = true) => {
   if (!form.name) return '请输入项目名称';
   if (!isSafeInput(form.name)) return '项目名称包含非法字符';
   
-  // 新建项目模式：校验开始日期
-  if (isCreating.value && !isCreatingHistorical.value) {
-    if (!form.startDate) return '请选择项目开始日期';
+  if (form.type === 'historical') {
+    if (!form.completionTime) return '请选择完结时间';
+    if (new Date(form.completionTime) > new Date()) return '完结时间不能晚于当前时间';
   } else {
-    // 历史模式或编辑模式：校验项目周期
-    if (!form.period || !form.period[0] || !form.period[1]) return '请选择项目周期';
+    // 常规项目新建时，禁止选择「已结清」状态
+    if (isCreating.value && form.status === 'closed') {
+      return '常规项目新建时，禁止选择「已结清」状态';
+    }
+
+    // 新建项目模式：校验开始日期
+    if (isCreating.value) {
+      if (!form.startDate) return '请选择项目开始日期';
+    } else {
+      // 历史模式或编辑模式：校验项目周期
+      if (!form.period || !form.period[0] || !form.period[1]) return '请选择项目周期';
+    }
   }
 
   // 历史模式：校验施工周期和回款周期
-  if (isCreatingHistorical.value || form.isHistorical) {
+  if (form.type !== 'historical' && form.isHistorical) {
     if (!form.constructionPeriod || !form.constructionPeriod[0] || !form.constructionPeriod[1]) return '请选择施工周期';
     
     // 只有状态为“已结清”时才强制要求回款周期
@@ -3412,6 +3482,7 @@ const handleSaveProject = async () => {
       isHistorical: !!form.isHistorical,
       isHasContract: form.isHasContract,
       isHasPreview: form.isHasPreview,
+      completionTime: form.completionTime ? new Date(form.completionTime).toISOString() : null,
       costs: costs.value.map(item => ({
         category: item.category,
         supplier: item.supplier,
@@ -3421,19 +3492,41 @@ const handleSaveProject = async () => {
     }
 
     // 处理周期数据
-    if (isCreating.value && !isCreatingHistorical.value) {
+    if (form.type === 'historical') {
+      projectData.period = null;
+      projectData.constructionPeriod = null;
+      projectData.collectionPeriod = null;
+      projectData.negotiatingTime = null;
+    } else if (isCreating.value) {
       // 新建项目模式：项目周期默认为开始日期当天
       const startDateStr = form.startDate || new Date().toISOString().split('T')[0];
       const date = new Date(startDateStr).toISOString();
-      projectData.period = [date, date];
+      const today = startDateStr;
+      projectData.period = [today, today];
       projectData.negotiatingTime = date; // 记录项目周期开始时间
       projectData.createTime = new Date().toISOString();
+      
+      // 根据初始状态初始化其他周期
+      if (form.status === 'constructing') {
+        projectData.constructingTime = date;
+        projectData.constructionPeriod = [today, today];
+      } else if (form.status === 'completed') {
+        projectData.constructingTime = date;
+        projectData.completedTime = date;
+        projectData.constructionPeriod = [today, today];
+      } else if (form.status === 'settling') {
+        projectData.constructingTime = date;
+        projectData.completedTime = date;
+        projectData.settlingTime = date;
+        projectData.constructionPeriod = [today, today];
+        projectData.collectionPeriod = [today, today];
+      }
     } else {
       // 历史模式或编辑模式
       projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
       
       // 如果是编辑活跃项目，确保保留或更新开始时间
-      if (!isCreatingHistorical.value && form.startDate) {
+      if (form.startDate) {
         projectData.negotiatingTime = new Date(form.startDate).toISOString();
       }
 
@@ -3991,6 +4084,20 @@ const handleLogout = () => {
 </script>
 
 <style>
+/* 统一禁用状态下的鼠标样式 */
+.is-disabled, 
+.is-disabled *,
+[disabled],
+[disabled] *,
+.el-input.is-disabled .el-input__wrapper,
+.el-select.is-disabled .el-select__wrapper,
+.el-date-editor.is-disabled,
+.el-input-number.is-disabled .el-input__wrapper,
+.el-textarea.is-disabled .el-textarea__inner,
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

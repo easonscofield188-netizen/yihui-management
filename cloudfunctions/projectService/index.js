@@ -177,7 +177,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview } = params;
+  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -195,8 +195,37 @@ async function updateProject(params) {
     }
     const oldProject = projectDoc.data;
 
+    // 补录单特殊逻辑：项目类型和项目状态不可修改
+    if (oldProject.type === 'historical') {
+      if (type && type !== oldProject.type) return { code: 403, message: '补录单项目类型不可修改' };
+      if (status && status !== oldProject.status) return { code: 403, message: '补录单项目状态不可修改' };
+    }
+
+    // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
+    if (oldProject.type !== 'historical') {
+      const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
+      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
+      const illegalChanges = incomingFields.filter(field => {
+        if (!lockedFields.includes(field)) return false;
+        const newValue = params[field];
+        const oldValue = oldProject[field];
+        if (Array.isArray(newValue) || (newValue && typeof newValue === 'object')) {
+          return JSON.stringify(newValue) !== JSON.stringify(oldValue);
+        }
+        return newValue != oldValue;
+      });
+
+      if (illegalChanges.length > 0) {
+        return { 
+          code: 403, 
+          message: '常规项目创建成功后，项目类型及三大周期禁止编辑',
+          details: `非法修改了字段: ${illegalChanges.join(', ')}`
+        };
+      }
+    }
+
     // 已结清状态权限控制
-    if (oldProject.status === 'closed') {
+    if (oldProject.status === 'closed' && oldProject.type !== 'historical') {
       const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
       
@@ -247,8 +276,10 @@ async function updateProject(params) {
     
     // 历史数据相关字段
     if (isHistorical !== undefined) updateData.isHistorical = isHistorical;
-    if (constructionPeriod) updateData.constructionPeriod = constructionPeriod;
-    if (collectionPeriod) updateData.collectionPeriod = collectionPeriod;
+    if (type) updateData.type = type;
+    if (constructionPeriod !== undefined) updateData.constructionPeriod = constructionPeriod;
+    if (collectionPeriod !== undefined) updateData.collectionPeriod = collectionPeriod;
+    if (completionTime !== undefined) updateData.completionTime = completionTime;
     
     if (isHasContract !== undefined) updateData.isHasContract = isHasContract;
     if (isHasPreview !== undefined) updateData.isHasPreview = isHasPreview;
@@ -260,13 +291,45 @@ async function updateProject(params) {
     if (settlingTime) updateData.settlingTime = settlingTime;
     if (settledTime) updateData.settledTime = settledTime;
 
-    // 状态变更自动记录时间节点（仅当参数中未提供时）
+    // 状态变更自动记录时间节点及周期联动
     if (status && status !== oldProject.status) {
       const now = new Date().toISOString();
-      if (status === 'negotiating' && !negotiatingTime) updateData.negotiatingTime = now;
-      if (status === 'constructing' && !constructingTime) updateData.constructingTime = now;
-      if (status === 'completed' && !completedTime) updateData.completedTime = now;
-      if (status === 'closed' && !settledTime) updateData.settledTime = now;
+      const today = now.split('T')[0];
+      
+      if (status === 'negotiating' && !oldProject.negotiatingTime) {
+        updateData.negotiatingTime = now;
+      }
+      if (status === 'constructing') {
+        if (!oldProject.constructingTime) {
+          updateData.constructingTime = now;
+          updateData.constructionPeriod = [today, today];
+        }
+      }
+      if (status === 'completed') {
+        if (!oldProject.completedTime) {
+          updateData.completedTime = now;
+          // 锁定施工周期结束日期
+          const conStart = (oldProject.constructionPeriod && oldProject.constructionPeriod[0]) ? oldProject.constructionPeriod[0] : today;
+          updateData.constructionPeriod = [conStart, today];
+        }
+      }
+      if (status === 'settling') {
+        if (!oldProject.settlingTime) {
+          updateData.settlingTime = now;
+          updateData.collectionPeriod = [today, today];
+        }
+      }
+      if (status === 'closed') {
+        if (!oldProject.settledTime) {
+          updateData.settledTime = now;
+          // 锁定项目周期和回款周期结束日期
+          const pStart = (oldProject.period && oldProject.period[0]) ? oldProject.period[0] : today;
+          updateData.period = [pStart, today];
+          
+          const colStart = (oldProject.collectionPeriod && oldProject.collectionPeriod[0]) ? oldProject.collectionPeriod[0] : today;
+          updateData.collectionPeriod = [colStart, today];
+        }
+      }
     }
 
     // 重新计算资金
@@ -312,11 +375,23 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, isHasContract, isHasPreview, contractFileIds, previewFileIds } = params;
+  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
+  }
+
+  // 补录单特殊逻辑
+  if (type === 'historical') {
+    params.status = 'closed';
+    params.isHistorical = true;
+    if (!completionTime) return { code: 400, message: '补录单必须填写完结时间' };
+  } else {
+    // 常规项目新建时，禁止选择「已结清」状态
+    if (status === 'closed') {
+      return { code: 400, message: '常规项目新建时，禁止选择「已结清」状态' };
+    }
   }
 
   // 合同/预览图校验

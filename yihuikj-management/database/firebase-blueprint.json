@@ -38,6 +38,8 @@
         "settledTime": { "type": "string", "format": "date-time", "description": "进入结清状态的时间节点" },
         "isHasContract": { "type": "string", "description": "是否有合同 (是/否)", "enum": ["是", "否"] },
         "isHasPreview": { "type": "string", "description": "是否有预览图 (是/否)", "enum": ["是", "否"] },
+        "type": { "type": "string", "description": "项目类型 (normal: 常规, historical: 补录)" },
+        "completionTime": { "type": "string", "format": "date-time", "description": "补录单：完结时间" },
         "isHistorical": { "type": "boolean", "description": "是否为历史补录数据" },
         "constructionPeriod": { "type": "array", "description": "历史补录：施工周期日期范围" },
         "collectionPeriod": { "type": "array", "description": "历史补录：回款周期日期范围" },
