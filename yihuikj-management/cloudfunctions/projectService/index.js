@@ -254,42 +254,52 @@ async function updateProject(params) {
       }
     }
 
-    const updateData = {
+    // 订单金额修改限制逻辑
+    if (amount !== undefined && amount != oldProject.amount) {
+      const editCount = oldProject.amountEditCount || 0;
+      if (editCount >= 1) {
+        return { code: 403, message: '订单金额在创建后仅允许修改一次，当前已达到修改上限' };
+      }
+      updateData.amountEditCount = editCount + 1;
+    }
+
+    const updateDataFinal = {
+      ...updateData,
       updateTime: db.serverDate()
     };
 
-    if (name) updateData.name = name;
-    if (period) updateData.period = period;
-    if (client) updateData.client = client;
-    if (role) updateData.role = role;
-    if (staffCount !== undefined) updateData.staffCount = staffCount;
-    if (amount !== undefined) updateData.amount = amount;
+    if (name) updateDataFinal.name = name;
+    if (period) updateDataFinal.period = period;
+    if (client) updateDataFinal.client = client;
+    if (role) updateDataFinal.role = role;
+    if (staffCount !== undefined) updateDataFinal.staffCount = staffCount;
+    if (amount !== undefined) updateDataFinal.amount = amount;
     if (receivedAmount !== undefined) {
       if (receivedAmount > (amount || oldProject.amount)) {
         return { code: 400, message: '已收账款不可超过订单金额' };
       }
-      updateData.receivedAmount = receivedAmount;
+      updateDataFinal.receivedAmount = receivedAmount;
     }
-    if (desc !== undefined) updateData.desc = desc;
-    if (costs) updateData.costs = costs;
-    if (status) updateData.status = status;
+    if (desc !== undefined) updateDataFinal.desc = desc;
+    if (costs) updateDataFinal.costs = costs;
+    if (status) updateDataFinal.status = status;
     
     // 历史数据相关字段
-    if (isHistorical !== undefined) updateData.isHistorical = isHistorical;
-    if (type) updateData.type = type;
-    if (constructionPeriod !== undefined) updateData.constructionPeriod = constructionPeriod;
-    if (collectionPeriod !== undefined) updateData.collectionPeriod = collectionPeriod;
-    if (completionTime !== undefined) updateData.completionTime = completionTime;
+    if (isHistorical !== undefined) updateDataFinal.isHistorical = isHistorical;
+    if (type) updateDataFinal.type = type;
+    if (constructionPeriod !== undefined) updateDataFinal.constructionPeriod = constructionPeriod;
+    if (collectionPeriod !== undefined) updateDataFinal.collectionPeriod = collectionPeriod;
+    if (completionTime !== undefined) updateDataFinal.completionTime = completionTime;
     
-    if (isHasContract !== undefined) updateData.isHasContract = isHasContract;
-    if (isHasPreview !== undefined) updateData.isHasPreview = isHasPreview;
+    if (isHasContract !== undefined) updateDataFinal.isHasContract = isHasContract;
+    if (isHasPreview !== undefined) updateDataFinal.isHasPreview = isHasPreview;
 
     // 时间节点显式更新
-    if (negotiatingTime) updateData.negotiatingTime = negotiatingTime;
-    if (constructingTime) updateData.constructingTime = constructingTime;
-    if (completedTime) updateData.completedTime = completedTime;
-    if (settlingTime) updateData.settlingTime = settlingTime;
-    if (settledTime) updateData.settledTime = settledTime;
+    if (negotiatingTime) updateDataFinal.negotiatingTime = negotiatingTime;
+    if (constructingTime) updateDataFinal.constructingTime = constructingTime;
+    if (completedTime) updateDataFinal.completedTime = completedTime;
+    if (settlingTime) updateDataFinal.settlingTime = settlingTime;
+    if (settledTime) updateDataFinal.settledTime = settledTime;
 
     // 状态变更自动记录时间节点及周期联动 (仅针对常规项目)
     if (status && status !== oldProject.status && oldProject.type !== 'historical') {
@@ -297,37 +307,37 @@ async function updateProject(params) {
       const today = now.split('T')[0];
       
       if (status === 'negotiating' && !oldProject.negotiatingTime) {
-        updateData.negotiatingTime = now;
+        updateDataFinal.negotiatingTime = now;
       }
       if (status === 'constructing') {
         if (!oldProject.constructingTime) {
-          updateData.constructingTime = now;
-          updateData.constructionPeriod = [today, today];
+          updateDataFinal.constructingTime = now;
+          updateDataFinal.constructionPeriod = [today, today];
         }
       }
       if (status === 'completed') {
         if (!oldProject.completedTime) {
-          updateData.completedTime = now;
+          updateDataFinal.completedTime = now;
           // 锁定施工周期结束日期
           const conStart = (oldProject.constructionPeriod && oldProject.constructionPeriod[0]) ? oldProject.constructionPeriod[0] : today;
-          updateData.constructionPeriod = [conStart, today];
+          updateDataFinal.constructionPeriod = [conStart, today];
         }
       }
       if (status === 'settling') {
         if (!oldProject.settlingTime) {
-          updateData.settlingTime = now;
-          updateData.collectionPeriod = [today, today];
+          updateDataFinal.settlingTime = now;
+          updateDataFinal.collectionPeriod = [today, today];
         }
       }
       if (status === 'closed') {
         if (!oldProject.settledTime) {
-          updateData.settledTime = now;
+          updateDataFinal.settledTime = now;
           // 锁定项目周期和回款周期结束日期
           const pStart = (oldProject.period && oldProject.period[0]) ? oldProject.period[0] : today;
-          updateData.period = [pStart, today];
+          updateDataFinal.period = [pStart, today];
           
           const colStart = (oldProject.collectionPeriod && oldProject.collectionPeriod[0]) ? oldProject.collectionPeriod[0] : today;
-          updateData.collectionPeriod = [colStart, today];
+          updateDataFinal.collectionPeriod = [colStart, today];
         }
       }
     }
@@ -337,7 +347,7 @@ async function updateProject(params) {
     const finalReceived = receivedAmount !== undefined ? receivedAmount : (oldProject.receivedAmount || 0);
     const finalCosts = costs || oldProject.costs || [];
     const financials = calculateFinancials(finalAmount, finalReceived, finalCosts);
-    Object.assign(updateData, financials);
+    Object.assign(updateDataFinal, financials);
 
     // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
     if (oldProject.isHasContract === '是' && isHasContract === '否') {
@@ -364,7 +374,7 @@ async function updateProject(params) {
     }
 
     await db.collection('projects').doc(id).update({
-      data: updateData
+      data: updateDataFinal
     });
 
     return { code: 0, message: '更新成功' };
@@ -430,6 +440,7 @@ async function createProject(params) {
     const data = {
       ...params,
       receivedAmount: received,
+      amountEditCount: 0, // 初始化修改次数为0
       ...financials,
       createTime: db.serverDate(),
       updateTime: db.serverDate()

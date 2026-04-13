@@ -48,6 +48,7 @@
 - `statusLabel` (string): 项目状态名称 (冗余显示)
 - `isHasContract` (string): 是否有合同 (是/否)
 - `isHasPreview` (string): 是否有预览图 (是/否)
+- `amountEditCount` (number): 订单金额修改次数 (创建成功后最多允许修改一次)
 - `createdAt` (timestamp): 创建时间
 - `updatedAt` (timestamp): 更新时间
 

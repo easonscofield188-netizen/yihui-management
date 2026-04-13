@@ -1735,7 +1735,59 @@
               </div>
             </div>
 
-            <div class="rounded-xl overflow-hidden aspect-square relative group border border-white/5 flex flex-col items-center justify-center bg-surface-container-high">
+            <!-- Project Preview Carousel or Placeholder -->
+            <div 
+              v-if="previews.length > 0" 
+              class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 relative group shadow-2xl aspect-square preview-carousel"
+            >
+              <el-carousel 
+                height="100%" 
+                arrow="hover" 
+                :autoplay="true" 
+                @change="handleCarouselChange"
+                class="h-full"
+              >
+                <el-carousel-item 
+                  v-for="(p, idx) in previews" 
+                  :key="p.id || idx"
+                >
+                  <img 
+                    :src="p.url" 
+                    class="w-full h-full object-cover opacity-80" 
+                    referrerPolicy="no-referrer"
+                  >
+                </el-carousel-item>
+              </el-carousel>
+              
+              <!-- Gradient Overlay -->
+              <div class="absolute inset-0 bg-gradient-to-t from-surface-container-high via-transparent to-transparent pointer-events-none z-10" />
+              
+              <!-- Bottom Info -->
+              <div class="absolute bottom-6 left-6 z-20">
+                <p class="text-[10px] text-primary uppercase tracking-[0.3em] font-bold mb-1">
+                  方案预览
+                </p>
+                <h4 class="text-sm font-bold text-on-surface">
+                  {{ form.name || '项目预览图' }} ({{ currentCarouselIndex + 1 }}/{{ previews.length }})
+                </h4>
+              </div>
+              
+              <!-- Fullscreen Button -->
+              <button 
+                class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-all z-20"
+                title="全屏查看"
+                @click="handlePreviewImagePreview(currentCarouselIndex)"
+              >
+                <el-icon size="20">
+                  <FullScreen />
+                </el-icon>
+              </button>
+            </div>
+
+            <div 
+              v-else 
+              class="rounded-xl overflow-hidden aspect-square relative group border border-white/5 flex flex-col items-center justify-center bg-surface-container-high"
+            >
               <div class="absolute inset-0 bg-neutral-900/40 flex flex-col items-center justify-center gap-4">
                 <div class="w-24 h-24 rounded-full border-2 border-dashed border-primary/20 flex items-center justify-center relative">
                   <el-icon
@@ -1862,7 +1914,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -1888,10 +1940,14 @@ import {
   Check,
   ArrowLeft,
   ArrowRight,
+  FullScreen,
 } from '@element-plus/icons-vue'
 
 // 获取API域名
 const apiDomain = import.meta.env.VITE_TCB_BASE_URL || ''
+
+// 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
+const isLoadingProject = ref(false)
 
 // 基础项目信息折叠状态
 const isBasicInfoCollapsed = ref(false)
@@ -1998,6 +2054,8 @@ const isViewMode = ref(false)
 const isEditMode = ref(false)
 // 当前选中的项目ID
 const selectedProjectId = ref(null)
+// 临时项目ID，用于新建项目时关联文件
+const currentTempId = ref(`TEMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
 // 是否正在新建项目
 const isCreating = computed(() => !selectedProjectId.value && !isViewMode.value && !isEditMode.value)
 // 禁用未来日期：补录单据的结束时间不能晚于当前日期
@@ -2203,7 +2261,23 @@ const form = reactive({
   desc: '',           // 项目描述
   isHistorical: false, // 标识是否为历史补录项目
   isHasContract: '否', // 是否有合同
-  isHasPreview: '否'   // 是否有预览图
+  isHasPreview: '否',   // 是否有预览图
+  amountEditCount: 0   // 订单金额修改次数
+})
+
+// 监听订单金额修改，在第一次修改时提醒用户
+watch(() => form.amount, (newVal, oldVal) => {
+  if (isLoadingProject.value) return // 加载中不触发提醒
+  // 仅在编辑模式、且尚未修改过金额、且新旧值不同时提醒
+  if (isEditMode.value && form.amountEditCount === 0 && oldVal !== undefined && oldVal !== '' && newVal !== oldVal) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning({
+        message: '注意：项目创建成功后，订单金额仅允许修改一次。本次修改保存后，该字段将无法再次编辑。',
+        duration: 5000,
+        showClose: true
+      })
+    })
+  }
 })
 
 // 项目合同列表
@@ -2465,6 +2539,7 @@ const collectionDays = computed(() => {
 
 // 监听是否有合同切换
 watch(() => form.isHasContract, async (newVal, oldVal) => {
+  if (isLoadingProject.value) return // 加载中不触发清理逻辑
   if (newVal === '否' && oldVal === '是') {
     if (contracts.value.length > 0) {
       try {
@@ -2473,11 +2548,12 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
             await ElMessageBox.confirm('切换为“否”将自动删除已上传的所有合同文件，是否继续？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'warning'
+              type: 'warning',
+              customClass: 'custom-message-box'
             })
             
             // 调用清理接口
-            const projectId = selectedProjectId.value || 'TEMP_UNASSOCIATED'
+            const projectId = selectedProjectId.value || currentTempId.value
             await axios.post(`${apiDomain}/contractPreviewService`, {
               action: 'deleteAllByProject',
               data: { projectId, type: 'contract' }
@@ -2498,6 +2574,7 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
 
 // 监听是否有预览图切换
 watch(() => form.isHasPreview, async (newVal, oldVal) => {
+  if (isLoadingProject.value) return // 加载中不触发清理逻辑
   if (newVal === '否' && oldVal === '是') {
     if (previews.value.length > 0) {
       try {
@@ -2506,11 +2583,12 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
             await ElMessageBox.confirm('切换为“否”将自动删除已上传的所有预览图，是否继续？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'warning'
+              type: 'warning',
+              customClass: 'custom-message-box'
             })
             
             // 调用清理接口
-            const projectId = selectedProjectId.value || 'TEMP_UNASSOCIATED'
+            const projectId = selectedProjectId.value || currentTempId.value
             await axios.post(`${apiDomain}/contractPreviewService`, {
               action: 'deleteAllByProject',
               data: { projectId, type: 'preview' }
@@ -2716,6 +2794,11 @@ const isFieldReadOnly = (fieldName) => {
     if (lockedFields.includes(fieldName)) {
       return true;
     }
+
+    // 订单金额修改限制：创建成功后最多允许修改一次
+    if (fieldName === 'amount' && form.amountEditCount >= 1) {
+      return true;
+    }
   }
 
   // 编辑模式下，项目类型不可修改
@@ -2769,6 +2852,7 @@ const previewInputRef = ref(null)
 const previewVisible = ref(false)
 const initialIndex = ref(0)
 const previewList = ref([])
+const currentCarouselIndex = ref(0)
 
 /**
  * 处理图片预览
@@ -2780,22 +2864,43 @@ const handlePreview = (index) => {
 }
 
 /**
+ * 轮播图切换回调
+ */
+const handleCarouselChange = (index) => {
+  currentCarouselIndex.value = index
+}
+
+/**
  * 使用 compressorjs 三方库实现图片压缩
  */
 const compressImage = (file) => {
   return new Promise((resolve) => {
+    // 基本校验
+    if (!file || file.size === 0) {
+      resolve(file);
+      return;
+    }
+
+    // 仅处理图片类型
+    if (!file.type || !file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
     new Compressor(file, {
-      maxWidth: 600, // 最大宽度
-      maxHeight: 600, // 最大高度
-      quality: 0.6, // 压缩质量（0-1）
-      mimeType: file.type, // 保持原文件类型
+      maxWidth: 1920, // 提高最大宽度到 Full HD
+      maxHeight: 1920, // 提高最大高度
+      quality: 0.8, // 提高压缩质量到 0.8
+      mimeType: file.type || 'image/jpeg', // 确保有有效的 mimeType
+      checkOrientation: true, // 自动修正图片方向
       success: (compressedBlob) => {
         // 压缩成功，返回压缩后的 Blob
         resolve(compressedBlob)
       },
       error: (err) => {
-        // 压缩失败，返回原文件
-        console.error('图片压缩失败:', err.message || err)
+        // 压缩失败（如 HEIC 格式或损坏的图片），返回原文件
+        // 避免输出过于频繁的错误日志，改为警告
+        console.warn('图片压缩跳过 (可能格式不支持或文件损坏):', err.message || err)
         resolve(file)
       }
     })
@@ -3052,7 +3157,19 @@ const handleDeleteProject = (project) => {
         // 1. 删除项目关联的所有凭证（云存储文件 + 数据库记录）
         await deleteVouchersByProject({ projectId: project.id })
         
-        // 2. 删除项目本身
+        // 2. 删除项目关联的所有合同文件
+        await axios.post(`${apiDomain}/contractPreviewService`, {
+          action: 'deleteAllByProject',
+          data: { projectId: project.id, type: 'contract' }
+        })
+
+        // 3. 删除项目关联的所有预览图
+        await axios.post(`${apiDomain}/contractPreviewService`, {
+          action: 'deleteAllByProject',
+          data: { projectId: project.id, type: 'preview' }
+        })
+
+        // 4. 删除项目本身
         const res = await deleteProject({ id: project.id })
         
         if (res.code === 0) {
@@ -3091,6 +3208,7 @@ const handleDeleteProject = (project) => {
 const handleViewProject = async (project) => {
   if (!project) return
   
+  isLoadingProject.value = true
   isViewMode.value = true
   isEditMode.value = false
   selectedProjectId.value = project.id
@@ -3116,7 +3234,8 @@ const handleViewProject = async (project) => {
     isHistorical: !!project.isHistorical,
     completionTime: project.completionTime ? new Date(project.completionTime).toISOString().split('T')[0] : null,
     isHasContract: project.isHasContract || '否',
-    isHasPreview: project.isHasPreview || '否'
+    isHasPreview: project.isHasPreview || '否',
+    amountEditCount: project.amountEditCount || 0
   })
 
   // 标记为非新客户，隐藏提示文案
@@ -3182,6 +3301,11 @@ const handleViewProject = async (project) => {
       console.error('获取预览图列表失败:', err)
     }
   }
+
+  // 数据加载完成后，重置加载状态
+  setTimeout(() => {
+    isLoadingProject.value = false
+  }, 100)
 }
 
 /**
@@ -3426,6 +3550,7 @@ const loadProjects = async () => {
  * 重置表单
  */
 const resetForm = () => {
+  isLoadingProject.value = true
   Object.assign(form, {
     name: '',
     type: 'normal',
@@ -3444,13 +3569,20 @@ const resetForm = () => {
     desc: '',
     isHistorical: false,
     isHasContract: '否',
-    isHasPreview: '否'
+    isHasPreview: '否',
+    amountEditCount: 0
   })
   costs.value = []
   vouchers.value = []
   contracts.value = []
   previews.value = []
   isNewClient.value = true
+  // 每次重置表单时生成新的临时ID
+  currentTempId.value = `TEMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  
+  setTimeout(() => {
+    isLoadingProject.value = false
+  }, 100)
 }
 
 // 安全校验：拦截特殊字符
@@ -3770,7 +3902,14 @@ const handleSaveProject = async () => {
       if (isEditMode.value && originalProjectName.value && originalProjectName.value !== form.name) {
         console.log(`项目名称已修改: ${originalProjectName.value} -> ${form.name}，同步云存储路径...`)
         try {
+          // 同步凭证路径
           await renameProjectVouchers({
+            projectId,
+            oldName: originalProjectName.value,
+            newName: form.name
+          })
+          // 同步合同与预览图路径
+          await renameProjectFiles({
             projectId,
             oldName: originalProjectName.value,
             newName: form.name
@@ -3814,9 +3953,17 @@ const handleSaveProject = async () => {
       
       // 立即更新本地列表数据，确保 UI 实时响应
       const statusConfig = projectStatuses.value.find(s => s.value === form.status)
+      
+      // 如果金额发生了变化且是编辑模式，本地模拟增加修改次数
+      let localAmountEditCount = form.amountEditCount || 0
+      if (isEditMode.value && Number(form.amount) !== Number(projects.value.find(p => p.id === projectId)?.amount)) {
+        localAmountEditCount += 1
+      }
+
       const updatedItem = {
         ...projectData,
         id: projectId,
+        amountEditCount: localAmountEditCount,
         statusText: statusConfig ? statusConfig.label : '未知状态',
         statusColor: form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
         date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-',
@@ -3831,8 +3978,6 @@ const handleSaveProject = async () => {
         projects.value.unshift(updatedItem)
       }
 
-      const wasCreating = !selectedProjectId.value && !isEditMode.value;
-
       // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
@@ -3842,9 +3987,7 @@ const handleSaveProject = async () => {
       
       // 保持当前选中项并回显
       selectedProjectId.value = projectId
-      if (wasCreating) {
-        handleViewProject(updatedItem)
-      }
+      handleViewProject(updatedItem)
     } else {
       throw new Error(res.message)
     }
@@ -3918,7 +4061,7 @@ const handleContractUpload = async (event) => {
         const formData = new FormData()
         formData.append('file', uploadFile, file.name)
         formData.append('type', 'contract')
-        formData.append('projectId', selectedProjectId.value || 'TEMP_UNASSOCIATED')
+        formData.append('projectId', selectedProjectId.value || currentTempId.value)
         formData.append('projectName', form.name)
         
         const response = await axios.post(`${apiDomain}/contractPreviewService`, formData, {
@@ -3947,6 +4090,8 @@ const handleContractUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       contracts.value.push(...successfulUploads)
+      // 自动切换状态为“是”
+      form.isHasContract = '是'
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 个合同文件`)
       })
@@ -4006,7 +4151,7 @@ const handlePreviewUpload = async (event) => {
         const formData = new FormData()
         formData.append('file', compressedFile, file.name)
         formData.append('type', 'preview')
-        formData.append('projectId', selectedProjectId.value || 'TEMP_UNASSOCIATED')
+        formData.append('projectId', selectedProjectId.value || currentTempId.value)
         formData.append('projectName', form.name)
         
         const response = await axios.post(`${apiDomain}/contractPreviewService`, formData, {
@@ -4035,6 +4180,8 @@ const handlePreviewUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       previews.value.push(...successfulUploads)
+      // 自动切换状态为“是”
+      form.isHasPreview = '是'
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 张预览图`)
       })
@@ -4191,7 +4338,7 @@ const handleVoucherUpload = async (event) => {
           // 调用云函数记录到数据库 (初始 projectId 为空或临时值)
           console.log(`📝 记录到数据库...`)
           const dbRes = await addVoucher({
-            projectId: 'TEMP_UNASSOCIATED', 
+            projectId: currentTempId.value, 
             fileName: file.name,
             fileId: response.data.data.fileId,
             fileUrl: response.data.data.url,
@@ -4608,11 +4755,11 @@ const handleLogout = () => {
 
 /* 科技感弹窗样式 */
 .custom-message-box {
-  background-color: rgba(28, 27, 28, 0.9) !important;
+  background-color: #2a2a2b !important; /* 使用 surface-container-high 颜色，增加对比度 */
   backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(82, 238, 138, 0.2) !important;
+  border: 1px solid rgba(82, 238, 138, 0.3) !important; /* 增加边框亮度 */
   border-radius: 16px !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(82, 238, 138, 0.05) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(82, 238, 138, 0.1) !important;
 }
 
 .custom-message-box .el-message-box__title {
@@ -4651,12 +4798,12 @@ const handleLogout = () => {
 
 /* 危险操作弹窗增强样式 */
 .danger-message-box {
-  background-color: #1a1a1a !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  background-color: #2a2a2b !important; /* 使用较亮的背景色增加对比 */
+  border: 1px solid rgba(239, 68, 68, 0.6) !important; /* 增强红色边框 */
   border-radius: 16px !important;
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1), 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), 0 25px 60px rgba(0, 0, 0, 0.9) !important;
   overflow: hidden !important;
-  backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(15px) !important;
 }
 
 .danger-message-box .el-message-box__header {
@@ -4929,5 +5076,24 @@ const handleLogout = () => {
 :deep(.el-select-dropdown__item.is-selected) {
   color: #52ee8a !important;
   font-weight: bold !important;
+}
+
+/* 方案预览轮播图指示器样式 */
+.preview-carousel :deep(.el-carousel__indicators--horizontal) {
+  bottom: 64px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+.preview-carousel :deep(.el-carousel__indicator--horizontal .el-carousel__button) {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  opacity: 1 !important;
+}
+
+.preview-carousel :deep(.el-carousel__indicator--horizontal.is-active .el-carousel__button) {
+  background-color: #52ee8a !important;
 }
 </style>

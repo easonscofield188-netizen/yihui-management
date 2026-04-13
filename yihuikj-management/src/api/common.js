@@ -316,3 +316,18 @@ export function updatePreviewsProject(params) {
     }
   });
 }
+
+/**
+ * 当项目名称修改时，同步修改云存储中的路径（合同与预览图）
+ * @param {Object} params - { projectId: string, oldName: string, newName: string }
+ */
+export function renameProjectFiles(params) {
+  return request({
+    url: '/contractPreviewService',
+    method: 'post',
+    data: {
+      action: 'renameProjectFiles',
+      data: params
+    }
+  });
+}

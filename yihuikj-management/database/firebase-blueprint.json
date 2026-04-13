@@ -43,6 +43,7 @@
         "isHistorical": { "type": "boolean", "description": "是否为历史补录数据" },
         "constructionPeriod": { "type": "array", "description": "历史补录：施工周期日期范围" },
         "collectionPeriod": { "type": "array", "description": "历史补录：回款周期日期范围" },
+        "amountEditCount": { "type": "number", "description": "订单金额修改次数 (创建成功后最多允许修改一次)" },
         "createdAt": { "type": "string", "format": "date-time", "description": "创建时间" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "最后更新时间" }
       },
