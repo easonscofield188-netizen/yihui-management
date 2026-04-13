@@ -42,7 +42,7 @@ exports.main = async (event, context) => {
         updateData.period = [project.period[0], today];
       }
 
-      // 如果在施工中，更新施工周期结束日期
+      // 如果在交付中，更新施工周期结束日期
       if (project.status === 'constructing' && project.constructionPeriod && project.constructionPeriod[0]) {
         updateData.constructionPeriod = [project.constructionPeriod[0], today];
       }

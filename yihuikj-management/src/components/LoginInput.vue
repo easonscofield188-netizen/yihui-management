@@ -36,9 +36,18 @@ import { ref, computed } from 'vue'
 import { View, Hide } from '@element-plus/icons-vue'
 
 const props = defineProps({
-  modelValue: String,
-  label: String,
-  placeholder: String,
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  label: {
+    type: String,
+    default: ''
+  },
+  placeholder: {
+    type: String,
+    default: ''
+  },
   type: {
     type: String,
     default: 'text'

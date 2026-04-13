@@ -6,8 +6,8 @@
 
   { "group": "PROJECT_STATUS", "label": "谈判中", "value": "negotiating", "sortOrder": 1, "isActive": true, "description": "前期沟通、现场勘察及报价阶段" },
   { "group": "PROJECT_STATUS", "label": "设计中", "value": "designing", "sortOrder": 2, "isActive": true, "description": "方案设计、施工图深化及效果图制作" },
-  { "group": "PROJECT_STATUS", "label": "施工中", "value": "constructing", "sortOrder": 3, "isActive": true, "description": "现场进场施工、材料采购及工程实施" },
-  { "group": "PROJECT_STATUS", "label": "已竣工", "value": "completed", "sortOrder": 4, "isActive": true, "description": "工程建设完毕，等待客户验收" },
+  { "group": "PROJECT_STATUS", "label": "交付中", "value": "constructing", "sortOrder": 3, "isActive": true, "description": "现场进场施工、材料采购及工程实施" },
+  { "group": "PROJECT_STATUS", "label": "已交付", "value": "completed", "sortOrder": 4, "isActive": true, "description": "工程建设完毕，等待客户验收" },
   { "group": "PROJECT_STATUS", "label": "结账中", "value": "settling", "sortOrder": 5, "isActive": true, "description": "验收通过，进入财务结算及审计流程" },
   { "group": "PROJECT_STATUS", "label": "已结清", "value": "closed", "sortOrder": 6, "isActive": true, "description": "款项全部结清，项目正式归档关闭" },
 

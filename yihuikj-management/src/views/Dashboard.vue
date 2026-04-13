@@ -165,81 +165,154 @@
           <div class="p-6 pt-0 border-b border-white/5">
             <div class="grid grid-cols-12 gap-3 items-center">
               <!-- 项目名称搜索 -->
-              <div class="col-span-3">
-                <el-input
+              <div class="col-span-3 relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+                <input 
                   v-model="projectFilters.search"
-                  placeholder="搜索项目名称..."
-                  class="custom-filter-input"
-                  clearable
+                  class="w-full h-9 bg-surface-container-lowest border border-white/5 rounded-lg pl-10 pr-4 text-xs text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-neutral-600" 
+                  placeholder="搜索项目名称..." 
+                  type="text"
                   @keyup.enter="handleSearch"
                 >
-                  <template #prefix>
-                    <el-icon><Search /></el-icon>
-                  </template>
-                </el-input>
               </div>
+              
               <!-- 类别筛选 -->
-              <div class="col-span-2">
-                <el-select
-                  v-model="projectFilters.type"
-                  placeholder="项目类别"
-                  class="custom-filter-select"
-                  clearable
+              <div class="col-span-2 relative custom-dropdown-trigger">
+                <div
+                  class="relative cursor-pointer"
+                  @click.stop="toggleDropdown('type')"
                 >
-                  <el-option label="全部类别" value="" />
-                  <el-option
-                    v-for="item in projectTypes"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
+                  <div 
+                    class="w-full h-9 bg-surface-container-lowest border rounded-lg px-3 text-xs text-on-surface flex justify-between items-center transition-all"
+                    :class="openDropdown === 'type' ? 'border-primary' : 'border-white/5'"
+                  >
+                    <span>{{ projectTypes.find(t => t.value === projectFilters.type)?.label || '项目类别' }}</span>
+                    <span 
+                      class="material-symbols-outlined text-sm transition-transform"
+                      :class="[
+                        openDropdown === 'type' ? 'rotate-180 text-primary' : 'text-on-surface-variant'
+                      ]"
+                    >expand_more</span>
+                  </div>
+                  
+                  <!-- Dropdown Menu -->
+                  <div 
+                    v-if="openDropdown === 'type'"
+                    class="absolute top-full left-0 w-full mt-2 bg-[#1c1b1c]/90 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl z-[60] overflow-hidden"
+                  >
+                    <div class="py-1">
+                      <div class="px-3 py-2 text-xs text-on-surface-variant/60 font-bold border-b border-white/5 mb-1">
+                        项目类别
+                      </div>
+                      <div 
+                        class="px-3 py-2 text-xs text-on-surface-variant hover:bg-white/5 cursor-pointer flex justify-between items-center"
+                        @click.stop="selectFilter('type', '')"
+                      >
+                        <span>全部类别</span>
+                      </div>
+                      <div 
+                        v-for="item in projectTypes" 
+                        :key="item.value"
+                        class="px-3 py-2 text-xs cursor-pointer flex justify-between items-center transition-colors"
+                        :class="projectFilters.type === item.value ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-white/5'"
+                        @click.stop="selectFilter('type', item.value)"
+                      >
+                        <span>{{ item.label }}</span>
+                        <span
+                          v-if="projectFilters.type === item.value"
+                          class="material-symbols-outlined text-sm"
+                        >check</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <!-- 状态筛选 -->
-              <div class="col-span-2">
-                <el-select
-                  v-model="projectFilters.status"
-                  placeholder="项目状态"
-                  class="custom-filter-select"
-                  clearable
+              <div class="col-span-2 relative custom-dropdown-trigger">
+                <div
+                  class="relative cursor-pointer"
+                  @click.stop="toggleDropdown('status')"
                 >
-                  <el-option label="全部状态" value="" />
-                  <el-option
-                    v-for="item in projectStatuses"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
+                  <div 
+                    class="w-full h-9 bg-surface-container-lowest border rounded-lg px-3 text-xs text-on-surface flex justify-between items-center transition-all"
+                    :class="openDropdown === 'status' ? 'border-primary' : 'border-white/5'"
+                  >
+                    <span>{{ projectStatuses.find(s => s.value === projectFilters.status)?.label || '项目状态' }}</span>
+                    <span 
+                      class="material-symbols-outlined text-sm transition-transform"
+                      :class="[
+                        openDropdown === 'status' ? 'rotate-180 text-primary' : 'text-on-surface-variant'
+                      ]"
+                    >expand_more</span>
+                  </div>
+                  
+                  <!-- Dropdown Menu -->
+                  <div 
+                    v-if="openDropdown === 'status'"
+                    class="absolute top-full left-0 w-full mt-2 bg-[#1c1b1c]/90 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl z-[60] overflow-hidden"
+                  >
+                    <div class="py-1">
+                      <div class="px-3 py-2 text-xs text-on-surface-variant/60 font-bold border-b border-white/5 mb-1">
+                        项目状态
+                      </div>
+                      <div 
+                        class="px-3 py-2 text-xs text-on-surface-variant hover:bg-white/5 cursor-pointer flex justify-between items-center"
+                        @click.stop="selectFilter('status', '')"
+                      >
+                        <span>全部状态</span>
+                      </div>
+                      <div 
+                        v-for="item in projectStatuses" 
+                        :key="item.value"
+                        class="px-3 py-2 text-xs cursor-pointer flex justify-between items-center transition-colors"
+                        :class="projectFilters.status === item.value ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-white/5'"
+                        @click.stop="selectFilter('status', item.value)"
+                      >
+                        <span>{{ item.label }}</span>
+                        <span
+                          v-if="projectFilters.status === item.value"
+                          class="material-symbols-outlined text-sm"
+                        >check</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <!-- 日期范围 -->
-              <div class="col-span-3">
+              <div class="col-span-3 relative">
                 <el-date-picker
                   v-model="projectFilters.dateRange"
                   type="daterange"
                   range-separator="-"
                   start-placeholder="开始日期"
                   end-placeholder="结束日期"
-                  class="custom-filter-date"
+                  class="custom-date-picker-styled h-9"
                   value-format="YYYY-MM-DD"
                 />
               </div>
+
               <!-- 操作按钮 -->
               <div class="col-span-2 flex items-center gap-2">
-                <el-button 
-                  type="primary" 
-                  class="flex-1 !h-9 !bg-primary !text-black !border-none !font-bold shadow-lg hover:brightness-110"
+                <button 
+                  class="flex-1 h-9 bg-primary text-on-primary text-xs font-bold rounded-lg hover:brightness-110 transition-all flex items-center justify-center gap-1 shadow-lg shadow-primary/10"
                   @click="handleSearch"
                 >
-                  <el-icon class="mr-1"><Search /></el-icon>
+                  <span class="material-symbols-outlined text-sm">filter_alt</span>
                   查询
-                </el-button>
-                <el-button 
-                  class="!h-9 !w-9 !p-0 !bg-neutral-800 !text-on-surface-variant !border-white/10 hover:!bg-neutral-700 hover:!text-white"
-                  @click="handleResetFilters"
+                </button>
+                <el-tooltip
+                  content="重置筛选"
+                  placement="top"
                 >
-                  <el-icon><Refresh /></el-icon>
-                </el-button>
+                  <button 
+                    class="px-3 h-9 border border-white/10 text-on-surface-variant text-xs font-bold rounded-lg hover:bg-white/5 hover:text-on-surface transition-all"
+                    @click="handleResetFilters"
+                  >
+                    <span class="material-symbols-outlined text-sm">restart_alt</span>
+                  </button>
+                </el-tooltip>
               </div>
             </div>
           </div>
@@ -303,15 +376,27 @@
                 </template>
               </el-table-column>
               <el-table-column
-                prop="date"
-                label="开始时间"
+                prop="createDateText"
+                label="创单日期"
                 min-width="100"
               >
                 <template #default="{ row }">
                   <span 
                     class="font-mono text-xs"
                     :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
-                  >{{ row.date }}</span>
+                  >{{ row.createDateText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="deliveryDateText"
+                label="交付日期"
+                min-width="100"
+              >
+                <template #default="{ row }">
+                  <span 
+                    class="font-mono text-xs"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.deliveryDateText }}</span>
                 </template>
               </el-table-column>
               <el-table-column
@@ -525,7 +610,7 @@
                     class="absolute top-0 right-0 w-0 h-0 border-l-[35px] border-l-transparent transition-all duration-500"
                     :class="projectTypeRibbon.shadow"
                     style="border-top-width: 35px;"
-                  ></div>
+                  />
                 </div>
               </div>
 
@@ -617,354 +702,366 @@
                     />
                   </div>
 
-                <!-- Project Type -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目类型</label>
-                  <el-select 
-                    v-model="form.type" 
-                    placeholder="请选择项目类型" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || form.type === 'historical' || isFieldReadOnly('type')"
-                  >
-                    <el-option 
-                      v-for="item in projectTypes" 
-                      :key="item.value" 
-                      :label="item.label" 
-                      :value="item.value" 
-                    />
-                  </el-select>
-                </div>
-
-                <!-- Project Status -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
-                  <el-select 
-                    v-model="form.status" 
-                    placeholder="请选择项目状态" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || isFieldReadOnly('status')"
-                    @change="handleFormStatusChange"
-                  >
-                    <el-option 
-                      v-for="item in filteredProjectStatuses" 
-                      :key="item.value" 
-                      :label="item.label" 
-                      :value="item.value" 
-                      :disabled="isEditMode && item.sortOrder < getStatusOrder(originalProjectStatus)"
-                    />
-                  </el-select>
-                </div>
-
-                <!-- Start Date (Only for New Project Mode) -->
-                <div
-                  v-if="isCreating && form.type !== 'historical'"
-                  class="space-y-2"
-                >
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
-                  <el-date-picker
-                    v-model="form.startDate"
-                    type="date"
-                    placeholder="选择开始日期"
-                    class="!w-full custom-date-picker"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    :disabled-date="disabledFutureDate"
-                  />
-                </div>
-
-                <!-- Completion Time (Only for Historical Project) -->
-                <div
-                  v-if="form.type === 'historical'"
-                  class="space-y-2"
-                >
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">完结时间</label>
-                  <el-date-picker
-                    v-model="form.completionTime"
-                    type="date"
-                    placeholder="选择完结时间"
-                    class="!w-full custom-date-picker"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    :disabled="isViewMode || isFieldReadOnly('completionTime')"
-                    :disabled-date="disabledFutureDate"
-                  />
-                </div>
-
-                <!-- Project Period -->
-                <div
-                  v-if="form.type !== 'historical' && !isCreating"
-                  class="space-y-2"
-                >
-                  <div class="flex justify-between items-center px-1">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">项目周期</label>
-                    <span
-                      v-if="projectDays > 0"
-                      class="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20"
-                    >共 {{ projectDays }} 天</span>
+                  <!-- Project Type -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目类型</label>
+                    <el-select 
+                      v-model="form.type" 
+                      placeholder="请选择项目类型" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || form.type === 'historical' || isFieldReadOnly('type')"
+                    >
+                      <el-option 
+                        v-for="item in projectTypes" 
+                        :key="item.value" 
+                        :label="item.label" 
+                        :value="item.value" 
+                      />
+                    </el-select>
                   </div>
-                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+
+                  <!-- Project Status -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
+                    <el-select 
+                      v-model="form.status" 
+                      placeholder="请选择项目状态" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || isFieldReadOnly('status')"
+                      @change="handleFormStatusChange"
+                    >
+                      <el-option 
+                        v-for="item in filteredProjectStatuses" 
+                        :key="item.value" 
+                        :label="item.label" 
+                        :value="item.value" 
+                        :disabled="isEditMode && item.sortOrder < getStatusOrder(originalProjectStatus)"
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Start Date (Only for New Project Mode) -->
+                  <div
+                    v-if="isCreating && form.type !== 'historical'"
+                    class="space-y-2"
+                  >
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
                     <el-date-picker
-                      v-model="form.period[0]"
+                      v-model="form.startDate"
                       type="date"
-                      placeholder="开始日期"
+                      placeholder="选择开始日期"
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
-                      :disabled-date="disabledHistoricalProjectDate"
+                      :disabled-date="disabledFutureDate"
                     />
-                    <span class="text-on-surface-variant/40">至</span>
+                  </div>
+
+                  <!-- Delivery Date (Only for Historical Project) -->
+                  <div
+                    v-if="form.type === 'historical'"
+                    class="space-y-2"
+                  >
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">交付日期</label>
                     <el-date-picker
-                      v-model="form.period[1]"
+                      v-model="form.completionTime"
                       type="date"
-                      placeholder="结束日期"
+                      placeholder="选择交付日期"
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
-                      :disabled-date="disabledHistoricalProjectDate"
+                      :disabled="isViewMode || isFieldReadOnly('completionTime')"
+                      :disabled-date="disabledFutureDate"
+                    />
+                  </div>
+
+                  <!-- Project Period -->
+                  <div
+                    v-if="form.type !== 'historical' && !isCreating"
+                    class="space-y-2"
+                  >
+                    <div class="flex justify-between items-center px-1">
+                      <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">项目周期</label>
+                      <span
+                        v-if="projectDays > 0"
+                        class="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20"
+                      >共 {{ projectDays }} 天</span>
+                    </div>
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <el-date-picker
+                        v-model="form.period[0]"
+                        type="date"
+                        placeholder="开始日期"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
+                        :disabled-date="disabledHistoricalProjectDate"
+                      />
+                      <span class="text-on-surface-variant/40">至</span>
+                      <el-date-picker
+                        v-model="form.period[1]"
+                        type="date"
+                        placeholder="结束日期"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
+                        :disabled-date="disabledHistoricalProjectDate"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Construction Period -->
+                  <div
+                    v-if="form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
+                    class="space-y-2"
+                  >
+                    <div class="flex justify-between items-center px-1">
+                      <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">施工周期</label>
+                      <span
+                        v-if="constructionDays > 0"
+                        class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
+                      >共 {{ constructionDays }} 天</span>
+                    </div>
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <el-date-picker
+                        v-model="form.constructionPeriod[0]"
+                        type="date"
+                        placeholder="开始施工"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
+                        :disabled-date="disabledHistoricalConstructionDate"
+                      />
+                      <span class="text-on-surface-variant/40">至</span>
+                      <el-date-picker
+                        v-model="form.constructionPeriod[1]"
+                        type="date"
+                        placeholder="竣工日期"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
+                        :disabled-date="disabledHistoricalConstructionDate"
+                        @change="(val) => handleConstructionPeriodChange([form.constructionPeriod[0], val])"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Collection Period -->
+                  <div
+                    v-if="form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
+                    class="space-y-2"
+                  >
+                    <div class="flex justify-between items-center px-1">
+                      <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">回款周期</label>
+                      <span
+                        v-if="collectionDays > 0"
+                        class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
+                      >共 {{ collectionDays }} 天</span>
+                    </div>
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <el-date-picker
+                        v-model="form.collectionPeriod[0]"
+                        type="date"
+                        placeholder="竣工日期"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
+                        :disabled-date="disabledHistoricalCollectionDate"
+                      />
+                      <span class="text-on-surface-variant/40">至</span>
+                      <el-date-picker
+                        v-model="form.collectionPeriod[1]"
+                        type="date"
+                        placeholder="结清日期"
+                        class="!w-full custom-date-picker"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
+                        :disabled-date="disabledHistoricalCollectionDate"
+                        @change="(val) => handleCollectionPeriodChange([form.collectionPeriod[0], val])"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Client Name -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户名称</label>
+                    <el-select
+                      v-model="form.client"
+                      filterable
+                      allow-create
+                      default-first-option
+                      placeholder="请输入或选择客户姓名"
+                      class="w-full custom-select"
+                      popper-class="custom-dropdown"
+                      :loading="clientLoading"
+                      :disabled="isViewMode || isFieldReadOnly('client')"
+                      @change="handleClientChange"
+                      @visible-change="handleClientVisibleChange"
+                    >
+                      <el-option
+                        v-for="item in existingClients"
+                        :key="item.id || item.name"
+                        :label="item.name"
+                        :value="item.name"
+                      />
+                    </el-select>
+                    <p
+                      v-if="isNewClient && form.client"
+                      class="text-[10px] text-on-surface-variant/60 px-1 flex items-center gap-1 mt-1"
+                    >
+                      <el-icon class="text-secondary/60">
+                        <QuestionFilled />
+                      </el-icon>
+                      未查询到该客户，建议前往 <span
+                        class="text-secondary hover:underline cursor-pointer font-bold"
+                        @click="router.push('/clients')"
+                      >客户管理</span> 完善详细档案
+                    </p>
+                  </div>
+
+                  <!-- Client Role -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户角色</label>
+                    <el-select 
+                      v-model="form.role" 
+                      placeholder="请选择客户角色" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('role')"
+                      :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
+                    >
+                      <el-option 
+                        v-for="item in clientRoles" 
+                        :key="item.value" 
+                        :label="item.label" 
+                        :value="item.value" 
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Client Source -->
+                  <div
+                    v-if="isNewClient || form.clientSource"
+                    class="space-y-2"
+                  >
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户来源</label>
+                    <el-select 
+                      v-model="form.clientSource" 
+                      placeholder="请选择客户来源" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('clientSource')"
+                      :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
+                    >
+                      <el-option 
+                        v-for="item in clientSources" 
+                        :key="item.value" 
+                        :label="item.label" 
+                        :value="item.value" 
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Staff Count -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">人员数量</label>
+                    <el-input-number
+                      v-model="form.staffCount"
+                      :min="1"
+                      :controls="false"
+                      placeholder="请输入预计施工及管理人员数量"
+                      class="!w-full custom-number-input"
+                      :disabled="isViewMode || isFieldReadOnly('staffCount')"
+                    />
+                  </div>
+
+                  <!-- Order Amount -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
+                    <el-input
+                      v-model="form.amount"
+                      placeholder="请输入总签约金额"
+                      class="custom-input amount-input"
+                      :disabled="isViewMode || isFieldReadOnly('amount')"
+                    />
+                  </div>
+
+                  <!-- Received Amount (Added here) -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
+                    <el-input
+                      v-model="form.receivedAmount"
+                      placeholder="请输入已收金额"
+                      class="custom-input"
+                      :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
+                    />
+                  </div>
+
+                  <!-- Has Contract -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
+                    <el-select 
+                      v-model="form.isHasContract" 
+                      placeholder="请选择" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || isFieldReadOnly('isHasContract')"
+                    >
+                      <el-option
+                        label="是"
+                        value="是"
+                      />
+                      <el-option
+                        label="否"
+                        value="否"
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Has Preview -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有预览图</label>
+                    <el-select 
+                      v-model="form.isHasPreview" 
+                      placeholder="请选择" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || isFieldReadOnly('isHasPreview')"
+                    >
+                      <el-option
+                        label="是"
+                        value="是"
+                      />
+                      <el-option
+                        label="否"
+                        value="否"
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Project Description -->
+                  <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目描述</label>
+                    <el-input 
+                      v-model="form.desc" 
+                      type="textarea" 
+                      :rows="4" 
+                      placeholder="在此详细说明园林项目的设计要求与技术难点..."
+                      class="custom-textarea"
+                      :disabled="isViewMode || isFieldReadOnly('desc')"
                     />
                   </div>
                 </div>
-
-                <!-- Construction Period -->
-                <div
-                  v-if="form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'closed'].includes(form.status)"
-                  class="space-y-2"
-                >
-                  <div class="flex justify-between items-center px-1">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">施工周期</label>
-                    <span
-                      v-if="constructionDays > 0"
-                      class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
-                    >共 {{ constructionDays }} 天</span>
-                  </div>
-                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <el-date-picker
-                      v-model="form.constructionPeriod[0]"
-                      type="date"
-                      placeholder="开始施工"
-                      class="!w-full custom-date-picker"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
-                      :disabled-date="disabledHistoricalConstructionDate"
-                    />
-                    <span class="text-on-surface-variant/40">至</span>
-                    <el-date-picker
-                      v-model="form.constructionPeriod[1]"
-                      type="date"
-                      placeholder="竣工日期"
-                      class="!w-full custom-date-picker"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
-                      :disabled-date="disabledHistoricalConstructionDate"
-                      @change="(val) => handleConstructionPeriodChange([form.constructionPeriod[0], val])"
-                    />
-                  </div>
-                </div>
-
-                <!-- Collection Period -->
-                <div
-                  v-if="form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
-                  class="space-y-2"
-                >
-                  <div class="flex justify-between items-center px-1">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">回款周期</label>
-                    <span
-                      v-if="collectionDays > 0"
-                      class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
-                    >共 {{ collectionDays }} 天</span>
-                  </div>
-                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <el-date-picker
-                      v-model="form.collectionPeriod[0]"
-                      type="date"
-                      placeholder="竣工日期"
-                      class="!w-full custom-date-picker"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
-                      :disabled-date="disabledHistoricalCollectionDate"
-                    />
-                    <span class="text-on-surface-variant/40">至</span>
-                    <el-date-picker
-                      v-model="form.collectionPeriod[1]"
-                      type="date"
-                      placeholder="结清日期"
-                      class="!w-full custom-date-picker"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD"
-                      :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
-                      :disabled-date="disabledHistoricalCollectionDate"
-                      @change="(val) => handleCollectionPeriodChange([form.collectionPeriod[0], val])"
-                    />
-                  </div>
-                </div>
-
-                <!-- Client Name -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户名称</label>
-                  <el-select
-                    v-model="form.client"
-                    filterable
-                    allow-create
-                    default-first-option
-                    placeholder="请输入或选择客户姓名"
-                    class="w-full custom-select"
-                    popper-class="custom-dropdown"
-                    :loading="clientLoading"
-                    :disabled="isViewMode || isFieldReadOnly('client')"
-                    @change="handleClientChange"
-                    @visible-change="handleClientVisibleChange"
-                  >
-                    <el-option
-                      v-for="item in existingClients"
-                      :key="item.id || item.name"
-                      :label="item.name"
-                      :value="item.name"
-                    />
-                  </el-select>
-                  <p
-                    v-if="isNewClient && form.client"
-                    class="text-[10px] text-on-surface-variant/60 px-1 flex items-center gap-1 mt-1"
-                  >
-                    <el-icon class="text-secondary/60">
-                      <QuestionFilled />
-                    </el-icon>
-                    未查询到该客户，建议前往 <span
-                      class="text-secondary hover:underline cursor-pointer font-bold"
-                      @click="router.push('/clients')"
-                    >客户管理</span> 完善详细档案
-                  </p>
-                </div>
-
-                <!-- Client Role -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户角色</label>
-                  <el-select 
-                    v-model="form.role" 
-                    placeholder="请选择客户角色" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('role')"
-                    :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
-                  >
-                    <el-option 
-                      v-for="item in clientRoles" 
-                      :key="item.value" 
-                      :label="item.label" 
-                      :value="item.value" 
-                    />
-                  </el-select>
-                </div>
-
-                <!-- Client Source -->
-                <div
-                  v-if="isNewClient || form.clientSource"
-                  class="space-y-2"
-                >
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">客户来源</label>
-                  <el-select 
-                    v-model="form.clientSource" 
-                    placeholder="请选择客户来源" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || (!isNewClient && form.type !== 'historical') || isFieldReadOnly('clientSource')"
-                    :class="{ 'is-disabled-cursor': !isNewClient && form.type !== 'historical' }"
-                  >
-                    <el-option 
-                      v-for="item in clientSources" 
-                      :key="item.value" 
-                      :label="item.label" 
-                      :value="item.value" 
-                    />
-                  </el-select>
-                </div>
-
-                <!-- Staff Count -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">人员数量</label>
-                  <el-input-number
-                    v-model="form.staffCount"
-                    :min="1"
-                    :controls="false"
-                    placeholder="请输入预计施工及管理人员数量"
-                    class="!w-full custom-number-input"
-                    :disabled="isViewMode || isFieldReadOnly('staffCount')"
-                  />
-                </div>
-
-                <!-- Order Amount -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
-                  <el-input
-                    v-model="form.amount"
-                    placeholder="请输入总签约金额"
-                    class="custom-input amount-input"
-                    :disabled="isViewMode || isFieldReadOnly('amount')"
-                  />
-                </div>
-
-                <!-- Received Amount (Added here) -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
-                  <el-input
-                    v-model="form.receivedAmount"
-                    placeholder="请输入已收金额"
-                    class="custom-input"
-                    :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
-                  />
-                </div>
-
-                <!-- Has Contract -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
-                  <el-select 
-                    v-model="form.isHasContract" 
-                    placeholder="请选择" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || isFieldReadOnly('isHasContract')"
-                  >
-                    <el-option label="是" value="是" />
-                    <el-option label="否" value="否" />
-                  </el-select>
-                </div>
-
-                <!-- Has Preview -->
-                <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有预览图</label>
-                  <el-select 
-                    v-model="form.isHasPreview" 
-                    placeholder="请选择" 
-                    class="w-full custom-select" 
-                    popper-class="custom-dropdown"
-                    :disabled="isViewMode || isFieldReadOnly('isHasPreview')"
-                  >
-                    <el-option label="是" value="是" />
-                    <el-option label="否" value="否" />
-                  </el-select>
-                </div>
-
-                <!-- Project Description -->
-                <div class="md:col-span-2 space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目描述</label>
-                  <el-input 
-                    v-model="form.desc" 
-                    type="textarea" 
-                    :rows="4" 
-                    placeholder="在此详细说明园林项目的设计要求与技术难点..."
-                    class="custom-textarea"
-                    :disabled="isViewMode || isFieldReadOnly('desc')"
-                  />
-                </div>
-              </div>
-            </el-collapse-transition>
-          </section>
+              </el-collapse-transition>
+            </section>
 
             <!-- Fund Management Section -->
             <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5">
@@ -1064,137 +1161,288 @@
                   v-show="!isCostInfoCollapsed" 
                   class="px-6 md:px-8 pb-8"
                 >
-                <div class="overflow-x-auto mb-6">
-                  <table class="w-full text-left border-separate border-spacing-y-3 min-w-[600px]">
-                    <thead>
-                      <tr class="text-[10px] text-on-surface-variant uppercase tracking-[0.2em]">
-                        <th class="px-4 py-2 font-medium w-[25%]">
-                          类目
-                        </th>
-                        <th class="px-4 py-2 font-medium w-[25%]">
-                          供应商
-                        </th>
-                        <th class="px-4 py-2 font-medium w-[20%] text-center">
-                          成本金额 (¥)
-                        </th>
-                        <th class="px-4 py-2 font-medium w-[20%] text-center">
-                          是否结清
-                        </th>
-                        <th class="px-4 py-2 font-medium text-right w-[10%]">
-                          操作
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr 
-                        v-for="(item, index) in costs" 
-                        :key="item.id"
-                        class="bg-surface-container-lowest group hover:bg-neutral-800/40 transition-colors"
-                      >
-                        <td class="px-4 py-4 rounded-l-lg">
-                          <el-select 
-                            v-model="item.category" 
-                            placeholder="请选择类目" 
-                            class="w-full custom-select-small"
-                            popper-class="custom-dropdown"
-                            :disabled="isViewMode || isFieldReadOnly('costs')"
-                          >
-                            <el-option 
-                              v-for="cat in costCategories" 
-                              :key="cat.value" 
-                              :label="cat.label" 
-                              :value="cat.value" 
-                              :disabled="isCategorySelected(cat.value, index)"
-                            />
-                          </el-select>
-                        </td>
-                        <td class="px-4 py-4">
-                          <el-select 
-                            v-model="item.supplier" 
-                            placeholder="请选择供应商" 
-                            class="w-full custom-select-small supplier-select"
-                            popper-class="custom-dropdown"
-                            :disabled="isViewMode || isFieldReadOnly('costs')"
-                          >
-                            <el-option 
-                              v-for="sup in suppliers" 
-                              :key="sup.value" 
-                              :label="sup.label" 
-                              :value="sup.value" 
-                            />
-                          </el-select>
-                        </td>
-                        <td class="px-4 py-4">
-                          <div class="flex items-center gap-2 bg-neutral-900/40 px-3 py-1.5 rounded-lg border border-white/5 focus-within:border-primary/40 transition-all">
-                            <span class="text-xs text-on-surface-variant font-mono">¥</span>
-                            <input 
-                              v-model="item.amount"
-                              type="number"
-                              class="bg-transparent border-none p-0 focus:ring-0 text-sm font-mono w-full outline-none cost-amount-input"
-                              placeholder="0.00"
+                  <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-left border-separate border-spacing-y-3 min-w-[600px]">
+                      <thead>
+                        <tr class="text-[10px] text-on-surface-variant uppercase tracking-[0.2em]">
+                          <th class="px-4 py-2 font-medium w-[25%]">
+                            类目
+                          </th>
+                          <th class="px-4 py-2 font-medium w-[25%]">
+                            供应商
+                          </th>
+                          <th class="px-4 py-2 font-medium w-[20%] text-center">
+                            成本金额 (¥)
+                          </th>
+                          <th class="px-4 py-2 font-medium w-[20%] text-center">
+                            是否结清
+                          </th>
+                          <th class="px-4 py-2 font-medium text-right w-[10%]">
+                            操作
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr 
+                          v-for="(item, index) in costs" 
+                          :key="item.id"
+                          class="bg-surface-container-lowest group hover:bg-neutral-800/40 transition-colors"
+                        >
+                          <td class="px-4 py-4 rounded-l-lg">
+                            <el-select 
+                              v-model="item.category" 
+                              placeholder="请选择类目" 
+                              class="w-full custom-select-small"
+                              popper-class="custom-dropdown"
                               :disabled="isViewMode || isFieldReadOnly('costs')"
                             >
-                          </div>
-                        </td>
-                        <td class="px-4 py-4 text-center">
-                          <el-switch
-                            v-model="item.isSettled"
-                            active-text="是"
-                            inactive-text="否"
-                            inline-prompt
-                            style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                            :disabled="isViewMode || isFieldReadOnly('costs')"
-                          />
-                        </td>
-                        <td class="px-4 py-4 text-right rounded-r-lg">
-                          <button 
-                            class="text-red-400/40 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="isViewMode || isFieldReadOnly('costs')"
-                            @click="costs.splice(index, 1)"
+                              <el-option 
+                                v-for="cat in costCategories" 
+                                :key="cat.value" 
+                                :label="cat.label" 
+                                :value="cat.value" 
+                                :disabled="isCategorySelected(cat.value, index)"
+                              />
+                            </el-select>
+                          </td>
+                          <td class="px-4 py-4">
+                            <el-select 
+                              v-model="item.supplier" 
+                              placeholder="请选择供应商" 
+                              class="w-full custom-select-small supplier-select"
+                              popper-class="custom-dropdown"
+                              :disabled="isViewMode || isFieldReadOnly('costs')"
+                            >
+                              <el-option 
+                                v-for="sup in suppliers" 
+                                :key="sup.value" 
+                                :label="sup.label" 
+                                :value="sup.value" 
+                              />
+                            </el-select>
+                          </td>
+                          <td class="px-4 py-4">
+                            <div class="flex items-center gap-2 bg-neutral-900/40 px-3 py-1.5 rounded-lg border border-white/5 focus-within:border-primary/40 transition-all">
+                              <span class="text-xs text-on-surface-variant font-mono">¥</span>
+                              <input 
+                                v-model="item.amount"
+                                type="number"
+                                class="bg-transparent border-none p-0 focus:ring-0 text-sm font-mono w-full outline-none cost-amount-input"
+                                placeholder="0.00"
+                                :disabled="isViewMode || isFieldReadOnly('costs')"
+                              >
+                            </div>
+                          </td>
+                          <td class="px-4 py-4 text-center">
+                            <el-switch
+                              v-model="item.isSettled"
+                              active-text="是"
+                              inactive-text="否"
+                              inline-prompt
+                              style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                              :disabled="isViewMode || isFieldReadOnly('costs')"
+                            />
+                          </td>
+                          <td class="px-4 py-4 text-right rounded-r-lg">
+                            <button 
+                              class="text-red-400/40 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              :disabled="isViewMode || isFieldReadOnly('costs')"
+                              @click="costs.splice(index, 1)"
+                            >
+                              <el-icon class="text-lg">
+                                <Delete />
+                              </el-icon>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="costs.length === 0">
+                          <td
+                            colspan="4"
+                            class="px-4 py-8 text-center bg-surface-container-lowest rounded-lg border border-white/5"
                           >
-                            <el-icon class="text-lg">
+                            <span class="text-xs text-on-surface-variant opacity-50 tracking-widest uppercase font-bold">暂无成本支出记录</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Vouchers Section -->
+                  <div class="mt-8 border-t border-white/5 pt-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                      <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                        单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多选)
+                      </h4>
+                      <label 
+                        v-if="!isViewMode && !isFieldReadOnly('vouchers')"
+                        for="voucher-file-input"
+                        class="flex items-center gap-2 text-xs font-bold text-primary hover:underline cursor-pointer"
+                        :class="{ 'opacity-50 pointer-events-none': uploadingVoucher }"
+                      >
+                        <el-icon v-if="!uploadingVoucher">
+                          <Upload />
+                        </el-icon>
+                        <el-icon
+                          v-else
+                          class="animate-spin"
+                        >
+                          <Refresh />
+                        </el-icon>
+                        <span>{{ uploadingVoucher ? '正在上传...' : '上传凭证' }}</span>
+                      </label>
+                    </div>
+                  
+                    <!-- 隐藏的文件输入框 -->
+                    <input 
+                      id="voucher-file-input"
+                      ref="fileInputRef"
+                      type="file" 
+                      multiple 
+                      accept="image/*" 
+                      class="hidden" 
+                      @change="handleVoucherUpload"
+                    >
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      <!-- 已上传图片展示 -->
+                      <div 
+                        v-for="(v, idx) in vouchers" 
+                        :key="v.fileId || v.id || idx"
+                        class="aspect-square rounded-lg bg-surface-container-lowest border border-white/10 overflow-hidden relative group cursor-pointer"
+                      >
+                        <img 
+                          :src="v.url" 
+                          :alt="v.name" 
+                          class="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        >
+                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
+                          <div
+                            v-if="v.deleting"
+                            class="flex flex-col items-center gap-2 text-primary"
+                          >
+                            <el-icon
+                              class="animate-spin"
+                              size="24"
+                            >
+                              <Refresh />
+                            </el-icon>
+                            <span class="text-[10px]">正在删除...</span>
+                          </div>
+                          <div
+                            v-else
+                            class="flex gap-3"
+                          >
+                            <el-icon
+                              class="text-white hover:text-primary transition-colors"
+                              size="20"
+                              @click.stop="handlePreview(idx)"
+                            >
+                              <View />
+                            </el-icon>
+                            <el-icon
+                              v-if="!isViewMode && !isFieldReadOnly('vouchers')"
+                              class="text-red-400 hover:text-red-500 transition-colors"
+                              size="20"
+                              @click.stop="removeVoucher(idx)"
+                            >
                               <Delete />
                             </el-icon>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr v-if="costs.length === 0">
-                        <td
-                          colspan="4"
-                          class="px-4 py-8 text-center bg-surface-container-lowest rounded-lg border border-white/5"
-                        >
-                          <span class="text-xs text-on-surface-variant opacity-50 tracking-widest uppercase font-bold">暂无成本支出记录</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+                      </div>
 
-                <!-- Project Contract Management -->
-                <div v-if="form.isHasContract === '是'" class="mt-8 border-t border-white/5 pt-6">
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-                      项目合同管理 (图片/PDF)
-                    </h4>
-                    <button 
-                      :disabled="isViewMode || uploadingContract || isFieldReadOnly('isHasContract')"
-                      class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
-                      @click="triggerContractUpload"
-                    >
-                      <el-icon v-if="!uploadingContract">
+                      <!-- Upload Placeholder -->
+                      <label 
+                        v-if="vouchers.length < 20 && !isViewMode && !isFieldReadOnly('vouchers')"
+                        for="voucher-file-input"
+                        class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group cursor-pointer"
+                        :class="{ 'opacity-30 pointer-events-none': uploadingVoucher }"
+                      >
+                        <el-icon
+                          v-if="!uploadingVoucher"
+                          size="24"
+                          class="group-hover:scale-110 transition-transform"
+                        >
+                          <Plus />
+                        </el-icon>
+                        <el-icon
+                          v-else
+                          size="24"
+                          class="animate-spin"
+                        >
+                          <Refresh />
+                        </el-icon>
+                        <div class="flex flex-col items-center">
+                          <span class="text-[10px] font-bold">{{ uploadingVoucher ? '上传中' : '继续添加' }}</span>
+                          <span class="text-[8px] opacity-40">{{ vouchers.length }}/20</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </el-collapse-transition>
+            </section>
+
+            <!-- Project Contract Management Section -->
+            <section
+              v-if="form.isHasContract === '是'"
+              class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300"
+            >
+              <div 
+                class="p-6 md:p-8 flex justify-between items-center cursor-pointer"
+                @click="isContractInfoCollapsed = !isContractInfoCollapsed"
+              >
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                  <span class="w-1.5 h-6 bg-amber-500 rounded-full" />
+                  <span>项目合同管理</span>
+                  <el-icon 
+                    class="text-on-surface-variant transition-transform duration-300 ml-1"
+                    :class="{ 'rotate-180': !isContractInfoCollapsed }"
+                  >
+                    <ArrowDown />
+                  </el-icon>
+                </h3>
+              </div>
+
+              <el-collapse-transition>
+                <div 
+                  v-show="!isContractInfoCollapsed" 
+                  class="px-6 md:px-8 pb-8"
+                >
+                  <!-- Upload Area -->
+                  <label 
+                    v-if="!isViewMode && !isFieldReadOnly('isHasContract')"
+                    for="contract-file-input"
+                    class="w-full p-10 upload-dashed-border rounded-xl bg-surface-container-lowest flex flex-col items-center justify-center gap-5 hover:bg-primary/5 transition-all cursor-pointer group mb-6"
+                  >
+                    <div class="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <el-icon
+                        v-if="!uploadingContract"
+                        size="32"
+                      >
                         <Upload />
                       </el-icon>
                       <el-icon
                         v-else
+                        size="32"
                         class="animate-spin"
                       >
                         <Refresh />
                       </el-icon>
-                      <span>{{ uploadingContract ? '正在上传...' : '上传合同' }}</span>
-                    </button>
-                  </div>
-                  
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-bold text-on-surface tracking-wide">
+                        {{ uploadingContract ? '正在上传...' : '点击上传项目合同' }}
+                      </p>
+                      <p class="text-xs text-on-surface-variant mt-2 opacity-60">
+                        支持 JPG, PNG, PDF 格式，请上传清晰的扫描件或照片
+                      </p>
+                    </div>
+                  </label>
+
                   <input 
+                    id="contract-file-input"
                     ref="contractInputRef"
                     type="file" 
                     multiple 
@@ -1203,14 +1451,23 @@
                     @change="handleContractUpload"
                   >
 
+                  <!-- File Echo Area -->
                   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <div 
                       v-for="(c, idx) in contracts" 
                       :key="c.id || idx"
                       class="aspect-square rounded-lg bg-surface-container-lowest border border-white/10 overflow-hidden relative group cursor-pointer"
                     >
-                      <div v-if="c.type === 'application/pdf'" class="w-full h-full flex flex-col items-center justify-center bg-surface-container-high/30 gap-2 p-2">
-                        <el-icon size="32" class="text-red-400"><Document /></el-icon>
+                      <div
+                        v-if="c.type === 'application/pdf'"
+                        class="w-full h-full flex flex-col items-center justify-center bg-surface-container-high/30 gap-2 p-2"
+                      >
+                        <el-icon
+                          size="32"
+                          class="text-red-400"
+                        >
+                          <Document />
+                        </el-icon>
                         <span class="text-[10px] text-on-surface-variant text-center line-clamp-2 px-1">{{ c.name }}</span>
                       </div>
                       <img 
@@ -1221,7 +1478,22 @@
                         referrerPolicy="no-referrer"
                       >
                       <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
-                        <div class="flex gap-3">
+                        <div
+                          v-if="c.deleting"
+                          class="flex flex-col items-center gap-2 text-primary"
+                        >
+                          <el-icon
+                            class="animate-spin"
+                            size="24"
+                          >
+                            <Refresh />
+                          </el-icon>
+                          <span class="text-[10px]">正在删除...</span>
+                        </div>
+                        <div
+                          v-else
+                          class="flex gap-3"
+                        >
                           <el-icon
                             class="text-white hover:text-primary transition-colors"
                             size="20"
@@ -1240,51 +1512,70 @@
                         </div>
                       </div>
                     </div>
-
-                    <button 
-                      v-if="contracts.length < 10"
-                      :disabled="isViewMode || uploadingContract || isFieldReadOnly('isHasContract')"
-                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
-                      @click="triggerContractUpload"
-                    >
-                      <el-icon v-if="!uploadingContract" size="24" class="group-hover:scale-110 transition-transform">
-                        <Plus />
-                      </el-icon>
-                      <el-icon v-else size="24" class="animate-spin">
-                        <Refresh />
-                      </el-icon>
-                      <div class="flex flex-col items-center">
-                        <span class="text-[10px] font-bold">{{ uploadingContract ? '上传中' : '继续添加' }}</span>
-                      </div>
-                    </button>
                   </div>
                 </div>
+              </el-collapse-transition>
+            </section>
 
-                <!-- Preview Image Management -->
-                <div v-if="form.isHasPreview === '是'" class="mt-8 border-t border-white/5 pt-6">
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-                      预览图管理 (最多4张)
-                    </h4>
-                    <button 
-                      :disabled="isViewMode || uploadingPreview || isFieldReadOnly('isHasPreview')"
-                      class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
-                      @click="triggerPreviewUpload"
-                    >
-                      <el-icon v-if="!uploadingPreview">
-                        <Upload />
+            <!-- Project Preview Management Section -->
+            <section
+              v-if="form.isHasPreview === '是'"
+              class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300"
+            >
+              <div 
+                class="p-6 md:p-8 flex justify-between items-center cursor-pointer"
+                @click="isPreviewInfoCollapsed = !isPreviewInfoCollapsed"
+              >
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                  <span class="w-1.5 h-6 bg-rose-500 rounded-full" />
+                  <span>项目预览图管理</span>
+                  <el-icon 
+                    class="text-on-surface-variant transition-transform duration-300 ml-1"
+                    :class="{ 'rotate-180': !isPreviewInfoCollapsed }"
+                  >
+                    <ArrowDown />
+                  </el-icon>
+                </h3>
+              </div>
+
+              <el-collapse-transition>
+                <div 
+                  v-show="!isPreviewInfoCollapsed" 
+                  class="px-6 md:px-8 pb-8"
+                >
+                  <!-- Upload Area -->
+                  <label 
+                    v-if="!isViewMode && !isFieldReadOnly('isHasPreview')"
+                    for="preview-file-input"
+                    class="w-full p-10 upload-dashed-border rounded-xl bg-surface-container-lowest flex flex-col items-center justify-center gap-5 hover:bg-primary/5 transition-all cursor-pointer group mb-6"
+                  >
+                    <div class="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <el-icon
+                        v-if="!uploadingPreview"
+                        size="32"
+                      >
+                        <Picture />
                       </el-icon>
                       <el-icon
                         v-else
+                        size="32"
                         class="animate-spin"
                       >
                         <Refresh />
                       </el-icon>
-                      <span>{{ uploadingPreview ? '正在上传...' : '上传预览图' }}</span>
-                    </button>
-                  </div>
-                  
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-bold text-on-surface tracking-wide">
+                        {{ uploadingPreview ? '正在上传...' : '点击上传方案预览图' }}
+                      </p>
+                      <p class="text-xs text-on-surface-variant mt-2 opacity-60">
+                        支持 JPG, PNG 格式，最多上传 4 张图片
+                      </p>
+                    </div>
+                  </label>
+
                   <input 
+                    id="preview-file-input"
                     ref="previewInputRef"
                     type="file" 
                     multiple 
@@ -1293,6 +1584,7 @@
                     @change="handlePreviewUpload"
                   >
 
+                  <!-- Image Grid Preview / Echo -->
                   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <div 
                       v-for="(p, idx) in previews" 
@@ -1305,7 +1597,22 @@
                         referrerPolicy="no-referrer"
                       >
                       <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
-                        <div class="flex gap-3">
+                        <div
+                          v-if="p.deleting"
+                          class="flex flex-col items-center gap-2 text-primary"
+                        >
+                          <el-icon
+                            class="animate-spin"
+                            size="24"
+                          >
+                            <Refresh />
+                          </el-icon>
+                          <span class="text-[10px]">正在删除...</span>
+                        </div>
+                        <div
+                          v-else
+                          class="flex gap-3"
+                        >
                           <el-icon
                             class="text-white hover:text-primary transition-colors"
                             size="20"
@@ -1324,147 +1631,40 @@
                         </div>
                       </div>
                     </div>
-
-                    <button 
-                      v-if="previews.length < 4"
-                      :disabled="isViewMode || uploadingPreview || isFieldReadOnly('isHasPreview')"
-                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
-                      @click="triggerPreviewUpload"
-                    >
-                      <el-icon v-if="!uploadingPreview" size="24" class="group-hover:scale-110 transition-transform">
-                        <Plus />
-                      </el-icon>
-                      <el-icon v-else size="24" class="animate-spin">
-                        <Refresh />
-                      </el-icon>
-                      <div class="flex flex-col items-center">
-                        <span class="text-[10px] font-bold">{{ uploadingPreview ? '上传中' : '继续添加' }}</span>
-                        <span class="text-[8px] opacity-40">{{ previews.length }}/4</span>
-                      </div>
-                    </button>
                   </div>
                 </div>
-
-                <!-- Vouchers Section -->
-                <div class="mt-8 border-t border-white/5 pt-6">
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-                      单据凭证列表 (多图上传)
-                    </h4>
-                    <button 
-                      :disabled="isViewMode || uploadingVoucher || isFieldReadOnly('vouchers')"
-                      class="flex items-center gap-2 text-xs font-bold text-primary hover:underline disabled:opacity-50"
-                      @click="triggerUpload"
-                    >
-                      <el-icon v-if="!uploadingVoucher">
-                        <Upload />
-                      </el-icon>
-                      <el-icon
-                        v-else
-                        class="animate-spin"
-                      >
-                        <Refresh />
-                      </el-icon>
-                      <span>{{ uploadingVoucher ? '正在上传...' : '上传凭证' }}</span>
-                    </button>
-                  </div>
-                  
-                  <!-- 隐藏的文件输入框 -->
-                  <input 
-                    ref="fileInputRef"
-                    type="file" 
-                    multiple 
-                    accept="image/*" 
-                    class="hidden" 
-                    @change="handleVoucherUpload"
-                  >
-
-                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    <!-- 已上传图片展示 -->
-                    <div 
-                      v-for="(v, idx) in vouchers" 
-                      :key="v.fileId || v.id || idx"
-                      class="aspect-square rounded-lg bg-surface-container-lowest border border-white/10 overflow-hidden relative group cursor-pointer"
-                    >
-                      <img 
-                        :src="v.url" 
-                        :alt="v.name" 
-                        class="w-full h-full object-cover transition-transform group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      >
-                      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
-                        <div class="flex gap-3">
-                          <el-icon
-                            class="text-white hover:text-primary transition-colors"
-                            size="20"
-                            @click.stop="handlePreview(idx)"
-                          >
-                            <View />
-                          </el-icon>
-                          <el-icon
-                            v-if="!isViewMode && !isFieldReadOnly('vouchers')"
-                            class="text-red-400 hover:text-red-500 transition-colors"
-                            size="20"
-                            @click.stop="removeVoucher(idx)"
-                          >
-                            <Delete />
-                          </el-icon>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Upload Placeholder -->
-                    <button 
-                      v-if="vouchers.length < 20"
-                      :disabled="isViewMode || uploadingVoucher || isFieldReadOnly('vouchers')"
-                      class="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all bg-surface-container-lowest/50 group disabled:opacity-30 disabled:cursor-not-allowed"
-                      @click="triggerUpload"
-                    >
-                      <el-icon
-                        v-if="!uploadingVoucher"
-                        size="24"
-                        class="group-hover:scale-110 transition-transform"
-                      >
-                        <Plus />
-                      </el-icon>
-                      <el-icon
-                        v-else
-                        size="24"
-                        class="animate-spin"
-                      >
-                        <Refresh />
-                      </el-icon>
-                      <div class="flex flex-col items-center">
-                        <span class="text-[10px] font-bold">{{ uploadingVoucher ? '上传中' : '继续添加' }}</span>
-                        <span class="text-[8px] opacity-40">{{ vouchers.length }}/20</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </el-collapse-transition>
-          </section>
+              </el-collapse-transition>
+            </section>
           </div>
 
           <!-- Right: Analysis -->
           <div class="lg:col-span-4 space-y-8">
             <!-- Project Financial Quick Report -->
             <div class="bg-surface-container-high rounded-xl p-8 relative overflow-hidden border border-white/5">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-              <h3 class="text-lg font-bold text-on-surface mb-6 font-headline tracking-tight">项目财务快报</h3>
+              <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+              <h3 class="text-lg font-bold text-on-surface mb-6 font-headline tracking-tight">
+                项目财务快报
+              </h3>
               <div class="space-y-4">
                 <!-- Card 1: Estimated Profit -->
                 <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-primary shadow-lg hover:shadow-primary/5 transition-all">
                   <div class="flex justify-between items-start mb-2">
                     <div>
-                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">预计利润</p>
-                      <p class="text-2xl font-mono font-black text-primary">¥ {{ formatNumber(estimatedProfit) }}</p>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
+                        预计利润
+                      </p>
+                      <p class="text-2xl font-mono font-black text-primary">
+                        ¥ {{ formatNumber(estimatedProfit) }}
+                      </p>
                     </div>
                     <span class="material-symbols-outlined text-primary/40 text-2xl">trending_up</span>
                   </div>
                   <div class="flex items-center gap-2 mt-2">
                     <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
-                      <div class="h-full bg-primary" :style="{ width: Math.max(0, Math.min(100, parseFloat(profitMargin))) + '%' }"></div>
+                      <div
+                        class="h-full bg-primary"
+                        :style="{ width: Math.max(0, Math.min(100, parseFloat(profitMargin))) + '%' }"
+                      />
                     </div>
                     <span class="text-[10px] font-bold text-primary">{{ profitMargin }}%</span>
                   </div>
@@ -1474,14 +1674,21 @@
                 <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-amber-500 shadow-lg hover:shadow-amber-500/5 transition-all">
                   <div class="flex justify-between items-start mb-2">
                     <div>
-                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">未收账款 (订单总额 - 已收)</p>
-                      <p class="text-2xl font-mono font-black text-amber-500">¥ {{ formatNumber(unreceivedAmount) }}</p>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
+                        未收账款 (订单总额 - 已收)
+                      </p>
+                      <p class="text-2xl font-mono font-black text-amber-500">
+                        ¥ {{ formatNumber(unreceivedAmount) }}
+                      </p>
                     </div>
                     <span class="material-symbols-outlined text-amber-500/40 text-2xl">account_balance_wallet</span>
                   </div>
                   <div class="flex items-center gap-2 mt-2">
                     <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
-                      <div class="h-full bg-amber-500" :style="{ width: unreceivedPercent + '%' }"></div>
+                      <div
+                        class="h-full bg-amber-500"
+                        :style="{ width: unreceivedPercent + '%' }"
+                      />
                     </div>
                     <span class="text-[10px] font-bold text-amber-500">{{ unreceivedPercent }}%</span>
                   </div>
@@ -1491,14 +1698,21 @@
                 <div class="p-4 bg-surface-container-lowest rounded-lg border-l-4 border-rose-500 shadow-lg hover:shadow-rose-500/5 transition-all">
                   <div class="flex justify-between items-start mb-2">
                     <div>
-                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">未付账款 (总成本 - 已付)</p>
-                      <p class="text-2xl font-mono font-black text-rose-500">¥ {{ formatNumber(unpaidAmount) }}</p>
+                      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
+                        未付账款 (总成本 - 已付)
+                      </p>
+                      <p class="text-2xl font-mono font-black text-rose-500">
+                        ¥ {{ formatNumber(unpaidAmount) }}
+                      </p>
                     </div>
                     <span class="material-symbols-outlined text-rose-500/40 text-2xl">payments</span>
                   </div>
                   <div class="flex items-center gap-2 mt-2">
                     <div class="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
-                      <div class="h-full bg-rose-500" :style="{ width: unpaidPercent + '%' }"></div>
+                      <div
+                        class="h-full bg-rose-500"
+                        :style="{ width: unpaidPercent + '%' }"
+                      />
                     </div>
                     <span class="text-[10px] font-bold text-rose-500">{{ unpaidPercent }}%</span>
                   </div>
@@ -1685,6 +1899,12 @@ const isBasicInfoCollapsed = ref(false)
 // 成本支出管理折叠状态
 const isCostInfoCollapsed = ref(false)
 
+// 合同管理折叠状态
+const isContractInfoCollapsed = ref(false)
+
+// 预览图管理折叠状态
+const isPreviewInfoCollapsed = ref(false)
+
 // 悬浮回到顶部按钮逻辑
 const floatBtnPos = ref({ x: window.innerWidth - 80, y: window.innerHeight - 80 })
 const isDragging = ref(false)
@@ -1841,6 +2061,23 @@ const projectFilters = reactive({
   tab: 'all' // 'all', 'ongoing', 'completed'
 })
 
+// 自定义下拉框状态
+const openDropdown = ref(null)
+const toggleDropdown = (type) => {
+  openDropdown.value = openDropdown.value === type ? null : type
+}
+const selectFilter = (type, value) => {
+  projectFilters[type] = value
+  openDropdown.value = null
+}
+
+// 点击外部关闭下拉框
+const closeDropdowns = (e) => {
+  if (!e.target.closest('.custom-dropdown-trigger')) {
+    openDropdown.value = null
+  }
+}
+
 // 过滤后的项目列表
 const filteredProjects = computed(() => {
   return projects.value.filter(p => {
@@ -1853,12 +2090,12 @@ const filteredProjects = computed(() => {
 
     // 1. Tab 标签过滤
     if (projectFilters.tab === 'ongoing') {
-      // 进行中：常规项目排除已竣工和已结清；补录单始终显示（因为已通过上面的时间过滤）
+      // 进行中：常规项目排除已交付和已结清；补录单始终显示（因为已通过上面的时间过滤）
       if (p.type !== 'historical' && (p.status === 'completed' || p.status === 'closed')) {
         return false;
       }
     } else if (projectFilters.tab === 'completed') {
-      // 已交付：常规项目包含已竣工和已结清；补录单不显示在已交付（因为它们在活跃列表中）
+      // 已交付：常规项目包含已交付和已结清；补录单不显示在已交付（因为它们在活跃列表中）
       if (p.type === 'historical' || (p.status !== 'completed' && p.status !== 'closed')) {
         return false;
       }
@@ -1994,6 +2231,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (todayTimer) window.clearInterval(todayTimer)
+  window.removeEventListener('click', closeDropdowns)
 })
 
 // 监听时间变化，实时更新活跃项目的周期显示
@@ -2102,10 +2340,13 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
       costCategories.value = deduplicate(configs['COST_CATEGORY'])
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
-      projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => ({
-        ...s,
-        label: (s.label === '已完账' || s.label === '已完帐') ? '已结清' : s.label
-      }))
+      projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
+        let label = s.label;
+        if (label === '已完账' || label === '已完帐') label = '已结清';
+        if (label === '施工中') label = '交付中';
+        if (label === '已竣工') label = '已交付';
+        return { ...s, label };
+      })
       return
     }
 
@@ -2130,10 +2371,13 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
       costCategories.value = deduplicate(configs['COST_CATEGORY'])
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
-      projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => ({
-        ...s,
-        label: (s.label === '已完账' || s.label === '已完帐') ? '已结清' : s.label
-      }))
+      projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
+        let label = s.label;
+        if (label === '已完账' || label === '已完帐') label = '已结清';
+        if (label === '施工中') label = '交付中';
+        if (label === '已竣工') label = '已交付';
+        return { ...s, label };
+      })
       
       // 3. 更新本地缓存
       localStorage.setItem(CACHE_KEY, JSON.stringify(configs))
@@ -2162,6 +2406,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
 
 onMounted(() => {
   initGlobalConfigs()
+  window.addEventListener('click', closeDropdowns)
 })
 
 // 计算属性：根据选择的日期范围自动计算项目总天数
@@ -2239,7 +2484,7 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
             })
             contracts.value = []
             ElMessage.success('合同文件已清理')
-          } catch (e) {
+          } catch {
             // 用户取消，恢复为“是”
             form.isHasContract = '是'
           }
@@ -2272,7 +2517,7 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
             })
             previews.value = []
             ElMessage.success('预览图已清理')
-          } catch (e) {
+          } catch {
             // 用户取消，恢复为“是”
             form.isHasPreview = '是'
           }
@@ -2523,27 +2768,15 @@ const previewInputRef = ref(null)
 // 图片预览状态
 const previewVisible = ref(false)
 const initialIndex = ref(0)
-const previewList = computed(() => vouchers.value.map(v => v.url))
+const previewList = ref([])
 
 /**
  * 处理图片预览
  */
 const handlePreview = (index) => {
+  previewList.value = vouchers.value.map(v => v.url)
   initialIndex.value = index
   previewVisible.value = true
-}
-
-/**
- * 触发文件选择
- */
-const triggerUpload = () => {
-  if (vouchers.value.length >= 20) {
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('最多只能上传 20 张凭证')
-    })
-    return
-  }
-  fileInputRef.value?.click()
 }
 
 /**
@@ -2648,7 +2881,7 @@ const handleInlineStatusChange = async (row, newVal) => {
         // 更新状态以供回溯校验
         row.status = newVal
 
-        // 活跃项目特殊逻辑：当状态改为“已竣工”或“已结清”时，更新时间节点并重新计算周期
+        // 活跃项目特殊逻辑：当状态改为“已交付”或“已结清”时，更新时间节点并重新计算周期
         if (!row.isHistorical) {
           const now = new Date().toISOString()
           if (newVal === 'constructing') {
@@ -3094,7 +3327,7 @@ const loadProjects = async () => {
       projects.value = res.data.map(p => {
         const statusConfig = projectStatuses.value.find(s => s.value === p.status)
         
-        const isHistorical = !!(p.isHistorical || p.constructionPeriod);
+        const isHistorical = !!(p.isHistorical || p.type === 'historical');
         
         // 计算周期
         let pDays;
@@ -3148,6 +3381,9 @@ const loadProjects = async () => {
           }
         }
 
+        const deliveryDate = p.type === 'historical' ? p.completionTime : p.completedTime;
+        const createDate = p.createTime;
+
         return {
           ...p,
           isHistorical: isHistorical,
@@ -3158,6 +3394,8 @@ const loadProjects = async () => {
           statusText: statusConfig ? statusConfig.label : '未知状态',
           date: p.period ? new Date(p.period[0]).toLocaleDateString() : (p.negotiatingTime || p.createTime ? new Date(p.negotiatingTime || p.createTime).toLocaleDateString() : '-'),
           createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-',
+          createDateText: createDate ? new Date(createDate).toLocaleDateString() : '-',
+          deliveryDateText: deliveryDate ? new Date(deliveryDate).toLocaleDateString() : '-',
           projectDaysText: pDays ? `${pDays}天` : '-',
           constructionDaysText: conDays ? `${conDays}天` : '-',
           collectionDaysText: colDays ? `${colDays}天` : '-',
@@ -3296,8 +3534,8 @@ const validateProjectForm = (checkVouchers = true) => {
   if (!isSafeInput(form.name)) return '项目名称包含非法字符';
   
   if (form.type === 'historical') {
-    if (!form.completionTime) return '请选择完结时间';
-    if (new Date(form.completionTime) > new Date()) return '完结时间不能晚于当前时间';
+    if (!form.completionTime) return '请选择交付日期';
+    if (new Date(form.completionTime) > new Date()) return '交付日期不能晚于当前时间';
   } else {
     // 常规项目新建时，禁止选择「已结清」状态
     if (isCreating.value && form.status === 'closed') {
@@ -3814,6 +4052,7 @@ const handlePreviewUpload = async (event) => {
  */
 const removeContract = async (index) => {
   const item = contracts.value[index]
+  item.deleting = true
   try {
     await deleteContract({ id: item.id, fileId: item.fileId })
     contracts.value.splice(index, 1)
@@ -3822,6 +4061,7 @@ const removeContract = async (index) => {
     })
   } catch (err) {
     console.error('删除合同失败:', err)
+    item.deleting = false
   }
 }
 
@@ -3830,6 +4070,7 @@ const removeContract = async (index) => {
  */
 const removePreview = async (index) => {
   const item = previews.value[index]
+  item.deleting = true
   try {
     await deletePreview({ id: item.id, fileId: item.fileId })
     previews.value.splice(index, 1)
@@ -3838,6 +4079,7 @@ const removePreview = async (index) => {
     })
   } catch (err) {
     console.error('删除预览图失败:', err)
+    item.deleting = false
   }
 }
 
@@ -4017,6 +4259,7 @@ const removeVoucher = async (index) => {
   const voucher = vouchers.value[index]
   if (!voucher) return
 
+  voucher.deleting = true
   try {
     // 调用整合后的云函数进行删除（包含数据库记录和云存储文件）
     await deleteVoucher({
@@ -4031,6 +4274,7 @@ const removeVoucher = async (index) => {
     })
   } catch (error) {
     console.error('删除凭证失败:', error.message || error)
+    voucher.deleting = false
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.error('删除失败，请稍后再试')
     })
@@ -4486,7 +4730,7 @@ const handleLogout = () => {
   border-color: rgba(59, 130, 246, 0.3);
 }
 
-/* 施工中 - 绿色 */
+/* 交付中 - 绿色 */
 .is-constructing .status-dot {
   background-color: #52ee8a;
   box-shadow: 0 0 8px rgba(82, 238, 138, 0.4);
@@ -4602,6 +4846,46 @@ const handleLogout = () => {
 }
 
 /* 高级筛选栏自定义样式 */
+.custom-date-picker-styled {
+  width: 100% !important;
+  height: 36px !important;
+  
+  :deep(.el-input__wrapper),
+  :deep(.el-range-editor.el-input__wrapper) {
+    background-color: #0e0e0f !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    height: 36px !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s;
+    
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    &.is-active {
+      border-color: #52ee8a !important;
+      box-shadow: 0 0 0 1px #52ee8a !important;
+    }
+  }
+  
+  :deep(.el-range-input) {
+    background-color: transparent !important;
+    color: #e5e2e3 !important;
+    font-size: 12px !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  
+  :deep(.el-range-separator) {
+    color: rgba(229, 226, 227, 0.4) !important;
+  }
+
+  :deep(.el-range__icon), :deep(.el-range__close-icon) {
+    color: #525252 !important;
+  }
+}
+
 .custom-filter-input, .custom-filter-select, .custom-filter-date {
   :deep(.el-input__wrapper), :deep(.el-select__wrapper), :deep(.el-input) {
     background-color: #0e0e0f !important;
@@ -4628,41 +4912,6 @@ const handleLogout = () => {
     &::placeholder {
       color: #525252 !important;
     }
-  }
-}
-
-.custom-filter-date {
-  width: 100% !important;
-  :deep(.el-input__wrapper) {
-    background-color: #0e0e0f !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: none !important;
-    border-radius: 8px !important;
-    height: 36px !important;
-    transition: all 0.2s;
-    
-    &:hover {
-      border-color: rgba(255, 255, 255, 0.2) !important;
-    }
-    
-    &.is-active {
-      border-color: #52ee8a !important;
-      box-shadow: 0 0 0 1px #52ee8a !important;
-    }
-  }
-  
-  :deep(.el-range-input) {
-    background-color: transparent !important;
-    color: #e5e2e3 !important;
-    font-size: 12px !important;
-  }
-  
-  :deep(.el-range-separator) {
-    color: #525252 !important;
-  }
-
-  :deep(.el-range__icon), :deep(.el-range__close-icon) {
-    color: #525252 !important;
   }
 }
 
