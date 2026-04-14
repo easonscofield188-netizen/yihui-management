@@ -287,6 +287,7 @@ async function updateProject(params) {
     };
 
     if (name) updateDataFinal.name = name;
+    if (type) updateDataFinal.type = type;
     if (period) updateDataFinal.period = period;
     if (client) updateDataFinal.client = client;
     if (role) updateDataFinal.role = role;

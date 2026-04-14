@@ -53,6 +53,12 @@
   - `content` (string): 项目内容 (植物养护, 植物换新, 景观优化, 环境治理)
   - `startDate` (string): 开始日期
   - `amount` (number): 订单金额
+  - `isHasVoucher` (string): 是否有发票凭证 (是/否)
+  - `vouchers` (array): 凭证列表
+    - `id` (string): 凭证 ID
+    - `fileId` (string): 云存储文件 ID
+    - `url` (string): 文件访问链接
+    - `name` (string): 文件名
   - `costs` (array): 子项目成本明细
     - `category` (string): 成本类目
     - `supplier` (string): 供应商
