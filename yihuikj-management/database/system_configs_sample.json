@@ -10,6 +10,8 @@
   { "group": "PROJECT_STATUS", "label": "已交付", "value": "completed", "sortOrder": 4, "isActive": true, "description": "工程建设完毕，等待客户验收" },
   { "group": "PROJECT_STATUS", "label": "结账中", "value": "settling", "sortOrder": 5, "isActive": true, "description": "验收通过，进入财务结算及审计流程" },
   { "group": "PROJECT_STATUS", "label": "已结清", "value": "closed", "sortOrder": 6, "isActive": true, "description": "款项全部结清，项目正式归档关闭" },
+  { "group": "PROJECT_STATUS", "label": "合作中", "value": "in_cooperation", "sortOrder": 7, "isActive": true, "description": "长期项目进行中" },
+  { "group": "PROJECT_STATUS", "label": "已终止", "value": "terminated", "sortOrder": 8, "isActive": true, "description": "长期项目已结束" },
 
   { "group": "COST_CATEGORY", "label": "真植物", "value": "real_plant", "sortOrder": 1, "isActive": true, "description": "苗木采购" },
   { "group": "COST_CATEGORY", "label": "仿真植物", "value": "fake_plant", "sortOrder": 2, "isActive": true, "description": "仿真绿植" },

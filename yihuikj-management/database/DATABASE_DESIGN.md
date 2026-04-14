@@ -35,22 +35,39 @@
 存储园林景观项目的核心业务数据。
 - `clientId` (string): 关联的客户 ID (外键)
 - `name` (string): 项目名称
-- `type` (string): 项目类型 (historical: 补录, normal: 常规)
+- `type` (string): 项目类型 (historical: 补录, normal: 常规, long_term: 长期)
 - `completionTime` (timestamp): 补录单：完结时间
 - `client` (string): 客户单位 (冗余显示)
 - `clientRole` (string): 客户角色 (冗余显示)
 - `startDate` (string): 开始日期 (YYYY-MM-DD)
 - `endDate` (string): 结束日期 (YYYY-MM-DD)
-- `staffCount` (number): 投入人员数量
-- `totalAmount` (number): 项目总订单金额
+- `staffCount` (number): 投入人员数量 (长期项目为 0)
+- `amount` (number): 项目订单金额 (长期项目为子项目汇总)
+- `receivedAmount` (number): 已收账款
+- `unreceivedAmount` (number): 未收账款 (计算字段)
+- `payableAmount` (number): 应付账款 (计算字段)
+- `paidAmount` (number): 已付账款 (计算字段)
 - `description` (string): 项目详细描述
-- `statusCode` (string): 项目状态标识 (对应 `system_configs` 中的 `value`)
-- `statusLabel` (string): 项目状态名称 (冗余显示)
+- `status` (string): 项目状态标识 (negotiating, constructing, completed, settling, closed, in_cooperation, terminated)
+- `subProjects` (array): 子项目列表 (仅长期项目)
+  - `content` (string): 项目内容 (植物养护, 植物换新, 景观优化, 环境治理)
+  - `startDate` (string): 开始日期
+  - `amount` (number): 订单金额
+  - `costs` (array): 子项目成本明细
+    - `category` (string): 成本类目
+    - `supplier` (string): 供应商
+    - `amount` (number): 支出金额
+    - `isSettled` (boolean): 是否结清
 - `isHasContract` (string): 是否有合同 (是/否)
 - `isHasPreview` (string): 是否有预览图 (是/否)
 - `amountEditCount` (number): 订单金额修改次数 (创建成功后最多允许修改一次)
 - `createdAt` (timestamp): 创建时间
 - `updatedAt` (timestamp): 更新时间
+- `negotiatingTime` (timestamp): 洽谈时间
+- `constructingTime` (timestamp): 施工时间
+- `completedTime` (timestamp): 完工时间
+- `settlingTime` (timestamp): 结账时间
+- `settledTime` (timestamp): 结清时间
 
 ### 1.5 成本明细表 (`costs`)
 记录每个项目的具体支出。

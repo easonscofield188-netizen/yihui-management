@@ -177,14 +177,14 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview } = params;
+  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, clientSource } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
   }
 
   // 安全校验
-  if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc)) {
+  if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc) || !isSafeInput(clientSource)) {
     return { code: 400, message: '输入包含非法字符' };
   }
 
@@ -254,8 +254,9 @@ async function updateProject(params) {
       }
     }
 
+    const updateData = {};
     // 订单金额修改限制逻辑
-    if (amount !== undefined && amount != oldProject.amount) {
+    if (amount !== undefined && parseFloat(amount) !== parseFloat(oldProject.amount || 0)) {
       const editCount = oldProject.amountEditCount || 0;
       if (editCount >= 1) {
         return { code: 403, message: '订单金额在创建后仅允许修改一次，当前已达到修改上限' };
@@ -281,7 +282,18 @@ async function updateProject(params) {
       updateDataFinal.receivedAmount = receivedAmount;
     }
     if (desc !== undefined) updateDataFinal.desc = desc;
-    if (costs) updateDataFinal.costs = costs;
+    if (clientSource !== undefined) updateDataFinal.clientSource = clientSource;
+    
+    if (costs && Array.isArray(costs)) {
+      // 清洗成本数据，确保没有 NaN 或 undefined
+      updateDataFinal.costs = costs.map(item => ({
+        category: item.category || '',
+        supplier: item.supplier || '',
+        amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
+        isSettled: item.isSettled || '否'
+      }));
+    }
+    
     if (status) updateDataFinal.status = status;
     
     // 历史数据相关字段
@@ -343,9 +355,9 @@ async function updateProject(params) {
     }
 
     // 重新计算资金
-    const finalAmount = amount !== undefined ? amount : oldProject.amount;
-    const finalReceived = receivedAmount !== undefined ? receivedAmount : (oldProject.receivedAmount || 0);
-    const finalCosts = costs || oldProject.costs || [];
+    const finalAmount = (amount !== undefined && !isNaN(parseFloat(amount))) ? parseFloat(amount) : oldProject.amount;
+    const finalReceived = (receivedAmount !== undefined && !isNaN(parseFloat(receivedAmount))) ? parseFloat(receivedAmount) : (oldProject.receivedAmount || 0);
+    const finalCosts = updateDataFinal.costs || oldProject.costs || [];
     const financials = calculateFinancials(finalAmount, finalReceived, finalCosts);
     Object.assign(updateDataFinal, financials);
 
@@ -373,6 +385,13 @@ async function updateProject(params) {
       }
     }
 
+    // 移除所有 undefined 的字段，防止数据库更新失败
+    Object.keys(updateDataFinal).forEach(key => {
+      if (updateDataFinal[key] === undefined) {
+        delete updateDataFinal[key];
+      }
+    });
+
     await db.collection('projects').doc(id).update({
       data: updateDataFinal
     });
@@ -380,7 +399,7 @@ async function updateProject(params) {
     return { code: 0, message: '更新成功' };
   } catch (err) {
     console.error('更新项目失败:', err);
-    return { code: 500, message: '更新失败', error: err.message };
+    return { code: 500, message: `更新失败: ${err.message || '未知错误'}`, error: err.message };
   }
 }
 

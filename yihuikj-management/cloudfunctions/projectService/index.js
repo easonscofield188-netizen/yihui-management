@@ -48,7 +48,7 @@ exports.main = async (event, context) => {
 };
 
 // 计算资金相关字段
-function calculateFinancials(amount, receivedAmount, costs) {
+function calculateFinancials(amount, receivedAmount, costs, subProjects) {
   const totalAmount = parseFloat(amount) || 0;
   const received = parseFloat(receivedAmount) || 0;
   const unreceived = Math.max(0, totalAmount - received);
@@ -56,12 +56,28 @@ function calculateFinancials(amount, receivedAmount, costs) {
   let payable = 0;
   let paid = 0;
   
+  // 主项目成本
   if (costs && Array.isArray(costs)) {
     costs.forEach(cost => {
       const costAmount = parseFloat(cost.amount) || 0;
       payable += costAmount;
       if (cost.isSettled === true || cost.isSettled === '是') {
         paid += costAmount;
+      }
+    });
+  }
+
+  // 子项目成本
+  if (subProjects && Array.isArray(subProjects)) {
+    subProjects.forEach(sp => {
+      if (sp.costs && Array.isArray(sp.costs)) {
+        sp.costs.forEach(cost => {
+          const costAmount = parseFloat(cost.amount) || 0;
+          payable += costAmount;
+          if (cost.isSettled === true || cost.isSettled === '是') {
+            paid += costAmount;
+          }
+        });
       }
     });
   }
@@ -83,7 +99,7 @@ async function syncFinancials(params) {
     if (!projectDoc.data) return { code: 404, message: '项目不存在' };
     
     const project = projectDoc.data;
-    const financials = calculateFinancials(project.amount, project.receivedAmount, project.costs);
+    const financials = calculateFinancials(project.amount, project.receivedAmount, project.costs, project.subProjects);
     
     await db.collection('projects').doc(projectId).update({
       data: {
@@ -125,8 +141,9 @@ async function syncHistoryFinancials(params) {
           ...cost,
           isSettled: cost.isSettled !== undefined ? cost.isSettled : true
         }));
+        const subProjects = project.subProjects || [];
 
-        const financials = calculateFinancials(amount, receivedAmount, updatedCosts);
+        const financials = calculateFinancials(amount, receivedAmount, updatedCosts, subProjects);
         
         await db.collection('projects').doc(project._id).update({
           data: {
@@ -177,7 +194,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, clientSource } = params;
+  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, clientSource, subProjects } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -296,6 +313,20 @@ async function updateProject(params) {
     
     if (status) updateDataFinal.status = status;
     
+    if (subProjects && Array.isArray(subProjects)) {
+      updateDataFinal.subProjects = subProjects.map(sp => ({
+        content: sp.content || '',
+        startDate: sp.startDate || '',
+        amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
+        costs: (sp.costs || []).map(c => ({
+          category: c.category || '',
+          supplier: c.supplier || '',
+          amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
+          isSettled: c.isSettled || false
+        }))
+      }));
+    }
+    
     // 历史数据相关字段
     if (isHistorical !== undefined) updateDataFinal.isHistorical = isHistorical;
     if (type) updateDataFinal.type = type;
@@ -358,7 +389,8 @@ async function updateProject(params) {
     const finalAmount = (amount !== undefined && !isNaN(parseFloat(amount))) ? parseFloat(amount) : oldProject.amount;
     const finalReceived = (receivedAmount !== undefined && !isNaN(parseFloat(receivedAmount))) ? parseFloat(receivedAmount) : (oldProject.receivedAmount || 0);
     const finalCosts = updateDataFinal.costs || oldProject.costs || [];
-    const financials = calculateFinancials(finalAmount, finalReceived, finalCosts);
+    const finalSubProjects = updateDataFinal.subProjects || oldProject.subProjects || [];
+    const financials = calculateFinancials(finalAmount, finalReceived, finalCosts, finalSubProjects);
     Object.assign(updateDataFinal, financials);
 
     // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
@@ -404,7 +436,7 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds } = params;
+  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
@@ -453,12 +485,25 @@ async function createProject(params) {
   try {
     const now = new Date().toISOString();
     
+    const subProjectsData = (subProjects && Array.isArray(subProjects)) ? subProjects.map(sp => ({
+      content: sp.content || '',
+      startDate: sp.startDate || '',
+      amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
+      costs: (sp.costs || []).map(c => ({
+        category: c.category || '',
+        supplier: c.supplier || '',
+        amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
+        isSettled: c.isSettled || false
+      }))
+    })) : [];
+
     // 计算资金
-    const financials = calculateFinancials(amount, received, costs);
+    const financials = calculateFinancials(amount, received, costs, subProjectsData);
     
     const data = {
       ...params,
       receivedAmount: received,
+      subProjects: subProjectsData,
       amountEditCount: 0, // 初始化修改次数为0
       ...financials,
       createTime: db.serverDate(),

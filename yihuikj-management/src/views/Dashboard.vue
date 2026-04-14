@@ -797,7 +797,7 @@
                         class="!w-full custom-date-picker"
                         format="YYYY-MM-DD"
                         value-format="YYYY-MM-DD"
-                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
+                        :disabled="form.type === 'long_term' || isHistoricalPeriodDisabled || isFieldReadOnly('period')"
                         :disabled-date="disabledHistoricalProjectDate"
                       />
                       <span class="text-on-surface-variant/40">至</span>
@@ -808,7 +808,7 @@
                         class="!w-full custom-date-picker"
                         format="YYYY-MM-DD"
                         value-format="YYYY-MM-DD"
-                        :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('period')"
+                        :disabled="form.type === 'long_term' || isHistoricalPeriodDisabled || isFieldReadOnly('period')"
                         :disabled-date="disabledHistoricalProjectDate"
                       />
                     </div>
@@ -816,7 +816,7 @@
 
                   <!-- Construction Period -->
                   <div
-                    v-if="form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
+                    v-if="form.type !== 'long_term' && form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -854,7 +854,7 @@
 
                   <!-- Collection Period -->
                   <div
-                    v-if="form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
+                    v-if="form.type !== 'long_term' && form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -971,7 +971,10 @@
                   </div>
 
                   <!-- Staff Count -->
-                  <div class="space-y-2">
+                  <div
+                    v-if="form.type !== 'long_term'"
+                    class="space-y-2"
+                  >
                     <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">人员数量</label>
                     <el-input-number
                       v-model="form.staffCount"
@@ -984,7 +987,10 @@
                   </div>
 
                   <!-- Order Amount -->
-                  <div class="space-y-2">
+                  <div
+                    v-if="form.type !== 'long_term'"
+                    class="space-y-2"
+                  >
                     <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
                     <el-input
                       v-model="form.amount"
@@ -996,10 +1002,10 @@
 
                   <!-- Received Amount (Added here) -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">{{ form.type === 'long_term' ? '已收总账款' : '已收账款' }} (¥)</label>
                     <el-input
                       v-model="form.receivedAmount"
-                      placeholder="请输入已收金额"
+                      :placeholder="form.type === 'long_term' ? '请输入已收总金额' : '请输入已收金额'"
                       class="custom-input"
                       :disabled="isViewMode || isFieldReadOnly('receivedAmount')"
                     />
@@ -1074,15 +1080,15 @@
               <div class="px-6 md:px-8 pb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Order Amount (Display Only) -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">{{ form.type === 'long_term' ? '订单总金额' : '订单金额' }} (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
-                    {{ Number(form.amount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+                    {{ Number(totalOrderAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
                 </div>
 
                 <!-- Received Amount (Read-only) -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已收账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">{{ form.type === 'long_term' ? '已收总账款' : '已收账款' }} (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(form.receivedAmount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1090,7 +1096,7 @@
 
                 <!-- Unreceived Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未收账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">{{ form.type === 'long_term' ? '未收总账款' : '未收账款' }} (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
                     {{ Number(unreceivedAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1123,7 +1129,10 @@
             </section>
 
             <!-- Cost Management Section -->
-            <section class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300">
+            <section
+              v-if="form.type !== 'long_term'"
+              class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300"
+            >
               <div 
                 class="p-6 md:p-8 flex justify-between items-center cursor-pointer"
                 :class="isCostInfoCollapsed ? 'pb-6' : 'pb-4'"
@@ -1857,6 +1866,239 @@
           </div>
         </div>
 
+        <!-- 子项目管理 (长期项目专用) -->
+        <div 
+          v-if="form.type === 'long_term'" 
+          class="col-span-12 mt-8"
+        >
+          <section class="bg-surface-container-low rounded-2xl p-6 md:p-8 border-t-2 border-emerald-500/20 shadow-2xl">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+              <div>
+                <h2 class="text-2xl font-bold text-on-surface flex items-center gap-3">
+                  <span class="material-symbols-outlined text-emerald-500 text-3xl">account_tree</span>
+                  子项目管理
+                </h2>
+                <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任务</p>
+              </div>
+              <button 
+                v-if="!isViewMode"
+                class="bg-emerald-500/10 px-6 py-2 rounded-full border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-95"
+                @click="addSubProject"
+              >
+                添加子项目
+              </button>
+            </div>
+
+            <!-- 子项目折叠面板容器 -->
+            <div class="space-y-4 mb-8">
+              <div 
+                v-for="(sp, index) in form.subProjects" 
+                :key="sp.id"
+                class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-lg transition-all duration-300"
+              >
+                <!-- 面板头部 -->
+                <div 
+                  class="flex items-center justify-between px-6 py-5 cursor-pointer hover:bg-white/5 transition-all bg-surface-container-highest/30"
+                  @click="sp.isCollapsed = !sp.isCollapsed"
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-3 flex-1 gap-6 items-center">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                        <span class="text-xs font-bold">{{ String(index + 1).padStart(2, '0') }}</span>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter truncate">项目内容</div>
+                        <div class="text-sm font-bold text-emerald-400 truncate">{{ sp.content || '未设置' }}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">开始日期</div>
+                      <div class="text-sm font-medium text-on-surface">{{ sp.startDate || '-' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">订单金额</div>
+                      <div class="text-sm font-bold text-on-surface">¥ {{ Number(sp.amount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 ml-4">
+                    <el-icon 
+                      class="text-on-surface-variant transition-transform duration-300"
+                      :class="{ 'rotate-180': !sp.isCollapsed }"
+                    >
+                      <ArrowDown />
+                    </el-icon>
+                    <el-icon 
+                      v-if="!isViewMode"
+                      class="text-red-400/40 hover:text-red-400 transition-colors"
+                      @click.stop="removeSubProject(index)"
+                    >
+                      <Delete />
+                    </el-icon>
+                  </div>
+                </div>
+
+                <!-- 面板内容 -->
+                <el-collapse-transition>
+                  <div v-show="!sp.isCollapsed" class="px-6 py-8 border-t border-white/5 bg-surface-container-high">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                      <div class="space-y-2">
+                        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目内容选择</label>
+                        <el-select 
+                          v-model="sp.content" 
+                          placeholder="请选择内容" 
+                          class="w-full custom-select"
+                          popper-class="custom-dropdown"
+                          :disabled="isViewMode"
+                        >
+                          <el-option 
+                            v-for="item in subProjectContents" 
+                            :key="item.value" 
+                            :label="item.label" 
+                            :value="item.value" 
+                          />
+                        </el-select>
+                      </div>
+                      <div class="space-y-2">
+                        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
+                        <el-date-picker
+                          v-model="sp.startDate"
+                          type="date"
+                          placeholder="选择日期"
+                          class="!w-full custom-date-picker"
+                          format="YYYY-MM-DD"
+                          value-format="YYYY-MM-DD"
+                          :disabled="isViewMode"
+                        />
+                      </div>
+                      <div class="space-y-2">
+                        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">订单金额 (¥)</label>
+                        <el-input 
+                          v-model="sp.amount" 
+                          placeholder="0.00" 
+                          class="custom-input"
+                          :disabled="isViewMode"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- 嵌套成本支出表格 -->
+                    <div class="bg-surface-container-low rounded-xl overflow-hidden border border-white/5">
+                      <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <span class="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                          <span class="material-symbols-outlined text-sm">receipt_long</span>
+                          成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
+                        </span>
+                        <button 
+                          v-if="!isViewMode"
+                          class="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded hover:bg-primary/20 transition-all font-bold"
+                          @click="addSubProjectCost(sp)"
+                        >
+                          添加成本记录
+                        </button>
+                      </div>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left border-separate border-spacing-y-2 px-4">
+                          <thead class="text-on-surface-variant uppercase tracking-widest">
+                            <tr>
+                              <th class="px-4 py-2 font-medium w-[25%]">类目</th>
+                              <th class="px-4 py-2 font-medium w-[25%]">供应商</th>
+                              <th class="px-4 py-2 font-medium w-[20%] text-center">支出金额 (¥)</th>
+                              <th class="px-4 py-2 font-medium w-[20%] text-center">是否结清</th>
+                              <th v-if="!isViewMode" class="px-4 py-2 font-medium text-right w-[10%]">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-white/5">
+                            <tr v-for="(cost, cIdx) in sp.costs" :key="cost.id" class="bg-surface-container-lowest/50 group hover:bg-white/5 transition-colors">
+                              <td class="px-4 py-3 rounded-l-lg">
+                                <el-select 
+                                  v-model="cost.category" 
+                                  placeholder="类目" 
+                                  class="w-full custom-select-small"
+                                  popper-class="custom-dropdown"
+                                  :disabled="isViewMode"
+                                >
+                                  <el-option 
+                                    v-for="cat in costCategories" 
+                                    :key="cat.value" 
+                                    :label="cat.label" 
+                                    :value="cat.value" 
+                                  />
+                                </el-select>
+                              </td>
+                              <td class="px-4 py-3">
+                                <el-select 
+                                  v-model="cost.supplier" 
+                                  placeholder="供应商" 
+                                  class="w-full custom-select-small"
+                                  popper-class="custom-dropdown"
+                                  :disabled="isViewMode"
+                                >
+                                  <el-option 
+                                    v-for="sup in suppliers" 
+                                    :key="sup.value" 
+                                    :label="sup.label" 
+                                    :value="sup.value" 
+                                  />
+                                </el-select>
+                              </td>
+                              <td class="px-4 py-3">
+                                <div class="flex items-center gap-2 bg-neutral-900/40 px-3 py-1 rounded border border-white/5 focus-within:border-primary/40 transition-all">
+                                  <span class="text-[10px] text-on-surface-variant font-mono">¥</span>
+                                  <input 
+                                    v-model="cost.amount"
+                                    type="number"
+                                    class="bg-transparent border-none p-0 focus:ring-0 text-xs font-mono w-full outline-none"
+                                    placeholder="0.00"
+                                    :disabled="isViewMode"
+                                  >
+                                </div>
+                              </td>
+                              <td class="px-4 py-3 text-center">
+                                <el-switch
+                                  v-model="cost.isSettled"
+                                  active-text="是"
+                                  inactive-text="否"
+                                  inline-prompt
+                                  size="small"
+                                  style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                                  :disabled="isViewMode"
+                                />
+                              </td>
+                              <td v-if="!isViewMode" class="px-4 py-3 text-right rounded-r-lg">
+                                <el-icon 
+                                  class="text-red-400/40 hover:text-red-400 cursor-pointer text-base"
+                                  @click="removeSubProjectCost(sp, cIdx)"
+                                >
+                                  <Delete />
+                                </el-icon>
+                              </td>
+                            </tr>
+                            <tr v-if="!sp.costs || sp.costs.length === 0">
+                              <td colspan="5" class="px-4 py-10 text-center">
+                                <span class="text-[10px] text-on-surface-variant opacity-40 uppercase tracking-widest font-bold">暂无成本支出记录</span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </el-collapse-transition>
+              </div>
+            </div>
+
+            <!-- 添加子项目虚线按钮 -->
+            <button 
+              v-if="!isViewMode"
+              class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
+              @click="addSubProject"
+            >
+              <el-icon class="text-lg group-hover:scale-110 transition-transform"><Plus /></el-icon>
+              <span class="text-sm font-bold tracking-widest uppercase">添加子项目</span>
+            </button>
+          </section>
+        </div>
+
         <!-- Footer Actions -->
         <div
           v-if="isCreating"
@@ -2262,7 +2504,8 @@ const form = reactive({
   isHistorical: false, // 标识是否为历史补录项目
   isHasContract: '否', // 是否有合同
   isHasPreview: '否',   // 是否有预览图
-  amountEditCount: 0   // 订单金额修改次数
+  amountEditCount: 0,   // 订单金额修改次数
+  subProjects: []      // 子项目列表
 })
 
 // 项目合同列表
@@ -2347,6 +2590,48 @@ const clientRoles = ref([])
 
 // 客户来源列表（由接口获取）
 const clientSources = ref([])
+
+// 子项目内容选项
+const subProjectContents = [
+  { label: '植物养护', value: '植物养护' },
+  { label: '植物换新', value: '植物换新' },
+  { label: '景观优化', value: '景观优化' },
+  { label: '环境治理', value: '环境治理' }
+]
+
+// 添加子项目
+const addSubProject = () => {
+  form.subProjects.push({
+    id: Date.now(),
+    content: '植物养护',
+    startDate: new Date().toISOString().split('T')[0],
+    amount: 0,
+    costs: [],
+    isCollapsed: false
+  })
+}
+
+// 移除子项目
+const removeSubProject = (index) => {
+  form.subProjects.splice(index, 1)
+}
+
+// 添加子项目成本项
+const addSubProjectCost = (subProject) => {
+  if (!subProject.costs) subProject.costs = []
+  subProject.costs.push({
+    id: Date.now() + Math.random(),
+    category: '',
+    supplier: '',
+    amount: 0,
+    isSettled: false
+  })
+}
+
+// 移除子项目成本项
+const removeSubProjectCost = (subProject, costIndex) => {
+  subProject.costs.splice(costIndex, 1)
+}
 
 // 项目类型列表（由接口获取）
 const projectTypes = ref([])
@@ -2601,12 +2886,19 @@ const filteredProjectStatuses = computed(() => {
     return projectStatuses.value.filter(s => s.value === 'settling' || s.value === 'closed')
   }
   
-  // 常规项目新建时，禁止选择「已结清」状态
-  if (isCreating.value && form.type !== 'historical') {
-    return projectStatuses.value.filter(s => s.value !== 'closed')
+  if (form.type === 'long_term') {
+    if (isCreating.value) {
+      return projectStatuses.value.filter(s => s.value === 'in_cooperation')
+    }
+    return projectStatuses.value.filter(s => s.value === 'in_cooperation' || s.value === 'terminated')
   }
   
-  return projectStatuses.value
+  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状态
+  if (isCreating.value && form.type !== 'historical') {
+    return projectStatuses.value.filter(s => s.value !== 'closed' && s.value !== 'in_cooperation' && s.value !== 'terminated')
+  }
+  
+  return projectStatuses.value.filter(s => s.value !== 'in_cooperation' && s.value !== 'terminated')
 })
 
 /**
@@ -2616,7 +2908,10 @@ const getRowProjectStatuses = (row) => {
   if (row.isHistorical) {
     return projectStatuses.value.filter(s => s.value === 'settling' || s.value === 'closed')
   }
-  return projectStatuses.value
+  if (row.type === 'long_term') {
+    return projectStatuses.value.filter(s => s.value === 'in_cooperation' || s.value === 'terminated')
+  }
+  return projectStatuses.value.filter(s => s.value !== 'in_cooperation' && s.value !== 'terminated')
 }
 
 // 施工周期变更处理：联动回款周期开始日期
@@ -2637,6 +2932,11 @@ watch(() => form.type, (newVal) => {
   if (newVal === 'historical') {
     form.status = 'closed'; // 补录单默认已结清
     form.isHistorical = true;
+  } else if (newVal === 'long_term') {
+    if (!isEditMode.value && !isViewMode.value) {
+      form.status = 'in_cooperation';
+      form.isHistorical = false;
+    }
   } else {
     if (!isEditMode.value && !isViewMode.value) {
       form.status = 'negotiating';
@@ -2702,18 +3002,38 @@ const costs = ref([])
 
 // 计算属性：未收账款
 const unreceivedAmount = computed(() => {
-  const total = parseFloat(form.amount) || 0;
+  const total = totalOrderAmount.value;
   const received = parseFloat(form.receivedAmount) || 0;
   return Math.max(0, total - received).toFixed(2);
 });
 
 // 计算属性：应付账款 (所有成本项总和)
 const payableAmount = computed(() => {
+  if (form.type === 'long_term') {
+    let total = 0;
+    form.subProjects.forEach(sp => {
+      if (sp.costs) {
+        total += sp.costs.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      }
+    });
+    return total.toFixed(2);
+  }
   return costs.value.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2);
 });
 
 // 计算属性：已付账款 (已结清成本项总和)
 const paidAmount = computed(() => {
+  if (form.type === 'long_term') {
+    let total = 0;
+    form.subProjects.forEach(sp => {
+      if (sp.costs) {
+        total += sp.costs
+          .filter(item => item.isSettled === true || item.isSettled === '是')
+          .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      }
+    });
+    return total.toFixed(2);
+  }
   return costs.value
     .filter(item => item.isSettled === true || item.isSettled === '是')
     .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
@@ -2765,6 +3085,13 @@ const isProjectClosed = computed(() => {
 
 // 计算属性：根据项目状态判断字段是否只读
 const isFieldReadOnly = (fieldName) => {
+  if (form.type === 'long_term') {
+    if (fieldName === 'period' || fieldName === 'amount') {
+      return true;
+    }
+    return false;
+  }
+
   // 补录单特殊逻辑：项目类型和项目状态始终只读
   if (form.type === 'historical') {
     if (fieldName === 'type' || fieldName === 'status') {
@@ -3080,6 +3407,11 @@ const handleInlineStatusChange = async (row, newVal) => {
  */
 const handleFormStatusChange = (newVal) => {
   if (isEditMode.value && originalProjectStatus.value && newVal !== originalProjectStatus.value) {
+    // 长期项目支持状态回溯切换，不需要确认弹窗
+    if (form.type === 'long_term') {
+      return;
+    }
+
     import('element-plus').then(({ ElMessageBox }) => {
       ElMessageBox.confirm(
         `确定要将项目状态修改为“${projectStatuses.value.find(s => s.value === newVal)?.label}”吗？状态一旦修改将无法回退。`,
@@ -3222,7 +3554,11 @@ const handleViewProject = async (project) => {
     completionTime: project.completionTime ? new Date(project.completionTime).toISOString().split('T')[0] : null,
     isHasContract: project.isHasContract || '否',
     isHasPreview: project.isHasPreview || '否',
-    amountEditCount: project.amountEditCount || 0
+    amountEditCount: project.amountEditCount || 0,
+    subProjects: project.subProjects ? project.subProjects.map(sp => ({
+      ...sp,
+      isCollapsed: true // 默认折叠
+    })) : []
   })
 
   // 标记为非新客户，隐藏提示文案
@@ -3557,7 +3893,8 @@ const resetForm = () => {
     isHistorical: false,
     isHasContract: '否',
     isHasPreview: '否',
-    amountEditCount: 0
+    amountEditCount: 0,
+    subProjects: []
   })
   costs.value = []
   vouchers.value = []
@@ -3586,13 +3923,19 @@ const formatNumber = (num) => {
 };
 
 // 财务快报计算逻辑
+const totalOrderAmount = computed(() => {
+  if (form.type === 'long_term') {
+    return form.subProjects.reduce((sum, sp) => sum + (parseFloat(sp.amount) || 0), 0);
+  }
+  return parseFloat(form.amount) || 0;
+});
+
 const totalIncome = computed(() => {
-  const val = parseFloat(form.amount) || 0;
-  return val;
+  return totalOrderAmount.value;
 });
 
 const totalCost = computed(() => {
-  return costs.value.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  return parseFloat(payableAmount.value) || 0;
 });
 
 const estimatedProfit = computed(() => {
@@ -3606,11 +3949,20 @@ const profitMargin = computed(() => {
 
 // 成本构成分析数据
 const costAnalysisData = computed(() => {
-  if (costs.value.length === 0 || totalCost.value === 0) return [];
+  let allCosts = [];
+  if (form.type === 'long_term') {
+    form.subProjects.forEach(sp => {
+      if (sp.costs) allCosts = allCosts.concat(sp.costs);
+    });
+  } else {
+    allCosts = costs.value;
+  }
+
+  if (allCosts.length === 0 || totalCost.value === 0) return [];
   
   // 按类别汇总
   const summary = {};
-  costs.value.forEach(item => {
+  allCosts.forEach(item => {
     if (item.category && item.amount) {
       summary[item.category] = (summary[item.category] || 0) + parseFloat(item.amount);
     }
@@ -3684,19 +4036,29 @@ const validateProjectForm = (checkVouchers = true) => {
 
   if (!form.status) return '请选择项目状态';
 
-  if (form.staffCount === null || form.staffCount === undefined) return '请输入人员数量';
-  
-  if (!form.amount) return '请输入订单金额';
-  if (isNaN(parseFloat(form.amount))) return '订单金额必须为数字';
+  if (form.type !== 'long_term') {
+    if (form.staffCount === null || form.staffCount === undefined) return '请输入人员数量';
+    
+    if (!form.amount) return '请输入订单金额';
+    if (isNaN(parseFloat(form.amount))) return '订单金额必须为数字';
+  } else {
+    if (form.subProjects.length === 0) return '长期项目请至少添加一个子项目';
+    for (let i = 0; i < form.subProjects.length; i++) {
+      const sp = form.subProjects[i];
+      if (!sp.content) return `子项目 ${i + 1} 请选择项目内容`;
+      if (!sp.startDate) return `子项目 ${i + 1} 请选择开始日期`;
+      if (sp.amount === null || sp.amount === undefined) return `子项目 ${i + 1} 请输入订单金额`;
+    }
+  }
 
   const received = parseFloat(form.receivedAmount) || 0;
-  const total = parseFloat(form.amount) || 0;
+  const total = totalOrderAmount.value;
   if (received > total) return '已收账款不可超过订单金额';
 
   if (!form.desc) return '请输入项目描述';
   if (!isSafeInput(form.desc)) return '项目描述包含非法字符';
   
-  if (costs.value.length === 0) return '请至少添加一个成本项';
+  if (form.type !== 'long_term' && costs.value.length === 0) return '请至少添加一个成本项';
   
   for (const cost of costs.value) {
     if (!cost.category || cost.amount === undefined || cost.amount === null) return '请完善成本项信息';
@@ -3803,8 +4165,8 @@ const handleSaveProject = async () => {
       role: form.role,
       clientSource: form.clientSource,
       status: form.status,
-      staffCount: Number(form.staffCount),
-      amount: Number(form.amount),
+      staffCount: form.type === 'long_term' ? 0 : Number(form.staffCount),
+      amount: Number(totalOrderAmount.value),
       receivedAmount: Number(form.receivedAmount),
       desc: form.desc,
       isHistorical: !!form.isHistorical,
@@ -3816,6 +4178,17 @@ const handleSaveProject = async () => {
         supplier: item.supplier,
         amount: Number(item.amount),
         isSettled: item.isSettled
+      })),
+      subProjects: form.subProjects.map(sp => ({
+        content: sp.content,
+        startDate: sp.startDate,
+        amount: Number(sp.amount),
+        costs: (sp.costs || []).map(c => ({
+          category: c.category,
+          supplier: c.supplier,
+          amount: Number(c.amount),
+          isSettled: c.isSettled
+        }))
       }))
     }
 

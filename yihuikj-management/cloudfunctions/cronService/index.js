@@ -22,11 +22,11 @@ exports.main = async (event, context) => {
   console.log(`开始执行每日更新任务，日期: ${today}`);
 
   try {
-    // 1. 获取所有未结清的常规项目（处理分页，TCB 默认限制 20 条，最大 100 条）
+    // 1. 获取所有未结清/未终止的活跃项目（处理分页，TCB 默认限制 20 条，最大 100 条）
     const MAX_LIMIT = 100;
     const countResult = await db.collection('projects').where({
       type: _.neq('historical'),
-      status: _.neq('closed')
+      status: _.nin(['closed', 'terminated'])
     }).count();
     
     const total = countResult.total;
@@ -38,7 +38,7 @@ exports.main = async (event, context) => {
     for (let i = 0; i < batchCount; i++) {
       const res = await db.collection('projects').where({
         type: _.neq('historical'),
-        status: _.neq('closed')
+        status: _.nin(['closed', 'terminated'])
       })
       .skip(i * MAX_LIMIT)
       .limit(MAX_LIMIT)
@@ -52,19 +52,29 @@ exports.main = async (event, context) => {
           updateTime: db.serverDate()
         };
 
-        // 更新项目周期结束日期
-        if (project.period && project.period[0]) {
-          updateData.period = [project.period[0], today];
-        }
+        // 长期项目逻辑
+        if (project.type === 'long_term') {
+          if (project.status === 'in_cooperation' && project.period && project.period[0]) {
+            updateData.period = [project.period[0], today];
+          } else {
+            continue;
+          }
+        } else {
+          // 常规项目逻辑
+          // 更新项目周期结束日期
+          if (project.period && project.period[0]) {
+            updateData.period = [project.period[0], today];
+          }
 
-        // 如果在交付中，更新施工周期结束日期
-        if (project.status === 'constructing' && project.constructionPeriod && project.constructionPeriod[0]) {
-          updateData.constructionPeriod = [project.constructionPeriod[0], today];
-        }
+          // 如果在交付中，更新施工周期结束日期
+          if (project.status === 'constructing' && project.constructionPeriod && project.constructionPeriod[0]) {
+            updateData.constructionPeriod = [project.constructionPeriod[0], today];
+          }
 
-        // 如果在结账中，更新回款周期结束日期
-        if (project.status === 'settling' && project.collectionPeriod && project.collectionPeriod[0]) {
-          updateData.collectionPeriod = [project.collectionPeriod[0], today];
+          // 如果在结账中，更新回款周期结束日期
+          if (project.status === 'settling' && project.collectionPeriod && project.collectionPeriod[0]) {
+            updateData.collectionPeriod = [project.collectionPeriod[0], today];
+          }
         }
 
         await db.collection('projects').doc(project._id).update({
