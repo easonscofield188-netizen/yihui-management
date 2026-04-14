@@ -216,10 +216,11 @@ async function updateProject(params) {
     if (oldProject.type === 'historical') {
       if (type && type !== oldProject.type) return { code: 403, message: '补录单项目类型不可修改' };
       if (status && status !== oldProject.status) return { code: 403, message: '补录单项目状态不可修改' };
-    }
-
-    // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
-    if (oldProject.type !== 'historical') {
+    } else if (oldProject.type === 'long_term') {
+      // 长期项目逻辑：项目类型禁止修改，但允许修改 period (因为结束日期会随系统时间自动更新)
+      if (type && type !== oldProject.type) return { code: 403, message: '长期项目类型不可修改' };
+    } else {
+      // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
       const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
       const illegalChanges = incomingFields.filter(field => {
