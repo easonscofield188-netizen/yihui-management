@@ -3638,6 +3638,7 @@ const handleViewProject = async (project) => {
     amountEditCount: project.amountEditCount || 0,
     subProjects: project.subProjects ? project.subProjects.map(sp => ({
       ...sp,
+      id: sp.id || Date.now() + Math.random(),
       isCollapsed: true // 默认折叠
     })) : []
   })
@@ -4265,12 +4266,14 @@ const handleSaveProject = async () => {
         isSettled: item.isSettled
       })),
       subProjects: form.subProjects.map(sp => ({
+        id: sp.id,
         content: sp.content,
         startDate: sp.startDate,
         amount: Number(sp.amount),
         isHasVoucher: sp.isHasVoucher || '否',
         vouchers: sp.vouchers || [],
         costs: (sp.costs || []).map(c => ({
+          id: c.id,
           category: c.category,
           supplier: c.supplier,
           amount: Number(c.amount),

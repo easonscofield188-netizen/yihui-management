@@ -317,10 +317,14 @@ async function updateProject(params) {
     
     if (subProjects && Array.isArray(subProjects)) {
       updateDataFinal.subProjects = subProjects.map(sp => ({
+        id: sp.id || Date.now() + Math.random(),
         content: sp.content || '',
         startDate: sp.startDate || '',
         amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
+        isHasVoucher: sp.isHasVoucher || '否',
+        vouchers: sp.vouchers || [],
         costs: (sp.costs || []).map(c => ({
+          id: c.id || Date.now() + Math.random(),
           category: c.category || '',
           supplier: c.supplier || '',
           amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
@@ -488,10 +492,14 @@ async function createProject(params) {
     const now = new Date().toISOString();
     
     const subProjectsData = (subProjects && Array.isArray(subProjects)) ? subProjects.map(sp => ({
+      id: sp.id || Date.now() + Math.random(),
       content: sp.content || '',
       startDate: sp.startDate || '',
       amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
+      isHasVoucher: sp.isHasVoucher || '否',
+      vouchers: sp.vouchers || [],
       costs: (sp.costs || []).map(c => ({
+        id: c.id || Date.now() + Math.random(),
         category: c.category || '',
         supplier: c.supplier || '',
         amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
