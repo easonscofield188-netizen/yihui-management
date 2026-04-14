@@ -1744,8 +1744,8 @@
                 height="100%" 
                 arrow="hover" 
                 :autoplay="true" 
-                @change="handleCarouselChange"
                 class="h-full"
+                @change="handleCarouselChange"
               >
                 <el-carousel-item 
                   v-for="(p, idx) in previews" 
@@ -2265,21 +2265,6 @@ const form = reactive({
   amountEditCount: 0   // 订单金额修改次数
 })
 
-// 监听订单金额修改，在第一次修改时提醒用户
-watch(() => form.amount, (newVal, oldVal) => {
-  if (isLoadingProject.value) return // 加载中不触发提醒
-  // 仅在编辑模式、且尚未修改过金额、且新旧值不同时提醒
-  if (isEditMode.value && form.amountEditCount === 0 && oldVal !== undefined && oldVal !== '' && newVal !== oldVal) {
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning({
-        message: '注意：项目创建成功后，订单金额仅允许修改一次。本次修改保存后，该字段将无法再次编辑。',
-        duration: 5000,
-        showClose: true
-      })
-    })
-  }
-})
-
 // 项目合同列表
 const contracts = ref([])
 // 项目预览图列表
@@ -2314,7 +2299,7 @@ watch(today, () => {
     if (!p.isHistorical) {
       const now = today.value.toISOString();
       const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-      const pEnd = p.completedTime || now;
+      const pEnd = p.settledTime || now;
       const pDays = calculateDiffDays(pStart, pEnd);
       
       const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
@@ -2343,7 +2328,7 @@ watch(today, () => {
     if (p && !p.isHistorical) {
       const now = today.value.toISOString()
       const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-      form.period = [pStart, p.completedTime || now]
+      form.period = [pStart, p.settledTime || now]
       if (p.constructingTime) {
         form.constructionPeriod = [p.constructingTime, p.completedTime || now]
       }
@@ -2416,6 +2401,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
+        if (label === '谈判中') label = '洽谈中';
         if (label === '已完账' || label === '已完帐') label = '已结清';
         if (label === '施工中') label = '交付中';
         if (label === '已竣工') label = '已交付';
@@ -2447,6 +2433,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
+        if (label === '谈判中') label = '洽谈中';
         if (label === '已完账' || label === '已完帐') label = '已结清';
         if (label === '施工中') label = '交付中';
         if (label === '已竣工') label = '已交付';
@@ -3005,7 +2992,7 @@ const handleInlineStatusChange = async (row, newVal) => {
           
           // 重新计算活跃项目的周期天数
           const pStart = row.negotiatingTime || (row.period && row.period[0]) || row.createTime
-          const pEnd = row.completedTime || now
+          const pEnd = row.settledTime || now
           const pDays = calculateDiffDays(pStart, pEnd)
           
           let conDays = null
@@ -3048,7 +3035,7 @@ const handleInlineStatusChange = async (row, newVal) => {
           } else {
             // 活跃项目同步更新表单中的周期显示
             const now = today.value.toISOString()
-            form.period = [row.negotiatingTime || row.createTime, row.completedTime || now]
+            form.period = [row.negotiatingTime || row.createTime, row.settledTime || now]
             if (row.constructingTime) {
               form.constructionPeriod = [row.constructingTime, row.completedTime || now]
             }
@@ -3219,7 +3206,7 @@ const handleViewProject = async (project) => {
   Object.assign(form, {
     name: project.name,
     type: project.type || (project.isHistorical ? 'historical' : 'normal'),
-    period: project.isHistorical ? (project.period || [null, null]) : [pStart, project.completedTime || now],
+    period: project.isHistorical ? (project.period || [null, null]) : [pStart, project.settledTime || now],
     startDate: pStart ? new Date(pStart).toISOString().split('T')[0] : null,
     constructionPeriod: project.isHistorical ? (project.constructionPeriod || [null, null]) : (project.constructingTime ? [project.constructingTime, project.completedTime || now] : [null, null]),
     collectionPeriod: project.isHistorical ? (project.collectionPeriod || [null, null]) : (project.settlingTime ? [project.settlingTime, project.settledTime || now] : [null, null]),
@@ -3484,7 +3471,7 @@ const loadProjects = async () => {
           // 活跃项目根据时间节点计算
           const now = today.value.toISOString();
           const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-          const pEnd = p.completedTime || now;
+          const pEnd = p.settledTime || now;
           pDays = calculateDiffDays(pStart, pEnd);
           pRange = `${formatDate(pStart)} - ${formatDate(pEnd)}`;
 
@@ -3562,7 +3549,7 @@ const resetForm = () => {
     client: '',
     role: '',
     clientSource: '',
-    status: 'negotiating', // 默认谈判中
+    status: 'negotiating', // 默认洽谈中
     staffCount: null,
     amount: '',
     receivedAmount: null,
@@ -3763,15 +3750,28 @@ const handleSyncFinancials = async () => {
  * 确认保存修改（带弹窗提醒）
  */
 const confirmSaveUpdate = () => {
+  const currentProject = projects.value.find(p => p.id === selectedProjectId.value);
+  const isAmountChanged = currentProject && Number(form.amount) !== Number(currentProject.amount);
+  
+  // 如果金额发生变化且尚未修改过（次数为0），则显示特殊提醒
+  const showAmountWarning = isAmountChanged && (form.amountEditCount || 0) === 0;
+  
+  const message = showAmountWarning 
+    ? '检测到您修改了“订单金额”。注意：订单金额只能修改一次，是否确认修改！'
+    : '确认保存对该项目的修改吗？';
+
   import('element-plus').then(({ ElMessageBox }) => {
     ElMessageBox.confirm(
-      '确认保存对该项目的修改吗？',
-      '提示',
+      message,
+      showAmountWarning ? '温馨提示' : '保存确认',
       {
-        confirmButtonText: '确认保存',
-        cancelButtonText: '取消',
+        confirmButtonText: showAmountWarning ? '确认修改' : '确认保存',
+        cancelButtonText: showAmountWarning ? '取消返回' : '取消',
         type: 'warning',
-        customClass: 'custom-message-box'
+        confirmButtonClass: showAmountWarning ? '!bg-red-500 !border-red-500 !text-white' : '',
+        cancelButtonClass: showAmountWarning ? '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white' : '',
+        customClass: showAmountWarning ? 'danger-message-box' : 'custom-message-box',
+        center: showAmountWarning ? true : false,
       }
     ).then(() => {
       handleSaveProject()
@@ -4868,7 +4868,7 @@ const handleLogout = () => {
   background-color: #9ca3af; /* 默认灰色 */
 }
 
-/* 谈判中 - 蓝色 */
+/* 洽谈中 - 蓝色 */
 .is-negotiating .status-dot {
   background-color: #3b82f6;
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);

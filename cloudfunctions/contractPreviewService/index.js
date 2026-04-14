@@ -128,6 +128,8 @@ exports.main = async (event, context) => {
         return await handleDeleteAllByProject(data);
       case 'updateBatch':
         return await handleUpdateBatch(data);
+      case 'renameProjectFiles':
+        return await handleRenameProjectFiles(data);
       default:
         return { code: 400, message: '未知操作' };
     }
@@ -254,6 +256,94 @@ async function handleUpload(event) {
   } catch (err) {
     console.error('上传失败:', err);
     return { code: 500, message: '上传失败', error: err.message };
+  }
+}
+
+/**
+ * 当项目名称修改时，同步修改云存储中的路径
+ */
+async function handleRenameProjectFiles(params) {
+  const { projectId, oldName, newName } = params;
+  
+  if (!projectId || !oldName || !newName || oldName === newName) {
+    return { code: 0, message: '无需重命名' };
+  }
+
+  const escapedOldName = oldName.replace(/[\\/:*?"<>|]/g, '_');
+  const escapedNewName = newName.replace(/[\\/:*?"<>|]/g, '_');
+
+  console.log(`开始重命名项目合同与预览图路径: ${escapedOldName} -> ${escapedNewName}`);
+
+  try {
+    const results = {
+      contracts: { total: 0, success: 0 },
+      previews: { total: 0, success: 0 }
+    };
+
+    // 处理函数
+    const processFiles = async (collectionName, typeLabel) => {
+      const res = await db.collection(collectionName).where({ projectId }).get();
+      const files = res.data;
+      if (!files || files.length === 0) return;
+
+      results[typeLabel].total = files.length;
+      
+      for (const file of files) {
+        const oldFileId = file.fileId;
+        const oldPathPart = `/${escapedOldName}/`;
+        
+        if (!oldFileId.includes(oldPathPart)) {
+          console.log(`文件 ${file._id} 路径不匹配，跳过`);
+          results[typeLabel].success++; // 视为成功，因为不需要处理
+          continue;
+        }
+
+        try {
+          const newPathPart = `/${escapedNewName}/`;
+          const newFileId = oldFileId.replace(oldPathPart, newPathPart);
+          
+          // 提取 cloudPath (去掉 cloud://env-id.env-id-xxx/ 部分)
+          const pathStartIndex = newFileId.indexOf('/', 9);
+          const cloudPath = newFileId.substring(pathStartIndex + 1);
+          
+          console.log(`处理文件 ${file._id}: ${oldFileId} -> ${cloudPath}`);
+
+          // 1. 下载
+          const downloadRes = await cloud.downloadFile({ fileID: oldFileId });
+          // 2. 上传
+          const uploadRes = await cloud.uploadFile({
+            cloudPath: cloudPath,
+            fileContent: downloadRes.fileContent
+          });
+          // 3. 获取新链接
+          const getUrlRes = await cloud.getTempFileURL({ fileList: [uploadRes.fileID] });
+          const newUrl = getUrlRes.fileList[0].tempFileURL;
+
+          // 4. 更新数据库
+          await db.collection(collectionName).doc(file._id).update({
+            data: {
+              fileId: uploadRes.fileID,
+              url: newUrl
+            }
+          });
+
+          // 5. 删除旧文件
+          await cloud.deleteFile({ fileList: [oldFileId] });
+          
+          results[typeLabel].success++;
+        } catch (err) {
+          console.error(`处理文件 ${file._id} 失败:`, err);
+        }
+      }
+    };
+
+    await processFiles('project_contracts', 'contracts');
+    await processFiles('project_previews', 'previews');
+
+    return { code: 0, message: '处理完成', data: results };
+  } catch (err) {
+    console.error('重命名项目文件失败:', err);
+    return { code: 500, message: '处理失败', error: err.message };
   }
 }
 
