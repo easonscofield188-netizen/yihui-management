@@ -1,0 +1,20 @@
+[
+  {
+    "name": "雅居乐集团",
+    "role": "项目经理",
+    "roleCode": "pm",
+    "source": "老客户推荐",
+    "paymentCycle": "季度结算",
+    "description": "长期合作伙伴，主要负责高端园林项目。",
+    "createdAt": "2023-01-15T08:00:00Z"
+  },
+  {
+    "name": "万科地产",
+    "role": "老板本身",
+    "roleCode": "boss",
+    "source": "行业展会",
+    "paymentCycle": "分阶段支付",
+    "description": "大型地产公司，对质量要求极高。",
+    "createdAt": "2023-05-20T09:00:00Z"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "projectId": "project_id_placeholder_1",
+    "categoryCode": "real_plant",
+    "categoryLabel": "真植物",
+    "supplier": "杭州翠绿苗木场",
+    "amount": 12500,
+    "createdAt": "2023-10-25T10:00:00Z"
+  },
+  {
+    "projectId": "project_id_placeholder_1",
+    "categoryCode": "fake_plant",
+    "categoryLabel": "仿真植物",
+    "supplier": "亿辉建材中心",
+    "amount": 8400,
+    "createdAt": "2023-10-26T11:00:00Z"
+  },
+  {
+    "projectId": "project_id_placeholder_1",
+    "categoryCode": "food",
+    "categoryLabel": "伙食费",
+    "supplier": "和顺餐饮服务",
+    "amount": 2100,
+    "createdAt": "2023-10-27T12:00:00Z"
+  }
+]
