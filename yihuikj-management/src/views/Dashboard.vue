@@ -1658,13 +1658,6 @@
                   </h2>
                   <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任务</p>
                 </div>
-                <button 
-                  v-if="!isViewMode"
-                  class="bg-emerald-500/10 px-6 py-2 rounded-full border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-95"
-                  @click="addSubProject"
-                >
-                  添加子项目
-                </button>
               </div>
 
               <!-- 子项目折叠面板容器 -->
@@ -1681,12 +1674,20 @@
                   >
                     <div class="grid grid-cols-1 md:grid-cols-3 flex-1 gap-6 items-center">
                       <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                        <div 
+                          class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                          :class="index % 2 === 0 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-cyan-500/20 text-cyan-500'"
+                        >
                           <span class="text-xs font-bold">{{ String(index + 1).padStart(2, '0') }}</span>
                         </div>
                         <div class="min-w-0">
                           <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter truncate">项目内容</div>
-                          <div class="text-sm font-bold text-emerald-400 truncate">{{ sp.content || '未设置' }}</div>
+                          <div 
+                            class="text-sm font-bold truncate"
+                            :class="index % 2 === 0 ? 'text-emerald-400' : 'text-cyan-400'"
+                          >
+                            {{ sp.content || '未设置' }}
+                          </div>
                         </div>
                       </div>
                       <div>
@@ -1706,7 +1707,7 @@
                         <ArrowDown />
                       </el-icon>
                       <el-icon 
-                        v-if="!isViewMode"
+                        v-if="!isViewMode && !isLongTermTerminated"
                         class="text-red-400/40 hover:text-red-400 transition-colors"
                         @click.stop="removeSubProject(index)"
                       >
@@ -1726,7 +1727,7 @@
                             placeholder="请选择内容" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           >
                             <el-option 
                               v-for="item in subProjectContents" 
@@ -1745,7 +1746,7 @@
                             class="!w-full custom-date-picker"
                             format="YYYY-MM-DD"
                             value-format="YYYY-MM-DD"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           />
                         </div>
                         <div class="space-y-2">
@@ -1754,7 +1755,7 @@
                             v-model="sp.amount" 
                             placeholder="0.00" 
                             class="custom-input"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           />
                         </div>
                         <div class="space-y-2">
@@ -1764,7 +1765,7 @@
                             placeholder="请选择" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           >
                             <el-option label="是" value="是" />
                             <el-option label="否" value="否" />
@@ -1775,13 +1776,17 @@
                       <!-- 嵌套成本支出表格 -->
                       <div class="bg-surface-container-low rounded-xl overflow-hidden border border-white/5 mb-10">
                         <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
-                          <span class="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                          <span 
+                            class="text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                            :class="index % 2 === 0 ? 'text-emerald-400' : 'text-cyan-400'"
+                          >
                             <span class="material-symbols-outlined text-sm">receipt_long</span>
                             成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
                           </span>
                           <button 
-                            v-if="!isViewMode"
-                            class="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded hover:bg-primary/20 transition-all font-bold"
+                            v-if="!isViewMode && !isLongTermTerminated"
+                            class="text-[10px] border px-3 py-1 rounded transition-all font-bold"
+                            :class="index % 2 === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'"
                             @click="addSubProjectCost(sp)"
                           >
                             添加成本记录
@@ -1806,7 +1811,7 @@
                                     placeholder="类目" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   >
                                     <el-option 
                                       v-for="cat in costCategories" 
@@ -1822,7 +1827,7 @@
                                     placeholder="供应商" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   >
                                     <el-option 
                                       v-for="sup in suppliers" 
@@ -1840,7 +1845,7 @@
                                       type="number"
                                       class="bg-transparent border-none p-0 focus:ring-0 text-xs font-mono w-full outline-none"
                                       placeholder="0.00"
-                                      :disabled="isViewMode"
+                                      :disabled="isViewMode || isLongTermTerminated"
                                     >
                                   </div>
                                 </td>
@@ -1852,10 +1857,10 @@
                                     inline-prompt
                                     size="small"
                                     style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   />
                                 </td>
-                                <td v-if="!isViewMode" class="px-4 py-3 text-right rounded-r-lg">
+                                <td v-if="!isViewMode && !isLongTermTerminated" class="px-4 py-3 text-right rounded-r-lg">
                                   <el-icon 
                                     class="text-red-400/40 hover:text-red-400 cursor-pointer text-base"
                                     @click="removeSubProjectCost(sp, cIdx)"
@@ -1901,24 +1906,30 @@
                                 <View />
                               </el-icon>
                               <el-icon 
-                                v-if="!isViewMode"
+                                v-if="!isViewMode && !isLongTermTerminated"
                                 class="text-red-400 hover:text-red-500 transition-colors cursor-pointer" 
+                                :class="{ 'opacity-50 pointer-events-none': v.deleting }"
                                 size="20"
                                 @click="removeSubProjectVoucher(sp, vIdx)"
                               >
-                                <Delete />
+                                <Delete v-if="!v.deleting" />
+                                <Refresh v-else class="animate-spin" />
                               </el-icon>
                             </div>
                           </div>
 
                           <!-- 上传按钮 -->
                           <div 
-                            v-if="!isViewMode && (!sp.vouchers || sp.vouchers.length < 10)"
+                            v-if="!isViewMode && !isLongTermTerminated && (!sp.vouchers || sp.vouchers.length < 10)"
                             class="relative aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group"
+                            :class="{ 'opacity-50 pointer-events-none': sp.uploading }"
                             @click="$refs[`subVoucherInput_${index}`][0].click()"
                           >
-                            <el-icon class="text-2xl text-on-surface-variant group-hover:text-primary transition-colors"><Plus /></el-icon>
-                            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest group-hover:text-primary transition-colors">上传凭证</span>
+                            <el-icon v-if="!sp.uploading" class="text-2xl text-on-surface-variant group-hover:text-primary transition-colors"><Plus /></el-icon>
+                            <el-icon v-else class="text-2xl text-primary animate-spin"><Refresh /></el-icon>
+                            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest group-hover:text-primary transition-colors">
+                              {{ sp.uploading ? '上传中...' : '上传凭证' }}
+                            </span>
                             <input 
                               :ref="`subVoucherInput_${index}`"
                               type="file" 
@@ -1938,7 +1949,7 @@
 
               <!-- 添加子项目虚线按钮 -->
               <button 
-                v-if="!isViewMode"
+                v-if="!isViewMode && !isLongTermTerminated"
                 class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
                 @click="addSubProject"
               >
@@ -3156,6 +3167,11 @@ const isProjectClosed = computed(() => {
     return p && p.status === 'closed';
   }
   return false;
+});
+
+// 计算属性：长期项目是否已终止
+const isLongTermTerminated = computed(() => {
+  return form.type === 'long_term' && form.status === 'terminated';
 });
 
 // 计算属性：根据项目状态判断字段是否只读
@@ -4731,7 +4747,7 @@ const handleSubProjectVoucherUpload = async (event, subProject) => {
     return
   }
 
-  uploadingVoucher.value = true
+  subProject.uploading = true
   
   try {
     const uploadPromises = files.map(async (file) => {
@@ -4795,7 +4811,7 @@ const handleSubProjectVoucherUpload = async (event, subProject) => {
   } catch (error) {
     console.error('上传失败:', error)
   } finally {
-    uploadingVoucher.value = false
+    subProject.uploading = false
     event.target.value = ''
   }
 }
@@ -4818,6 +4834,7 @@ const removeSubProjectVoucher = async (subProject, index) => {
   const voucher = subProject.vouchers[index]
   if (!voucher) return
 
+  voucher.deleting = true
   try {
     // 仅删除云存储文件，因为子项目凭证没有单独的数据库记录
     const formData = new FormData()
@@ -4832,6 +4849,7 @@ const removeSubProjectVoucher = async (subProject, index) => {
     })
   } catch (error) {
     console.error('删除凭证失败:', error)
+    voucher.deleting = false
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.error('删除失败')
     })
