@@ -477,7 +477,7 @@
                           v-for="item in getRowProjectStatuses(row)"
                           :key="item.value"
                           :command="item.value"
-                          :disabled="item.sortOrder < getStatusOrder(row.status)"
+                          :disabled="!canRollbackStatus(row) && item.sortOrder < getStatusOrder(row.status)"
                           :class="{ 'is-selected': row.status === item.value }"
                         >
                           <span>{{ item.label }}</span>
@@ -729,7 +729,7 @@
                       placeholder="请选择项目状态" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
-                      :disabled="isViewMode || isFieldReadOnly('status')"
+                      :disabled="isViewMode || isFieldReadOnly('status') || (isCreating && form.type === 'long_term')"
                       @change="handleFormStatusChange"
                     >
                       <el-option 
@@ -737,7 +737,7 @@
                         :key="item.value" 
                         :label="item.label" 
                         :value="item.value" 
-                        :disabled="isEditMode && item.sortOrder < getStatusOrder(originalProjectStatus)"
+                        :disabled="isEditMode && !canRollbackStatus(form) && item.sortOrder < getStatusOrder(originalProjectStatus)"
                       />
                     </el-select>
                   </div>
@@ -1707,7 +1707,7 @@
                         <ArrowDown />
                       </el-icon>
                       <el-icon 
-                        v-if="!isViewMode && !isLongTermTerminated"
+                        v-if="!isViewMode"
                         class="text-red-400/40 hover:text-red-400 transition-colors"
                         @click.stop="removeSubProject(index)"
                       >
@@ -1727,7 +1727,7 @@
                             placeholder="请选择内容" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode || isLongTermTerminated"
+                            :disabled="isViewMode"
                           >
                             <el-option 
                               v-for="item in subProjectContents" 
@@ -1746,7 +1746,8 @@
                             class="!w-full custom-date-picker"
                             format="YYYY-MM-DD"
                             value-format="YYYY-MM-DD"
-                            :disabled="isViewMode || isLongTermTerminated"
+                            :disabled="isViewMode"
+                            :disabled-date="disabledFutureDate"
                           />
                         </div>
                         <div class="space-y-2">
@@ -1755,7 +1756,7 @@
                             v-model="sp.amount" 
                             placeholder="0.00" 
                             class="custom-input"
-                            :disabled="isViewMode || isLongTermTerminated"
+                            :disabled="isViewMode"
                           />
                         </div>
                         <div class="space-y-2">
@@ -1765,7 +1766,7 @@
                             placeholder="请选择" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode || isLongTermTerminated"
+                            :disabled="isViewMode"
                           >
                             <el-option label="是" value="是" />
                             <el-option label="否" value="否" />
@@ -1784,7 +1785,7 @@
                             成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
                           </span>
                           <button 
-                            v-if="!isViewMode && !isLongTermTerminated"
+                            v-if="!isViewMode"
                             class="text-[10px] border px-3 py-1 rounded transition-all font-bold"
                             :class="index % 2 === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'"
                             @click="addSubProjectCost(sp)"
@@ -1811,7 +1812,7 @@
                                     placeholder="类目" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode || isLongTermTerminated"
+                                    :disabled="isViewMode"
                                   >
                                     <el-option 
                                       v-for="cat in costCategories" 
@@ -1827,7 +1828,7 @@
                                     placeholder="供应商" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode || isLongTermTerminated"
+                                    :disabled="isViewMode"
                                   >
                                     <el-option 
                                       v-for="sup in suppliers" 
@@ -1845,7 +1846,7 @@
                                       type="number"
                                       class="bg-transparent border-none p-0 focus:ring-0 text-xs font-mono w-full outline-none"
                                       placeholder="0.00"
-                                      :disabled="isViewMode || isLongTermTerminated"
+                                      :disabled="isViewMode"
                                     >
                                   </div>
                                 </td>
@@ -1857,10 +1858,10 @@
                                     inline-prompt
                                     size="small"
                                     style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                                    :disabled="isViewMode || isLongTermTerminated"
+                                    :disabled="isViewMode"
                                   />
                                 </td>
-                                <td v-if="!isViewMode && !isLongTermTerminated" class="px-4 py-3 text-right rounded-r-lg">
+                                <td v-if="!isViewMode" class="px-4 py-3 text-right rounded-r-lg">
                                   <el-icon 
                                     class="text-red-400/40 hover:text-red-400 cursor-pointer text-base"
                                     @click="removeSubProjectCost(sp, cIdx)"
@@ -1906,7 +1907,7 @@
                                 <View />
                               </el-icon>
                               <el-icon 
-                                v-if="!isViewMode && !isLongTermTerminated"
+                                v-if="!isViewMode"
                                 class="text-red-400 hover:text-red-500 transition-colors cursor-pointer" 
                                 :class="{ 'opacity-50 pointer-events-none': v.deleting }"
                                 size="20"
@@ -1920,7 +1921,7 @@
 
                           <!-- 上传按钮 -->
                           <div 
-                            v-if="!isViewMode && !isLongTermTerminated && (!sp.vouchers || sp.vouchers.length < 10)"
+                            v-if="!isViewMode && (!sp.vouchers || sp.vouchers.length < 10)"
                             class="relative aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group"
                             :class="{ 'opacity-50 pointer-events-none': sp.uploading }"
                             @click="$refs[`subVoucherInput_${index}`][0].click()"
@@ -1949,7 +1950,7 @@
 
               <!-- 添加子项目虚线按钮 -->
               <button 
-                v-if="!isViewMode && !isLongTermTerminated"
+                v-if="!isViewMode"
                 class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
                 @click="addSubProject"
               >
@@ -2362,6 +2363,9 @@ const getStatusOrder = (statusValue) => {
   const status = projectStatuses.value.find(s => s.value === statusValue)
   return status ? status.sortOrder : 0
 }
+
+// 仅长期项目允许状态回溯，其他项目类型不允许
+const canRollbackStatus = (project) => project?.type === 'long_term'
 
 // 获取原始项目状态（用于编辑模式下的状态回溯保护）
 const originalProjectStatus = computed(() => {
@@ -3169,11 +3173,6 @@ const isProjectClosed = computed(() => {
   return false;
 });
 
-// 计算属性：长期项目是否已终止
-const isLongTermTerminated = computed(() => {
-  return form.type === 'long_term' && form.status === 'terminated';
-});
-
 // 计算属性：根据项目状态判断字段是否只读
 const isFieldReadOnly = (fieldName) => {
   if (form.type === 'long_term') {
@@ -3326,7 +3325,7 @@ const handleInlineStatusChange = async (row, newVal) => {
   const oldOrder = getStatusOrder(row.status)
   const newOrder = getStatusOrder(newVal)
   
-  if (newOrder < oldOrder) {
+  if (!canRollbackStatus(row) && newOrder < oldOrder) {
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.warning('项目状态无法回退')
     })
@@ -3397,6 +3396,14 @@ const handleInlineStatusChange = async (row, newVal) => {
         // 更新状态以供回溯校验
         row.status = newVal
 
+        if (row.type === 'long_term' && row.period && row.period[0]) {
+          row.period = [row.period[0], new Date().toISOString()]
+          const days = calculateDiffDays(row.period[0], row.period[1])
+          row.projectDaysText = days ? `${days}天` : '-'
+          const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-'
+          row.projectRangeText = `${formatDate(row.period[0])} - ${formatDate(row.period[1])}`
+        }
+
         // 活跃项目特殊逻辑：当状态改为“已交付”或“已结清”时，更新时间节点并重新计算周期
         if (!row.isHistorical) {
           const now = new Date().toISOString()
@@ -3456,6 +3463,8 @@ const handleInlineStatusChange = async (row, newVal) => {
           form.status = newVal
           if (row.isHistorical) {
             form.collectionPeriod = row.collectionPeriod
+          } else if (row.type === 'long_term' && row.period) {
+            form.period = [...row.period]
           } else {
             // 活跃项目同步更新表单中的周期显示
             const now = today.value.toISOString()
@@ -3479,6 +3488,11 @@ const handleInlineStatusChange = async (row, newVal) => {
       // 失败时回滚本地状态
       loadProjects()
     }
+  }
+
+  if (canRollbackStatus(row)) {
+    performUpdate()
+    return
   }
 
   import('element-plus').then(({ ElMessageBox }) => {
@@ -3505,7 +3519,7 @@ const handleInlineStatusChange = async (row, newVal) => {
 const handleFormStatusChange = (newVal) => {
   if (isEditMode.value && originalProjectStatus.value && newVal !== originalProjectStatus.value) {
     // 长期项目支持状态回溯切换，不需要确认弹窗
-    if (form.type === 'long_term') {
+    if (canRollbackStatus(form)) {
       return;
     }
 
@@ -3635,7 +3649,9 @@ const handleViewProject = async (project) => {
   Object.assign(form, {
     name: project.name,
     type: project.type || (project.isHistorical ? 'historical' : 'normal'),
-    period: project.isHistorical ? (project.period || [null, null]) : [pStart, project.settledTime || now],
+    period: project.type === 'long_term'
+      ? (project.period || [pStart, now])
+      : (project.isHistorical ? (project.period || [null, null]) : [pStart, project.settledTime || now]),
     startDate: pStart ? new Date(pStart).toISOString().split('T')[0] : null,
     constructionPeriod: project.isHistorical ? (project.constructionPeriod || [null, null]) : (project.constructingTime ? [project.constructingTime, project.completedTime || now] : [null, null]),
     collectionPeriod: project.isHistorical ? (project.collectionPeriod || [null, null]) : (project.settlingTime ? [project.settlingTime, project.settledTime || now] : [null, null]),
@@ -3904,8 +3920,10 @@ const loadProjects = async () => {
         } else {
           // 活跃项目根据时间节点计算
           const now = today.value.toISOString();
-          const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-          const pEnd = p.settledTime || now;
+          const pStart = (p.type === 'long_term' ? (p.period && p.period[0]) : null) || p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
+          const pEnd = p.type === 'long_term'
+            ? ((p.period && p.period[1]) || now)
+            : (p.settledTime || now);
           pDays = calculateDiffDays(pStart, pEnd);
           pRange = `${formatDate(pStart)} - ${formatDate(pEnd)}`;
 
@@ -4114,6 +4132,7 @@ const validateProjectForm = (checkVouchers = true) => {
     // 新建项目模式：校验开始日期
     if (isCreating.value) {
       if (!form.startDate) return '请选择项目开始日期';
+      if (new Date(form.startDate) > new Date()) return '项目开始日期不能晚于当前日期';
     } else {
       // 历史模式或编辑模式：校验项目周期
       if (!form.period || !form.period[0] || !form.period[1]) return '请选择项目周期';
@@ -4145,6 +4164,7 @@ const validateProjectForm = (checkVouchers = true) => {
       const sp = form.subProjects[i];
       if (!sp.content) return `子项目 ${i + 1} 请选择项目内容`;
       if (!sp.startDate) return `子项目 ${i + 1} 请选择开始日期`;
+      if (new Date(sp.startDate) > new Date()) return `子项目 ${i + 1} 开始日期不能晚于当前日期`;
       if (sp.amount === null || sp.amount === undefined) return `子项目 ${i + 1} 请输入订单金额`;
       
       if (checkVouchers && sp.isHasVoucher === '是') {
@@ -4339,7 +4359,11 @@ const handleSaveProject = async () => {
         delete projectData.constructionPeriod;
         delete projectData.collectionPeriod;
       } else {
-        projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+        if (form.type === 'long_term') {
+          delete projectData.period;
+        } else {
+          projectData.period = (form.period && form.period[0] && form.period[1]) ? [new Date(form.period[0]).toISOString(), new Date(form.period[1]).toISOString()] : [];
+        }
         
         if (form.isHistorical) {
           projectData.constructionPeriod = (form.constructionPeriod && form.constructionPeriod[0] && form.constructionPeriod[1]) ? [new Date(form.constructionPeriod[0]).toISOString(), new Date(form.constructionPeriod[1]).toISOString()] : [];
