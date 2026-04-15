@@ -1104,7 +1104,7 @@
 
                 <!-- Payable Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(payableAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1112,7 +1112,7 @@
 
                 <!-- Paid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-success/80 cursor-not-allowed">
                     {{ Number(paidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1120,7 +1120,7 @@
 
                 <!-- Unpaid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
                     {{ Number(unpaidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1707,7 +1707,7 @@
                         <ArrowDown />
                       </el-icon>
                       <el-icon 
-                        v-if="!isViewMode"
+                        v-if="!isViewMode && !isLongTermTerminated"
                         class="text-red-400/40 hover:text-red-400 transition-colors"
                         @click.stop="removeSubProject(index)"
                       >
@@ -1727,7 +1727,7 @@
                             placeholder="请选择内容" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           >
                             <el-option 
                               v-for="item in subProjectContents" 
@@ -1746,7 +1746,7 @@
                             class="!w-full custom-date-picker"
                             format="YYYY-MM-DD"
                             value-format="YYYY-MM-DD"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                             :disabled-date="disabledFutureDate"
                           />
                         </div>
@@ -1756,7 +1756,7 @@
                             v-model="sp.amount" 
                             placeholder="0.00" 
                             class="custom-input"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           />
                         </div>
                         <div class="space-y-2">
@@ -1766,7 +1766,7 @@
                             placeholder="请选择" 
                             class="w-full custom-select"
                             popper-class="custom-dropdown"
-                            :disabled="isViewMode"
+                            :disabled="isViewMode || isLongTermTerminated"
                           >
                             <el-option label="是" value="是" />
                             <el-option label="否" value="否" />
@@ -1785,7 +1785,7 @@
                             成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
                           </span>
                           <button 
-                            v-if="!isViewMode"
+                            v-if="!isViewMode && !isLongTermTerminated"
                             class="text-[10px] border px-3 py-1 rounded transition-all font-bold"
                             :class="index % 2 === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'"
                             @click="addSubProjectCost(sp)"
@@ -1812,7 +1812,7 @@
                                     placeholder="类目" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   >
                                     <el-option 
                                       v-for="cat in costCategories" 
@@ -1828,7 +1828,7 @@
                                     placeholder="供应商" 
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   >
                                     <el-option 
                                       v-for="sup in suppliers" 
@@ -1846,7 +1846,7 @@
                                       type="number"
                                       class="bg-transparent border-none p-0 focus:ring-0 text-xs font-mono w-full outline-none"
                                       placeholder="0.00"
-                                      :disabled="isViewMode"
+                                      :disabled="isViewMode || isLongTermTerminated"
                                     >
                                   </div>
                                 </td>
@@ -1858,10 +1858,10 @@
                                     inline-prompt
                                     size="small"
                                     style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                                    :disabled="isViewMode"
+                                    :disabled="isViewMode || isLongTermTerminated"
                                   />
                                 </td>
-                                <td v-if="!isViewMode" class="px-4 py-3 text-right rounded-r-lg">
+                                <td v-if="!isViewMode && !isLongTermTerminated" class="px-4 py-3 text-right rounded-r-lg">
                                   <el-icon 
                                     class="text-red-400/40 hover:text-red-400 cursor-pointer text-base"
                                     @click="removeSubProjectCost(sp, cIdx)"
@@ -1907,7 +1907,7 @@
                                 <View />
                               </el-icon>
                               <el-icon 
-                                v-if="!isViewMode"
+                                v-if="!isViewMode && !isLongTermTerminated"
                                 class="text-red-400 hover:text-red-500 transition-colors cursor-pointer" 
                                 :class="{ 'opacity-50 pointer-events-none': v.deleting }"
                                 size="20"
@@ -1921,7 +1921,7 @@
 
                           <!-- 上传按钮 -->
                           <div 
-                            v-if="!isViewMode && (!sp.vouchers || sp.vouchers.length < 10)"
+                            v-if="!isViewMode && !isLongTermTerminated && (!sp.vouchers || sp.vouchers.length < 10)"
                             class="relative aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group"
                             :class="{ 'opacity-50 pointer-events-none': sp.uploading }"
                             @click="$refs[`subVoucherInput_${index}`][0].click()"
@@ -1950,7 +1950,7 @@
 
               <!-- 添加子项目虚线按钮 -->
               <button 
-                v-if="!isViewMode"
+                v-if="!isViewMode && !isLongTermTerminated"
                 class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
                 @click="addSubProject"
               >
@@ -3174,6 +3174,10 @@ const isProjectClosed = computed(() => {
 });
 
 // 计算属性：根据项目状态判断字段是否只读
+const isLongTermTerminated = computed(() => {
+  return form.type === 'long_term' && form.status === 'terminated';
+});
+
 const isFieldReadOnly = (fieldName) => {
   if (form.type === 'long_term') {
     // 长期项目创建成功后，项目类型、项目周期和订单金额禁止编辑

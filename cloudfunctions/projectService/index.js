@@ -89,6 +89,23 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
   };
 }
 
+function isFutureDateValue(dateValue) {
+  if (!dateValue) return false;
+  const date = new Date(dateValue);
+  if (isNaN(date.getTime())) return true;
+  return date.getTime() > Date.now();
+}
+
+function getAllowedStatusesByType(type, isHistorical) {
+  if (type === 'long_term') {
+    return ['in_cooperation', 'terminated'];
+  }
+  if (type === 'historical' || isHistorical) {
+    return ['closed'];
+  }
+  return ['negotiating', 'constructing', 'completed', 'settling', 'closed'];
+}
+
 // 资金计算同步接口
 async function syncFinancials(params) {
   const { projectId } = params;
@@ -219,6 +236,9 @@ async function updateProject(params) {
     } else if (oldProject.type === 'long_term') {
       // 长期项目逻辑：项目类型禁止修改，但允许修改 period (因为结束日期会随系统时间自动更新)
       if (type && type !== oldProject.type) return { code: 403, message: '长期项目类型不可修改' };
+      if (period && JSON.stringify(period) !== JSON.stringify(oldProject.period)) {
+        return { code: 403, message: '长期项目项目周期不可手动修改' };
+      }
     } else {
       // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
       const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
@@ -243,6 +263,23 @@ async function updateProject(params) {
     }
 
     // 已结清状态权限控制
+    const nextType = type || oldProject.type;
+    const nextIsHistorical = isHistorical !== undefined ? !!isHistorical : !!oldProject.isHistorical;
+    if (status) {
+      const allowedStatuses = getAllowedStatusesByType(nextType, nextIsHistorical);
+      if (!allowedStatuses.includes(status)) {
+        return { code: 400, message: '当前项目类型不支持该项目状态' };
+      }
+    }
+
+    if (nextType === 'long_term') {
+      const nextSubProjects = Array.isArray(subProjects) ? subProjects : (oldProject.subProjects || []);
+      const hasFutureSubProjectDate = nextSubProjects.some(item => isFutureDateValue(item.startDate));
+      if (hasFutureSubProjectDate) {
+        return { code: 400, message: '长期项目子项目开始日期不能晚于当前日期' };
+      }
+    }
+
     if (oldProject.status === 'closed' && oldProject.type !== 'historical') {
       const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
@@ -350,8 +387,15 @@ async function updateProject(params) {
     if (settlingTime) updateDataFinal.settlingTime = settlingTime;
     if (settledTime) updateDataFinal.settledTime = settledTime;
 
+    // 长期项目状态切换时，项目周期结束日期立即联动到当天
+    if (status && status !== oldProject.status && oldProject.type === 'long_term') {
+      const today = new Date().toISOString().split('T')[0];
+      const periodStart = (oldProject.period && oldProject.period[0]) || today;
+      updateDataFinal.period = [periodStart, today];
+    }
+
     // 状态变更自动记录时间节点及周期联动 (仅针对常规项目)
-    if (status && status !== oldProject.status && oldProject.type !== 'historical') {
+    if (status && status !== oldProject.status && oldProject.type !== 'historical' && oldProject.type !== 'long_term') {
       const now = new Date().toISOString();
       const today = now.split('T')[0];
       
@@ -474,6 +518,22 @@ async function createProject(params) {
   }
 
   // 2. 安全校验
+  const allowedStatuses = getAllowedStatusesByType(type, !!isHistorical);
+  if (status && !allowedStatuses.includes(status)) {
+    return { code: 400, message: '当前项目类型不支持该项目状态' };
+  }
+
+  if (type === 'long_term') {
+    const hasFutureSubProjectDate = Array.isArray(subProjects) && subProjects.some(item => isFutureDateValue(item.startDate));
+    if (hasFutureSubProjectDate) {
+      return { code: 400, message: '长期项目子项目开始日期不能晚于当前日期' };
+    }
+  }
+
+  if (Array.isArray(period) && period[0] && isFutureDateValue(period[0])) {
+    return { code: 400, message: '项目开始日期不能晚于当前日期' };
+  }
+
   if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc)) {
     return { code: 400, message: '输入包含非法字符，请检查后重试' };
   }
