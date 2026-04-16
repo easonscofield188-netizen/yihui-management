@@ -50,6 +50,21 @@ export function getGlobalConfig(forceRefresh = false) {
 }
 
 /**
+ * 创建系统配置项
+ * @param {Object} data - { group, label, description }
+ */
+export function createConfig(data) {
+  return request({
+    url: '/configService',
+    method: 'post',
+    data: {
+      action: 'createConfig',
+      data
+    }
+  });
+}
+
+/**
  * 记录凭证上传信息 (整合到 voucherService)
  * @param {Object} data - { projectId, fileName, fileId, fileUrl, fileSize, mimeType }
  */

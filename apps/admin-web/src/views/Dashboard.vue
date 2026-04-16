@@ -17,6 +17,7 @@
           :key="item.name"
           class="flex items-center gap-3 px-6 py-4 cursor-pointer transition-all hover:bg-neutral-800/50"
           :class="item.active ? 'text-primary bg-primary/10 font-bold border-r-2 border-primary' : 'text-neutral-400'"
+          @click="handleMenuClick(item.name)"
         >
           <el-icon class="w-5 h-5">
             <component :is="item.icon" />
@@ -87,6 +88,7 @@
 
       <!-- Content -->
       <main class="pt-24 p-8 space-y-10 overflow-x-hidden">
+        <template v-if="activeMenu === 'projects'">
         <!-- Page Header -->
         <div class="flex justify-between items-end">
           <div>
@@ -638,18 +640,6 @@
                   class="flex gap-3"
                 >
                   <template v-if="isViewMode">
-                    <el-button
-                      type="info"
-                      size="small"
-                      class="!rounded-full !px-4 !bg-neutral-800 !text-on-surface-variant !border-white/10 hover:!bg-neutral-700"
-                      :loading="syncingFinancials"
-                      @click="handleSyncFinancials"
-                    >
-                      <el-icon class="mr-1">
-                        <Refresh />
-                      </el-icon>
-                      同步资金
-                    </el-button>
                     <el-button
                       type="default"
                       size="small"
@@ -2203,12 +2193,172 @@
             放弃创建
           </el-button>
         </div>
+        </template>
+
+        <template v-else-if="activeMenu === 'settings'">
+          <section class="settings-page relative space-y-12 pb-20">
+            <div class="flex items-end justify-between">
+              <div>
+                <h2 class="text-3xl font-bold font-space tracking-tight text-zinc-100">
+                  权限配置
+                </h2>
+                <p class="text-zinc-500 text-sm mt-2">
+                  管理系统角色权限矩阵与用户访问级别
+                </p>
+              </div>
+              <button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">add</span>
+                <span>新增角色</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div class="p-6 rounded-xl bg-surface-container-high relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 rounded-full group-hover:bg-emerald-500/10 transition-all" />
+                <div class="flex items-center gap-5 relative z-10">
+                  <div class="relative">
+                    <div class="w-20 h-20 rounded-xl overflow-hidden shadow-2xl">
+                      <img
+                        alt="管理员头像"
+                        class="w-full h-full object-cover"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjlwOlzc23T2bj6EUmlx2AkEAQqItGaRRXbTZNKA9uZtUWNLACpgTrMyCTqQbBxVgnAbjSGch7y7up5-T7Xm7dfwOQFwV9fokxxCTSC_Q1_KfdPFnpUg2cXuyCANDhpGLDIhvEC6y5hAuosFC5R4U4NPiqRiH6iVeYdWASI_lTeVcufcmzVBuuuf-Gm3UkZyDW8gzrB2R_dxs0WYHYSDkbZlv5k6cAer0sHeV3n5A2dSKy4zNYUmz1hitr0fhydNn8pYcg2yAEZPA"
+                      >
+                    </div>
+                    <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-primary border-2 border-surface-container-high rounded-full" />
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold text-zinc-100">
+                      陈艺辉
+                    </h3>
+                    <p class="text-emerald-400 text-xs font-space tracking-widest uppercase">
+                      超级管理员
+                    </p>
+                    <div class="mt-3 flex gap-2">
+                      <span class="px-2 py-0.5 bg-zinc-800 text-[10px] text-zinc-400 rounded">最后登录 2分钟前</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="xl:col-span-2 p-6 rounded-xl bg-surface-container-high overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-400 text-lg">shield_person</span>
+                    角色权限矩阵
+                  </h3>
+                  <div class="text-[10px] text-zinc-500 italic">
+                    自动保存已开启
+                  </div>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-separate border-spacing-y-2">
+                    <thead>
+                      <tr class="text-[10px] uppercase tracking-widest text-zinc-500 border-b border-zinc-800">
+                        <th class="pb-4 font-medium pl-4">
+                          权限项 \ 角色
+                        </th>
+                        <th
+                          v-for="role in settingRoles"
+                          :key="role"
+                          class="pb-4 font-medium text-center whitespace-nowrap"
+                        >
+                          {{ role }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="text-xs">
+                      <tr
+                        v-for="permission in settingPermissions"
+                        :key="permission.name"
+                        class="group hover:bg-zinc-800/30 transition-colors"
+                      >
+                        <td class="py-3 pl-4 text-zinc-300 font-medium whitespace-nowrap">
+                          {{ permission.name }}
+                        </td>
+                        <td
+                          v-for="role in settingRoles"
+                          :key="`${permission.name}-${role}`"
+                          class="text-center"
+                        >
+                          <span
+                            class="material-symbols-outlined text-base"
+                            :class="permission.enabled.includes(role) ? 'text-primary setting-icon-filled' : 'text-zinc-700'"
+                          >
+                            {{ permission.enabled.includes(role) ? 'check_circle' : 'radio_button_unchecked' }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <section class="space-y-8">
+              <div class="flex items-center gap-4">
+                <div class="h-px flex-1 bg-zinc-800/50" />
+                <h2 class="text-3xl font-bold font-space text-zinc-100 tracking-tight px-4">
+                  数据配置
+                </h2>
+                <div class="h-px flex-1 bg-zinc-800/50" />
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">
+                <div
+                  v-for="card in settingConfigCards"
+                  :key="card.title"
+                  class="p-8 rounded-xl bg-surface-container-high border-b-2 border-transparent transition-all duration-300 group"
+                  :class="card.hoverBorder"
+                >
+                  <div class="flex justify-between items-start mb-6">
+                    <div
+                      class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center transition-colors"
+                      :class="card.iconHover"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        :class="card.iconColor"
+                      >{{ card.icon }}</span>
+                    </div>
+                    <button
+                      class="text-zinc-600 hover:text-zinc-300"
+                      @click="openConfigDialog(card)"
+                    >
+                      <span class="material-symbols-outlined">settings</span>
+                    </button>
+                  </div>
+                  <h3 class="text-lg font-bold text-zinc-100 mb-2">
+                    {{ card.title }}
+                  </h3>
+                  <p class="text-xs text-zinc-500 mb-6 font-light">
+                    {{ card.description }}
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="tag in getSettingConfigItems(card)"
+                      :key="tag.value"
+                      class="inline-flex h-8 items-center px-3 bg-zinc-950 text-zinc-300 text-[10px] leading-none rounded hover:bg-zinc-900 transition-colors border border-emerald-900/30"
+                    >{{ tag.label }}</span>
+                    <span
+                      class="inline-flex h-8 items-center px-3 bg-primary/10 text-primary text-[10px] leading-none rounded border border-primary/20 gap-1 cursor-pointer"
+                      @click="openConfigDialog(card)"
+                    >
+                      <span class="material-symbols-outlined text-[10px]">add</span>
+                      新增
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+          </section>
+        </template>
       </main>
     </div>
 
     <!-- 图片预览组件 -->
     <el-image-viewer
-      v-if="previewVisible"
+      v-if="activeMenu === 'projects' && previewVisible"
       :url-list="previewList"
       :initial-index="initialIndex"
       teleported
@@ -2217,6 +2367,7 @@
 
     <!-- 悬浮回到顶部按钮 -->
     <div 
+      v-if="activeMenu === 'projects'"
       class="fixed z-[9999] cursor-move select-none group"
       :style="{ left: floatBtnPos.x + 'px', top: floatBtnPos.y + 'px' }"
       @mousedown="startDrag"
@@ -2231,13 +2382,73 @@
         </el-icon>
       </button>
     </div>
+
+    <el-dialog
+      v-model="configDialog.visible"
+      :title="`新增${configDialog.title}`"
+      width="460px"
+      class="custom-message-box"
+      append-to-body
+    >
+      <div class="space-y-5">
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">中文名</label>
+          <el-input
+            v-model="configDialog.form.label"
+            class="custom-input"
+            maxlength="20"
+            show-word-limit
+            placeholder="请输入配置中文名"
+          />
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">英文标识</label>
+          <el-input
+            :model-value="configValuePreview"
+            class="custom-input"
+            disabled
+            placeholder="系统自动生成"
+          />
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">备注说明</label>
+          <el-input
+            v-model="configDialog.form.description"
+            type="textarea"
+            class="custom-textarea"
+            maxlength="60"
+            show-word-limit
+            :rows="3"
+            placeholder="请输入备注说明"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <el-button
+            class="!bg-neutral-800 !border-white/10 !text-on-surface-variant"
+            @click="configDialog.visible = false"
+          >
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            class="!bg-primary !border-primary !text-black !font-bold"
+            :loading="configDialog.submitting"
+            @click="handleCreateConfig"
+          >
+            创建
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, syncFinancials, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, getGlobalConfig, createConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { 
@@ -2346,6 +2557,7 @@ onUnmounted(() => {
 const router = useRouter()
 
 // 侧边栏菜单配置
+const activeMenu = ref('projects')
 const menuItems = ref([
   { name: 'dashboard', label: '数据总览', icon: markRaw(DataBoard), active: false },
   { name: 'projects', label: '项目管理', icon: markRaw(Management), active: true },
@@ -2355,7 +2567,228 @@ const menuItems = ref([
   { name: 'settings', label: '系统设置', icon: markRaw(Setting), active: false },
 ])
 
+/**
+ * 切换侧边栏菜单
+ * @param {string} menuName 菜单名称
+ * @returns {void}
+ * @throws {Error} 无
+ */
+const handleMenuClick = (menuName) => {
+  if (!['projects', 'settings'].includes(menuName)) return;
+  activeMenu.value = menuName;
+  menuItems.value = menuItems.value.map(item => ({
+    ...item,
+    active: item.name === menuName
+  }));
+}
+
+// 系统设置页面角色列表
+const settingRoles = ['超级管理员', '系统管理员', '项目经理', '财务主管', '普通访客']
+
+// 系统设置页面权限矩阵
+const settingPermissions = [
+  { name: '删除项目', enabled: ['超级管理员'] },
+  { name: '回溯项目状态', enabled: ['超级管理员', '系统管理员'] },
+  { name: '查看操作日志', enabled: ['超级管理员', '系统管理员', '项目经理'] },
+  { name: '查看数据总览', enabled: ['超级管理员', '系统管理员', '项目经理', '财务主管', '普通访客'] },
+  { name: '导出财务报表', enabled: ['超级管理员', '财务主管'] }
+]
+
+// 系统设置页面数据配置卡片
+const settingConfigCards = [
+  {
+    title: '客户来源',
+    description: '管理商机流量渠道入口标签',
+    icon: 'hub',
+    iconColor: 'text-emerald-400',
+    iconHover: 'group-hover:bg-primary/20',
+    hoverBorder: 'hover:border-primary',
+    tags: ['老客户推荐', '官网咨询', '行业展会']
+  },
+  {
+    title: '成本项目',
+    description: '定义项目物料与劳务成本科目',
+    icon: 'payments',
+    iconColor: 'text-secondary',
+    iconHover: 'group-hover:bg-secondary/20',
+    hoverBorder: 'hover:border-secondary',
+    tags: ['真植物', '仿真植物', '石材/铺装']
+  },
+  {
+    title: '客户角色',
+    description: '配置甲方组织架构对应身份',
+    icon: 'groups',
+    iconColor: 'text-emerald-400',
+    iconHover: 'group-hover:bg-emerald-400/20',
+    hoverBorder: 'hover:border-emerald-400',
+    tags: ['甲方老板', '项目负责人', '采购代理', '设计代表']
+  }
+]
+
 // 项目状态列表（由接口获取）
+const configDialog = reactive({
+  visible: false,
+  title: '',
+  group: '',
+  submitting: false,
+  form: {
+    label: '',
+    description: ''
+  }
+})
+
+const configGroupMap = {
+  '客户来源': 'CLIENT_SOURCE',
+  '瀹㈡埛鏉ユ簮': 'CLIENT_SOURCE',
+  '成本项目': 'COST_CATEGORY',
+  '鎴愭湰椤圭洰': 'COST_CATEGORY',
+  '客户角色': 'CLIENT_ROLE',
+  '瀹㈡埛瑙掕壊': 'CLIENT_ROLE'
+}
+
+/**
+ * 获取系统设置卡片配置项
+ * @param {Object} card 配置卡片
+ * @returns {Array} 配置项列表
+ * @throws {Error} 无
+ */
+const getSettingConfigItems = (card) => {
+  const group = configGroupMap[card.title]
+  if (group === 'CLIENT_SOURCE') return clientSources.value
+  if (group === 'COST_CATEGORY') return costCategories.value
+  if (group === 'CLIENT_ROLE') return clientRoles.value
+  return []
+}
+
+/**
+ * 根据中文名生成英文标识预览
+ * @param {string} label 中文名
+ * @returns {string} 英文标识
+ * @throws {Error} 无
+ */
+const generateConfigValue = (label) => {
+  const raw = String(label || '').trim().toLowerCase()
+  const asciiValue = raw
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_')
+
+  if (asciiValue) return asciiValue
+
+  const wordMap = {
+    '老': 'old',
+    '客户': 'client',
+    '推荐': 'referral',
+    '官网': 'official_site',
+    '咨询': 'inquiry',
+    '行业': 'industry',
+    '展会': 'exhibition',
+    '线上': 'online',
+    '搜索': 'search',
+    '主动': 'active',
+    '开发': 'outreach',
+    '其他': 'other',
+    '真': 'real',
+    '植物': 'plant',
+    '仿真': 'artificial',
+    '人工': 'labor',
+    '餐食': 'meal',
+    '石材': 'stone',
+    '铺装': 'paving',
+    '项目': 'project',
+    '经理': 'manager',
+    '老板': 'boss',
+    '本人': 'owner',
+    '中间人': 'agent',
+    '负责人': 'principal',
+    '采购': 'purchase',
+    '代理': 'agent',
+    '设计': 'design',
+    '代表': 'representative',
+    '甲方': 'client'
+  }
+
+  let converted = raw
+  Object.keys(wordMap)
+    .sort((a, b) => b.length - a.length)
+    .forEach(key => {
+      converted = converted.replace(new RegExp(key, 'g'), `_${wordMap[key]}_`)
+    })
+
+  const mappedValue = converted
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_')
+
+  if (mappedValue) return mappedValue
+
+  let hash = 0
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i)
+    hash |= 0
+  }
+  return raw ? `config_${Math.abs(hash)}` : ''
+}
+
+const configValuePreview = computed(() => generateConfigValue(configDialog.form.label))
+
+/**
+ * 打开新增配置弹窗
+ * @param {Object} card 配置卡片
+ * @returns {void}
+ * @throws {Error} 无
+ */
+const openConfigDialog = (card) => {
+  const group = configGroupMap[card.title]
+  if (!group) return
+  configDialog.title = card.title
+  configDialog.group = group
+  configDialog.form.label = ''
+  configDialog.form.description = ''
+  configDialog.visible = true
+}
+
+/**
+ * 创建系统配置
+ * @returns {Promise<void>} 无
+ * @throws {Error} 接口异常时提示错误
+ */
+const handleCreateConfig = async () => {
+  const label = configDialog.form.label.trim()
+  if (!label) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('请填写配置中文名')
+    })
+    return
+  }
+
+  configDialog.submitting = true
+  try {
+    const res = await createConfig({
+      group: configDialog.group,
+      label,
+      description: configDialog.form.description.trim()
+    })
+    if (res.code !== 0) {
+      throw new Error(res.message || '创建失败')
+    }
+
+    localStorage.removeItem('APP_GLOBAL_CONFIGS')
+    localStorage.removeItem('APP_CONFIG_TIMESTAMP')
+    await initGlobalConfigs(true)
+    configDialog.visible = false
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.success('配置创建成功')
+    })
+  } catch (error) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(error.message || '创建失败，请稍后再试')
+    })
+  } finally {
+    configDialog.submitting = false
+  }
+}
+
 const projectStatuses = ref([])
 
 // 获取状态的排序值
@@ -3406,6 +3839,7 @@ const handleInlineStatusChange = async (row, newVal) => {
           row.projectDaysText = days ? `${days}天` : '-'
           const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-'
           row.projectRangeText = `${formatDate(row.period[0])} - ${formatDate(row.period[1])}`
+          row.deliveryDateText = newVal === 'terminated' ? formatDate(row.period[1]) : '-'
         }
 
         // 活跃项目特殊逻辑：当状态改为“已交付”或“已结清”时，更新时间节点并重新计算周期
@@ -3948,7 +4382,9 @@ const loadProjects = async () => {
           }
         }
 
-        const deliveryDate = p.type === 'historical' ? p.completionTime : p.completedTime;
+        const deliveryDate = p.type === 'long_term' && p.status === 'terminated'
+          ? (p.period && p.period[1])
+          : (p.type === 'historical' ? p.completionTime : p.completedTime);
         const createDate = p.createTime;
 
         return {
@@ -4197,42 +4633,6 @@ const validateProjectForm = (checkVouchers = true) => {
   
   return null;
 }
-
-// 资金同步状态
-const syncingFinancials = ref(false);
-
-/**
- * 同步当前项目资金数据
- */
-const handleSyncFinancials = async () => {
-  if (!selectedProjectId.value) return;
-  
-  syncingFinancials.value = true;
-  try {
-    const res = await syncFinancials({ projectId: selectedProjectId.value });
-    if (res.code === 0) {
-      import('element-plus').then(({ ElMessage }) => {
-        ElMessage.success('资金数据同步成功');
-      });
-      // 刷新列表以获取最新数据
-      await loadProjects();
-      // 重新加载当前项目详情
-      const updatedProject = projects.value.find(p => p.id === selectedProjectId.value);
-      if (updatedProject) {
-        handleViewProject(updatedProject);
-      }
-    } else {
-      throw new Error(res.message);
-    }
-  } catch (err) {
-    console.error('同步资金失败:', err);
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.error('同步失败: ' + err.message);
-    });
-  } finally {
-    syncingFinancials.value = false;
-  }
-};
 
 /**
  * 确认保存修改（带弹窗提醒）
