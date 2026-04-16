@@ -344,25 +344,23 @@ async function queryConfig(params) {
   const { group, isActive } = params || {};
 
   try {
-    // 构建查询条件
     let query = db.collection('system_configs');
+    const whereCondition = {};
     
     // 按分组筛选
     if (group) {
-      query = query.where({
-        group: group
-      });
+      whereCondition.group = group;
     }
 
     // 状态筛选：默认只查询已启用的配置 (isActive == true)
     if (isActive !== undefined && isActive !== 'all') {
-      query = query.where({
-        isActive: isActive === 'true' || isActive === true
-      });
-    } else {
-      query = query.where({
-        isActive: true
-      });
+      whereCondition.isActive = isActive === 'true' || isActive === true;
+    } else if (isActive === undefined) {
+      whereCondition.isActive = true;
+    }
+
+    if (Object.keys(whereCondition).length > 0) {
+      query = query.where(whereCondition);
     }
 
     // 排序逻辑：按 sortOrder 字段升序排列，确保前端展示顺序可控

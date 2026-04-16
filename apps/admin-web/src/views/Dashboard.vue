@@ -2943,10 +2943,13 @@ const loadSettingConfigItems = async () => {
   })))
 
   responses.forEach((res, index) => {
+    const group = groups[index]
     if (res.code !== 0) {
       throw new Error(res.message || '配置查询失败')
     }
-    settingConfigItems[groups[index]] = Array.isArray(res.data) ? res.data : []
+    settingConfigItems[group] = Array.isArray(res.data)
+      ? res.data.filter(item => item.group === group)
+      : []
   })
 }
 
