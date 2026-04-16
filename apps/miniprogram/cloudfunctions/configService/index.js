@@ -56,6 +56,8 @@ exports.main = async (event, context) => {
         return await queryConfig(data);
       case 'createConfig':
         return await createConfig(data);
+      case 'deleteConfig':
+        return await deleteConfig(data);
       default:
         // 处理未知操作
         return {
@@ -468,5 +470,58 @@ async function createConfig(params) {
   } catch (err) {
     console.error('创建配置项失败:', err);
     return { code: 500, message: '创建失败', error: err.message };
+  }
+}
+
+/**
+ * 删除配置项（软删除）
+ */
+async function deleteConfig(params) {
+  const { id, group } = params || {};
+  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
+
+  if (!id || !String(id).trim()) {
+    return { code: 400, message: '缺少配置 ID' };
+  }
+  if (!group || !allowedGroups.includes(group)) {
+    return { code: 400, message: '配置分组不支持删除' };
+  }
+
+  try {
+    const configRes = await db.collection('system_configs')
+      .doc(id)
+      .get();
+    const config = configRes.data;
+
+    if (!config) {
+      return { code: 404, message: '配置不存在' };
+    }
+    if (config.group !== group) {
+      return { code: 400, message: '配置分组不匹配' };
+    }
+    if (config.isActive === false) {
+      return { code: 0, message: '配置已删除' };
+    }
+
+    await db.collection('system_configs')
+      .doc(id)
+      .update({
+        data: {
+          isActive: false,
+          updateTime: db.serverDate()
+        }
+      });
+
+    configCache = null;
+    lastUpdateTime = 0;
+
+    return {
+      code: 0,
+      message: '删除成功',
+      data: { id }
+    };
+  } catch (err) {
+    console.error('删除配置项失败:', err);
+    return { code: 500, message: '删除失败', error: err.message };
   }
 }

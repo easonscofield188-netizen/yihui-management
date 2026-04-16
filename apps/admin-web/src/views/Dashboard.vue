@@ -2343,8 +2343,19 @@
                     <span
                       v-for="tag in getSettingConfigItems(card)"
                       :key="tag.value"
-                      class="inline-flex h-8 items-center px-3 bg-zinc-950 text-zinc-300 text-[10px] leading-none rounded hover:bg-zinc-900 transition-colors border border-emerald-900/30"
-                    >{{ tag.label }}</span>
+                      class="inline-flex h-8 items-center gap-2 pl-3 pr-1 bg-zinc-950 text-zinc-300 text-[10px] leading-none rounded hover:bg-zinc-900 transition-colors border border-emerald-900/30"
+                    >
+                      <span>{{ tag.label }}</span>
+                      <button
+                        class="inline-flex w-5 h-5 items-center justify-center rounded text-zinc-600 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        :disabled="deletingConfigKey === tag.id"
+                        :aria-label="`删除${tag.label}`"
+                        title="删除配置"
+                        @click.stop="handleDeleteConfig(card, tag)"
+                      >
+                        <span class="material-symbols-outlined text-[13px]">close</span>
+                      </button>
+                    </span>
                     <span
                       class="inline-flex h-8 items-center px-3 bg-primary/10 text-primary text-[10px] leading-none rounded border border-primary/20 gap-1 cursor-pointer"
                       @click="openConfigDialog(card)"
@@ -2536,7 +2547,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, createConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, getGlobalConfig, createConfig, deleteConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { getInfo, updateInfo, uploadAvatar } from '../api/user'
@@ -2890,6 +2901,7 @@ const configDialog = reactive({
     description: ''
   }
 })
+const deletingConfigKey = ref('')
 
 const configGroupMap = {
   '客户来源': 'CLIENT_SOURCE',
@@ -2972,6 +2984,56 @@ const handleCreateConfig = async () => {
     })
   } finally {
     configDialog.submitting = false
+  }
+}
+
+/**
+ * 删除系统配置
+ * @param {Object} card 配置卡片
+ * @param {Object} tag 配置项
+ * @returns {Promise<void>} 无
+ * @throws {Error} 接口异常时提示错误
+ */
+const handleDeleteConfig = async (card, tag) => {
+  const group = configGroupMap[card.title]
+  if (!group || !tag?.id || deletingConfigKey.value) return
+
+  try {
+    const { ElMessageBox, ElMessage } = await import('element-plus')
+    await ElMessageBox.confirm(
+      `确定要删除“${tag.label}”吗？删除后不会再出现在新增项目的下拉配置中，历史数据不会被物理删除。`,
+      '删除配置',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: '!bg-red-500 !border-red-500 !text-white',
+        cancelButtonClass: '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white',
+        customClass: 'danger-message-box',
+        center: true
+      }
+    )
+
+    deletingConfigKey.value = tag.id
+    const res = await deleteConfig({
+      id: tag.id,
+      group
+    })
+    if (res.code !== 0) {
+      throw new Error(res.message || '删除失败')
+    }
+
+    localStorage.removeItem('APP_GLOBAL_CONFIGS')
+    localStorage.removeItem('APP_CONFIG_TIMESTAMP')
+    await initGlobalConfigs(true)
+    ElMessage.success('配置已删除')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      const { ElMessage } = await import('element-plus')
+      ElMessage.error(error.message || '删除失败，请稍后再试')
+    }
+  } finally {
+    deletingConfigKey.value = ''
   }
 }
 

@@ -65,6 +65,21 @@ export function createConfig(data) {
 }
 
 /**
+ * 删除系统配置项（软删除）
+ * @param {Object} data - { id, group }
+ */
+export function deleteConfig(data) {
+  return request({
+    url: '/configService',
+    method: 'post',
+    data: {
+      action: 'deleteConfig',
+      data
+    }
+  });
+}
+
+/**
  * 记录凭证上传信息 (整合到 voucherService)
  * @param {Object} data - { projectId, fileName, fileId, fileUrl, fileSize, mimeType }
  */
