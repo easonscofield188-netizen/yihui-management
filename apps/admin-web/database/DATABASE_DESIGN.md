@@ -10,6 +10,10 @@
 - `password` (string): MD5 加密后的密码
 - `role` (string): 角色（如 admin）
 - `nickname` (string): 用户昵称
+- `avatarUrl` (string): 用户头像访问地址
+- `avatarFileId` (string): 用户头像云存储文件 ID
+- `lastLoginTime` (timestamp/string): 最后登录时间
+- `updateTime` (timestamp): 最后更新时间
 
 ### 1.2 系统通用配置表 (`system_configs`)
 统一管理所有下拉选项（客户角色、项目状态、成本类目、客户来源等）。

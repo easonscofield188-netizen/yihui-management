@@ -18,7 +18,41 @@ export function login(data) {
  */
 export function getInfo() {
   return request({
-    url: '/getUserInfo',
-    method: 'get'
+    url: '/login',
+    method: 'post',
+    data: {
+      action: 'getUserInfo',
+      data: {}
+    }
+  });
+}
+
+/**
+ * 更新当前登录用户信息
+ * @param {Object} data - 用户信息
+ */
+export function updateInfo(data) {
+  return request({
+    url: '/login',
+    method: 'post',
+    data: {
+      action: 'updateUserInfo',
+      data
+    }
+  });
+}
+
+/**
+ * 上传用户头像
+ * @param {Object} data - { file, fileName, fileType }
+ */
+export function uploadAvatar(data) {
+  return request({
+    url: '/login',
+    method: 'post',
+    data: {
+      action: 'uploadAvatar',
+      data
+    }
   });
 }

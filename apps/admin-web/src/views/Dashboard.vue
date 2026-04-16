@@ -2215,26 +2215,32 @@
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <div class="p-6 rounded-xl bg-surface-container-high relative overflow-hidden group">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 rounded-full group-hover:bg-emerald-500/10 transition-all" />
+                <button
+                  class="absolute right-4 top-4 z-20 text-zinc-600 hover:text-primary transition-colors"
+                  @click="openUserDialog"
+                >
+                  <span class="material-symbols-outlined text-lg">edit</span>
+                </button>
                 <div class="flex items-center gap-5 relative z-10">
                   <div class="relative">
                     <div class="w-20 h-20 rounded-xl overflow-hidden shadow-2xl">
                       <img
                         alt="管理员头像"
                         class="w-full h-full object-cover"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjlwOlzc23T2bj6EUmlx2AkEAQqItGaRRXbTZNKA9uZtUWNLACpgTrMyCTqQbBxVgnAbjSGch7y7up5-T7Xm7dfwOQFwV9fokxxCTSC_Q1_KfdPFnpUg2cXuyCANDhpGLDIhvEC6y5hAuosFC5R4U4NPiqRiH6iVeYdWASI_lTeVcufcmzVBuuuf-Gm3UkZyDW8gzrB2R_dxs0WYHYSDkbZlv5k6cAer0sHeV3n5A2dSKy4zNYUmz1hitr0fhydNn8pYcg2yAEZPA"
+                        :src="currentUser.avatarUrl || DEFAULT_ADMIN_AVATAR"
                       >
                     </div>
                     <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-primary border-2 border-surface-container-high rounded-full" />
                   </div>
                   <div>
                     <h3 class="text-lg font-bold text-zinc-100">
-                      陈艺辉
+                      {{ currentUser.nickname || currentUser.username || '系统管理员' }}
                     </h3>
                     <p class="text-emerald-400 text-xs font-space tracking-widest uppercase">
-                      超级管理员
+                      {{ currentUserRoleText }}
                     </p>
                     <div class="mt-3 flex gap-2">
-                      <span class="px-2 py-0.5 bg-zinc-800 text-[10px] text-zinc-400 rounded">最后登录 2分钟前</span>
+                      <span class="px-2 py-0.5 bg-zinc-800 text-[10px] text-zinc-400 rounded">最后登录 {{ formatLastLogin(currentUser.lastLoginTime) }}</span>
                     </div>
                   </div>
                 </div>
@@ -2442,6 +2448,88 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="userDialog.visible"
+      title="编辑用户信息"
+      width="520px"
+      class="custom-message-box"
+      append-to-body
+    >
+      <div class="space-y-6">
+        <div class="flex items-center gap-5">
+          <div class="w-20 h-20 rounded-xl overflow-hidden border border-primary/20 bg-zinc-900">
+            <img
+              :src="userDialog.form.avatarUrl || DEFAULT_ADMIN_AVATAR"
+              alt="用户头像"
+              class="w-full h-full object-cover"
+            >
+          </div>
+          <div class="space-y-2">
+            <input
+              ref="avatarInputRef"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden"
+              @change="handleAvatarChange"
+            >
+            <el-button
+              class="!bg-primary/10 !border-primary/20 !text-primary"
+              :loading="userDialog.uploading"
+              @click="avatarInputRef?.click()"
+            >
+              上传头像
+            </el-button>
+            <p class="text-[10px] text-zinc-500">
+              支持 JPG、PNG、WebP，最大 2MB
+            </p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">登录账号</label>
+          <el-input
+            v-model="userDialog.form.username"
+            class="custom-input"
+            disabled
+          />
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">用户昵称</label>
+          <el-input
+            v-model="userDialog.form.nickname"
+            class="custom-input"
+            maxlength="20"
+            show-word-limit
+          />
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">用户角色</label>
+          <el-input
+            v-model="userDialog.form.role"
+            class="custom-input"
+            maxlength="20"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <el-button
+            class="!bg-neutral-800 !border-white/10 !text-on-surface-variant"
+            @click="userDialog.visible = false"
+          >
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            class="!bg-primary !border-primary !text-black !font-bold"
+            :loading="userDialog.submitting"
+            @click="handleUpdateUser"
+          >
+            保存
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -2451,6 +2539,7 @@ import { useRouter } from 'vue-router'
 import { queryClients, getGlobalConfig, createConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
+import { getInfo, updateInfo, uploadAvatar } from '../api/user'
 import { 
   DataBoard, 
   User, 
@@ -2478,12 +2567,177 @@ import {
 } from '@element-plus/icons-vue'
 
 // 获取API域名
+const DEFAULT_ADMIN_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDjlwOlzc23T2bj6EUmlx2AkEAQqItGaRRXbTZNKA9uZtUWNLACpgTrMyCTqQbBxVgnAbjSGch7y7up5-T7Xm7dfwOQFwV9fokxxCTSC_Q1_KfdPFnpUg2cXuyCANDhpGLDIhvEC6y5hAuosFC5R4U4NPiqRiH6iVeYdWASI_lTeVcufcmzVBuuuf-Gm3UkZyDW8gzrB2R_dxs0WYHYSDkbZlv5k6cAer0sHeV3n5A2dSKy4zNYUmz1hitr0fhydNn8pYcg2yAEZPA'
 const apiDomain = import.meta.env.VITE_TCB_BASE_URL || ''
 
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
 const isLoadingProject = ref(false)
 
 // 基础项目信息折叠状态
+const avatarInputRef = ref(null)
+const currentUser = reactive({
+  id: '',
+  username: '',
+  nickname: '',
+  role: '',
+  avatarUrl: '',
+  avatarFileId: '',
+  lastLoginTime: null
+})
+const userDialog = reactive({
+  visible: false,
+  submitting: false,
+  uploading: false,
+  form: {
+    username: '',
+    nickname: '',
+    role: '',
+    avatarUrl: '',
+    avatarFileId: ''
+  }
+})
+
+const currentUserRoleText = computed(() => {
+  const roleMap = {
+    admin: '超级管理员',
+    user: '系统管理员'
+  }
+  return roleMap[currentUser.role] || currentUser.role || '系统管理员'
+})
+
+const formatLastLogin = (value) => {
+  if (!value) return '-'
+  const date = value.$date ? new Date(value.$date) : new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+const applyUserInfo = (user) => {
+  if (!user) return
+  Object.assign(currentUser, {
+    id: user.id || '',
+    username: user.username || '',
+    nickname: user.nickname || user.username || '',
+    role: user.role || 'user',
+    avatarUrl: user.avatarUrl || '',
+    avatarFileId: user.avatarFileId || '',
+    lastLoginTime: user.lastLoginTime || null
+  })
+  localStorage.setItem('userInfo', JSON.stringify({ ...currentUser }))
+}
+
+const loadCurrentUser = async () => {
+  const cachedUser = localStorage.getItem('userInfo')
+  if (cachedUser) {
+    try {
+      applyUserInfo(JSON.parse(cachedUser))
+    } catch (error) {
+      console.warn('解析本地用户信息失败:', error)
+    }
+  }
+
+  try {
+    const res = await getInfo()
+    if (res.code === 0 && res.data) {
+      applyUserInfo(res.data)
+    }
+  } catch (error) {
+    console.warn('获取用户信息失败:', error.message || error)
+  }
+}
+
+const openUserDialog = () => {
+  Object.assign(userDialog.form, {
+    username: currentUser.username,
+    nickname: currentUser.nickname,
+    role: currentUser.role,
+    avatarUrl: currentUser.avatarUrl,
+    avatarFileId: currentUser.avatarFileId
+  })
+  userDialog.visible = true
+}
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.onerror = reject
+  reader.readAsDataURL(file)
+})
+
+const handleAvatarChange = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('头像仅支持 JPG、PNG、WebP')
+    })
+    event.target.value = ''
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('头像大小不能超过 2MB')
+    })
+    event.target.value = ''
+    return
+  }
+
+  userDialog.uploading = true
+  try {
+    const fileData = await readFileAsDataUrl(file)
+    const res = await uploadAvatar({
+      file: fileData,
+      fileName: file.name,
+      fileType: file.type
+    })
+    if (res.code !== 0) {
+      throw new Error(res.message || '头像上传失败')
+    }
+    userDialog.form.avatarUrl = res.data.avatarUrl
+    userDialog.form.avatarFileId = res.data.avatarFileId
+  } catch (error) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(error.message || '头像上传失败')
+    })
+  } finally {
+    userDialog.uploading = false
+    event.target.value = ''
+  }
+}
+
+const handleUpdateUser = async () => {
+  if (!userDialog.form.nickname.trim()) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('请填写用户昵称')
+    })
+    return
+  }
+
+  userDialog.submitting = true
+  try {
+    const res = await updateInfo({
+      nickname: userDialog.form.nickname.trim(),
+      role: userDialog.form.role.trim(),
+      avatarUrl: userDialog.form.avatarUrl,
+      avatarFileId: userDialog.form.avatarFileId
+    })
+    if (res.code !== 0) {
+      throw new Error(res.message || '保存失败')
+    }
+    applyUserInfo(res.data)
+    userDialog.visible = false
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.success('用户信息已更新')
+    })
+  } catch (error) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(error.message || '保存失败')
+    })
+  } finally {
+    userDialog.submitting = false
+  }
+}
+
 const isBasicInfoCollapsed = ref(false)
 
 // 成本支出管理折叠状态
@@ -3270,6 +3524,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
 }
 
 onMounted(() => {
+  loadCurrentUser()
   initGlobalConfigs()
   window.addEventListener('click', closeDropdowns)
 })
@@ -5468,6 +5723,8 @@ const tableRowClassName = ({ row }) => {
 
 const handleLogout = () => {
   localStorage.removeItem('isLoggedIn')
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
   router.push('/login')
 }
 </script>

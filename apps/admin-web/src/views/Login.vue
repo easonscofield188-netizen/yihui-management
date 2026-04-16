@@ -213,6 +213,9 @@ const handleLogin = async () => {
     if (res.data && res.data.token) {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('isLoggedIn', 'true')
+      if (res.data.userInfo) {
+        localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
+      }
       ElMessage.success('登录成功，欢迎回来')
       router.push('/dashboard')
     } else {
