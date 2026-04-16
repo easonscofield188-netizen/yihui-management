@@ -13,7 +13,7 @@
       
       <nav class="flex-1 mt-4">
         <div 
-          v-for="item in menuItems" 
+          v-for="item in visibleMenuItems" 
           :key="item.name"
           class="flex items-center gap-3 px-6 py-4 cursor-pointer transition-all hover:bg-neutral-800/50"
           :class="item.active ? 'text-primary bg-primary/10 font-bold border-r-2 border-primary' : 'text-neutral-400'"
@@ -97,7 +97,37 @@
 
       <!-- Content -->
       <main class="pt-24 p-8 space-y-10 overflow-x-hidden">
-        <template v-if="activeMenu === 'projects'">
+        <template v-if="activeMenu === 'dashboard'">
+          <div class="flex justify-between items-end">
+            <div>
+              <h2 class="text-3xl font-bold tracking-tight mb-2">
+                数据总览
+              </h2>
+              <div class="flex gap-2 text-xs text-on-surface-variant uppercase tracking-widest">
+                <span class="text-primary">数据</span>
+                <span>/</span>
+                <span>经营概览</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div
+              v-for="item in dashboardOverview"
+              :key="item.label"
+              class="p-6 rounded-xl bg-surface-container-high border border-white/5"
+            >
+              <p class="text-xs text-on-surface-variant tracking-widest">
+                {{ item.label }}
+              </p>
+              <p class="mt-3 text-3xl font-bold text-zinc-100">
+                {{ item.value }}
+              </p>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="activeMenu === 'projects'">
         <!-- Page Header -->
         <div class="flex justify-between items-end">
           <div>
@@ -507,13 +537,17 @@
                 <template #default="{ row }">
                   <div class="flex justify-end pr-2">
                     <el-icon 
-                      v-if="!isCreating"
+                      v-if="!isCreating && hasPermission('DELETE_PROJECT')"
                       class="cursor-pointer !text-red-500 hover:!text-red-600 transition-colors text-lg"
                       title="删除项目"
                       @click.stop="handleDeleteProject(row)"
                     >
                       <Delete />
                     </el-icon>
+                    <span
+                      v-else-if="!isCreating"
+                      class="text-[10px] text-on-surface-variant/40"
+                    >-</span>
                     <span
                       v-else
                       class="text-[10px] text-on-surface-variant/40 italic"
@@ -2289,10 +2323,10 @@
                         </th>
                         <th
                           v-for="role in settingRoles"
-                          :key="role"
+                          :key="role.value"
                           class="pb-4 font-medium text-center whitespace-nowrap"
                         >
-                          {{ role }}
+                          {{ role.label }}
                         </th>
                       </tr>
                     </thead>
@@ -2307,15 +2341,22 @@
                         </td>
                         <td
                           v-for="role in settingRoles"
-                          :key="`${permission.name}-${role}`"
+                          :key="`${permission.key}-${role.value}`"
                           class="text-center"
                         >
-                          <span
-                            class="material-symbols-outlined text-base"
-                            :class="permission.enabled.includes(role) ? 'text-primary setting-icon-filled' : 'text-zinc-700'"
+                          <button
+                            type="button"
+                            class="permission-toggle-btn"
+                            :title="permission.enabledRoles.includes(role.value) ? '点击移除权限' : '点击配置权限'"
+                            @click="togglePermissionRole(permission, role.value)"
                           >
-                            {{ permission.enabled.includes(role) ? 'check_circle' : 'radio_button_unchecked' }}
-                          </span>
+                            <span
+                              class="material-symbols-outlined text-base"
+                              :class="permission.enabledRoles.includes(role.value) ? 'text-primary setting-icon-filled' : 'text-zinc-700'"
+                            >
+                              {{ permission.enabledRoles.includes(role.value) ? 'check_circle' : 'radio_button_unchecked' }}
+                            </span>
+                          </button>
                         </td>
                       </tr>
                     </tbody>
@@ -2857,7 +2898,13 @@ const menuItems = ref([
  * @throws {Error} 无
  */
 const handleMenuClick = (menuName) => {
-  if (!['projects', 'settings'].includes(menuName)) return;
+  if (menuName === 'dashboard' && !hasPermission('VIEW_DASHBOARD')) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('暂无查看数据总览权限')
+    })
+    return
+  }
+  if (!['dashboard', 'projects', 'settings'].includes(menuName)) return;
   activeMenu.value = menuName;
   menuItems.value = menuItems.value.map(item => ({
     ...item,
@@ -2866,16 +2913,91 @@ const handleMenuClick = (menuName) => {
 }
 
 // 系统设置页面角色列表
-const settingRoles = ['超级管理员', '系统管理员', '项目经理', '财务主管', '普通访客']
+const settingRoles = [
+  { label: '超级系统管理员', value: 'ADMIN_SUPER' },
+  { label: '系统管理员', value: 'ADMIN' },
+  { label: '项目经理', value: 'PROJECT_MANAGER' },
+  { label: '财务主管', value: 'FINANCE_MANAGER' },
+  { label: '普通访客', value: 'VISITOR' }
+]
 
 // 系统设置页面权限矩阵
-const settingPermissions = [
-  { name: '删除项目', enabled: ['超级管理员'] },
-  { name: '回溯项目状态', enabled: ['超级管理员', '系统管理员'] },
-  { name: '查看操作日志', enabled: ['超级管理员', '系统管理员', '项目经理'] },
-  { name: '查看数据总览', enabled: ['超级管理员', '系统管理员', '项目经理', '财务主管', '普通访客'] },
-  { name: '导出财务报表', enabled: ['超级管理员', '财务主管'] }
-]
+const PERMISSION_STORAGE_KEY = 'admin-role-permissions'
+
+const settingPermissions = reactive([
+  { key: 'DELETE_PROJECT', name: '删除项目', enabledRoles: ['ADMIN_SUPER'] },
+  { key: 'VIEW_DASHBOARD', name: '查看数据总览', enabledRoles: ['ADMIN_SUPER', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR'] },
+  { key: 'VIEW_OPERATION_LOGS', name: '查看操作记录日志', enabledRoles: ['ADMIN_SUPER'] }
+])
+
+/**
+ * 功能：切换角色权限
+ * @param {Object} permission 权限项
+ * @param {string} roleValue 角色标识
+ * @returns {void}
+ * @throws {Error} 无
+ */
+const togglePermissionRole = (permission, roleValue) => {
+  const roleIndex = permission.enabledRoles.indexOf(roleValue)
+  if (roleIndex > -1) {
+    permission.enabledRoles.splice(roleIndex, 1)
+  } else {
+    permission.enabledRoles.push(roleValue)
+  }
+  saveSettingPermissions()
+}
+
+/**
+ * 功能：读取本地保存的权限矩阵
+ * @returns {void}
+ * @throws {Error} 读取失败时保留默认权限矩阵
+ */
+const loadSettingPermissions = () => {
+  try {
+    const savedPermissions = localStorage.getItem(PERMISSION_STORAGE_KEY)
+    if (!savedPermissions) return
+    const permissionMap = JSON.parse(savedPermissions)
+    settingPermissions.forEach(permission => {
+      if (Array.isArray(permissionMap[permission.key])) {
+        permission.enabledRoles = permissionMap[permission.key]
+      }
+    })
+  } catch (error) {
+    console.error('读取权限矩阵失败', error)
+  }
+}
+
+/**
+ * 功能：保存权限矩阵到本地
+ * @returns {void}
+ * @throws {Error} 保存失败时输出错误日志
+ */
+const saveSettingPermissions = () => {
+  try {
+    const permissionMap = settingPermissions.reduce((map, permission) => {
+      map[permission.key] = permission.enabledRoles
+      return map
+    }, {})
+    localStorage.setItem(PERMISSION_STORAGE_KEY, JSON.stringify(permissionMap))
+  } catch (error) {
+    console.error('保存权限矩阵失败', error)
+  }
+}
+
+loadSettingPermissions()
+
+const hasPermission = (permissionKey) => {
+  const permission = settingPermissions.find(item => item.key === permissionKey)
+  if (!permission) return false
+  return permission.enabledRoles.includes(currentUser.role)
+}
+
+const visibleMenuItems = computed(() => {
+  return menuItems.value.filter(item => {
+    if (item.name === 'dashboard') return hasPermission('VIEW_DASHBOARD')
+    return true
+  })
+})
 
 // 系统设置页面数据配置卡片
 const settingConfigCards = [
@@ -3170,6 +3292,18 @@ const originalProjectName = ref('')
 // 项目列表数据
 const projects = ref([])
 const loadingProjects = ref(false)
+
+const dashboardOverview = computed(() => {
+  const totalAmount = projects.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  const ongoingCount = projects.value.filter(item => !['completed', 'closed', 'terminated'].includes(item.status)).length
+  const completedCount = projects.value.filter(item => ['completed', 'closed', 'terminated'].includes(item.status)).length
+  return [
+    { label: '项目总数', value: projects.value.length },
+    { label: '进行中', value: ongoingCount },
+    { label: '已完成', value: completedCount },
+    { label: '订单总额', value: `¥${totalAmount.toLocaleString()}` }
+  ]
+})
 
 // 项目列表筛选状态
 const projectFilters = reactive({
@@ -4317,6 +4451,12 @@ const handleFormStatusChange = (newVal) => {
  */
 const handleDeleteProject = (project) => {
   if (!project) return
+  if (!hasPermission('DELETE_PROJECT')) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('暂无删除项目权限')
+    })
+    return
+  }
   
   import('element-plus').then(({ ElMessageBox, ElMessage, ElLoading }) => {
     ElMessageBox.confirm(
@@ -6445,5 +6585,23 @@ const handleLogout = () => {
 
 .preview-carousel :deep(.el-carousel__indicator--horizontal.is-active .el-carousel__button) {
   background-color: #52ee8a !important;
+}
+
+.permission-toggle-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(82, 238, 138, 0.08);
+    border-color: rgba(82, 238, 138, 0.25);
+  }
 }
 </style>

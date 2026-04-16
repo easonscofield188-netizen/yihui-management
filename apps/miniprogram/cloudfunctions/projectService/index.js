@@ -33,7 +33,7 @@ exports.main = async (event, context) => {
       case 'update':
         return await updateProject(data);
       case 'delete':
-        return await deleteProject(data);
+        return await deleteProject(data, event);
       case 'syncFinancials':
         return await syncFinancials(data);
       case 'syncHistoryFinancials':
@@ -195,13 +195,43 @@ const isSafeInput = (str) => {
   return !unsafePattern.test(str);
 };
 
-async function deleteProject(params) {
+function getTokenUserId(event) {
+  const headers = event.headers || {};
+  const authorization = headers.authorization || headers.Authorization || '';
+  const token = authorization.replace(/^Bearer\s+/i, '');
+  if (!token || !token.startsWith('auth-token-')) return '';
+  const parts = token.split('-');
+  return parts.slice(3).join('-');
+}
+
+async function requirePermission(event, allowedRoles) {
+  const userId = getTokenUserId(event);
+  if (!userId) {
+    return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+
+  const userRes = await db.collection('users').doc(userId).get();
+  const user = userRes.data;
+  if (!user) {
+    return { error: { code: 401, message: '登录用户不存在' } };
+  }
+  if (!allowedRoles.includes(user.role)) {
+    return { error: { code: 403, message: '暂无操作权限' } };
+  }
+
+  return { user };
+}
+
+async function deleteProject(params, event) {
   const { id } = params;
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
   }
 
   try {
+    const permission = await requirePermission(event, ['ADMIN_SUPER']);
+    if (permission.error) return permission.error;
+
     await db.collection('projects').doc(id).remove();
     return { code: 0, message: '删除成功' };
   } catch (err) {
