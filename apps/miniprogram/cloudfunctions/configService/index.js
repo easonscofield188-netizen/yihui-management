@@ -52,6 +52,8 @@ exports.main = async (event, context) => {
         return await getGlobalConfig(data);
       case 'queryConfig':
         return await queryConfig(data);
+      case 'createConfig':
+        return await createConfig(data);
       default:
         // 处理未知操作
         return {
@@ -144,6 +146,92 @@ async function getGlobalConfig(params) {
   }
 }
 
+function isSafeInput(str) {
+  if (!str) return true;
+  const unsafePattern = /[<>{}[\]\\^%`|]/;
+  return !unsafePattern.test(str);
+}
+
+function normalizeEnglishValue(label) {
+  const raw = String(label || '').trim().toLowerCase();
+  const asciiValue = raw
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_');
+
+  if (asciiValue) return asciiValue;
+
+  const wordMap = {
+    '老': 'old',
+    '客户': 'client',
+    '推荐': 'referral',
+    '官网': 'official_site',
+    '咨询': 'inquiry',
+    '行业': 'industry',
+    '展会': 'exhibition',
+    '线上': 'online',
+    '搜索': 'search',
+    '主动': 'active',
+    '开发': 'outreach',
+    '其他': 'other',
+    '真': 'real',
+    '植物': 'plant',
+    '仿真': 'artificial',
+    '人工': 'labor',
+    '餐食': 'meal',
+    '石材': 'stone',
+    '铺装': 'paving',
+    '项目': 'project',
+    '经理': 'manager',
+    '老板': 'boss',
+    '本人': 'owner',
+    '中间人': 'agent',
+    '负责人': 'principal',
+    '采购': 'purchase',
+    '代理': 'agent',
+    '设计': 'design',
+    '代表': 'representative',
+    '甲方': 'client'
+  };
+
+  let converted = raw;
+  Object.keys(wordMap)
+    .sort((a, b) => b.length - a.length)
+    .forEach(key => {
+      converted = converted.replace(new RegExp(key, 'g'), `_${wordMap[key]}_`);
+    });
+
+  const mappedValue = converted
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_');
+
+  if (mappedValue) return mappedValue;
+
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return `config_${Math.abs(hash)}`;
+}
+
+async function ensureUniqueValue(group, baseValue) {
+  let value = baseValue;
+  let index = 1;
+
+  while (true) {
+    const res = await db.collection('system_configs')
+      .where({ group, value })
+      .limit(1)
+      .get();
+
+    if (!res.data || res.data.length === 0) return value;
+    index += 1;
+    value = `${baseValue}_${index}`;
+  }
+}
+
 /**
  * 查询配置列表
  */
@@ -187,5 +275,83 @@ async function queryConfig(params) {
       message: '服务器内部错误',
       error: err.message
     };
+  }
+}
+
+/**
+ * 创建配置项
+ */
+async function createConfig(params) {
+  const { group, label, description = '' } = params || {};
+  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
+
+  if (!group || !allowedGroups.includes(group)) {
+    return { code: 400, message: '配置分组不支持新增' };
+  }
+  if (!label || !String(label).trim()) {
+    return { code: 400, message: '请填写配置中文名' };
+  }
+  if (!isSafeInput(label) || !isSafeInput(description)) {
+    return { code: 400, message: '输入包含非法字符' };
+  }
+
+  try {
+    const normalizedLabel = String(label).trim();
+    const duplicatedLabel = await db.collection('system_configs')
+      .where({
+        group,
+        label: normalizedLabel,
+        isActive: true
+      })
+      .limit(1)
+      .get();
+
+    if (duplicatedLabel.data && duplicatedLabel.data.length > 0) {
+      return { code: 409, message: '该配置中文名已存在' };
+    }
+
+    const lastRes = await db.collection('system_configs')
+      .where({ group })
+      .orderBy('sortOrder', 'desc')
+      .limit(1)
+      .get();
+
+    const nextSortOrder = lastRes.data && lastRes.data.length > 0
+      ? (Number(lastRes.data[0].sortOrder) || 0) + 1
+      : 1;
+    const baseValue = normalizeEnglishValue(normalizedLabel);
+    const value = await ensureUniqueValue(group, baseValue);
+    const now = db.serverDate();
+    const configData = {
+      group,
+      label: normalizedLabel,
+      value,
+      sortOrder: nextSortOrder,
+      isActive: true,
+      description: String(description || '').trim(),
+      createdAt: now,
+      updateTime: now
+    };
+
+    const res = await db.collection('system_configs').add({
+      data: configData
+    });
+
+    configCache = null;
+    lastUpdateTime = 0;
+
+    return {
+      code: 0,
+      message: '创建成功',
+      data: {
+        id: res._id,
+        ...configData,
+        createdAt: undefined,
+        updateTime: undefined
+      }
+    };
+  } catch (err) {
+    console.error('创建配置项失败:', err);
+    return { code: 500, message: '创建失败', error: err.message };
   }
 }
