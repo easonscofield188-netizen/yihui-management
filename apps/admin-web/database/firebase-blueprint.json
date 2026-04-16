@@ -7,7 +7,9 @@
       "properties": {
         "username": { "type": "string", "description": "登录账号" },
         "password": { "type": "string", "description": "MD5 加密后的密码" },
-        "role": { "type": "string", "description": "用户角色" },
+        "role": { "type": "string", "description": "用户角色标识" },
+        "roleName": { "type": "string", "description": "用户角色名称" },
+        "employeeNo": { "type": "string", "description": "工号" },
         "nickname": { "type": "string", "description": "用户昵称" },
         "avatarUrl": { "type": "string", "description": "用户头像访问地址" },
         "avatarFileId": { "type": "string", "description": "用户头像云存储文件 ID" },

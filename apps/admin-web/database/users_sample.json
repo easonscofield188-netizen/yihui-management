@@ -1,1 +1,14 @@
-﻿[ { "username": "admin", "password": "e10adc3949ba59abbe56e057f20f883e", "role": "admin", "nickname": "系统管理员", "avatarUrl": "", "avatarFileId": "", "lastLoginTime": "", "updateTime": "" } ]
+[
+  {
+    "username": "admin",
+    "password": "e10adc3949ba59abbe56e057f20f883e",
+    "role": "ADMIN_SUPER",
+    "roleName": "超级系统管理员",
+    "employeeNo": "YH-ADMIN-001",
+    "nickname": "系统管理员",
+    "avatarUrl": "",
+    "avatarFileId": "",
+    "lastLoginTime": "",
+    "updateTime": ""
+  }
+]

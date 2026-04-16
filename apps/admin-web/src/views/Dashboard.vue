@@ -2197,56 +2197,58 @@
 
         <template v-else-if="activeMenu === 'settings'">
           <section class="settings-page relative space-y-12 pb-20">
-            <div class="flex items-end justify-between">
-              <div>
-                <h2 class="text-3xl font-bold font-space tracking-tight text-zinc-100">
-                  权限配置
+            <section class="space-y-6">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-xl">person</span>
+                <h2 class="text-xl font-medium text-zinc-100">
+                  账户信息
                 </h2>
-                <p class="text-zinc-500 text-sm mt-2">
-                  管理系统角色权限矩阵与用户访问级别
-                </p>
               </div>
-              <button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity">
-                <span class="material-symbols-outlined text-sm">add</span>
-                <span>新增角色</span>
-              </button>
-            </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div class="p-6 rounded-xl bg-surface-container-high relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 rounded-full group-hover:bg-emerald-500/10 transition-all" />
-                <button
-                  class="absolute right-4 top-4 z-20 text-zinc-600 hover:text-primary transition-colors"
-                  @click="openUserDialog"
-                >
-                  <span class="material-symbols-outlined text-lg">edit</span>
-                </button>
-                <div class="flex items-center gap-5 relative z-10">
+              <div class="bg-surface-container-high rounded-xl p-8 border border-white/5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+                <div class="flex items-center gap-8">
                   <div class="relative">
-                    <div class="w-20 h-20 rounded-xl overflow-hidden shadow-2xl">
-                      <img
-                        alt="管理员头像"
-                        class="w-full h-full object-cover"
-                        :src="currentUser.avatarUrl || DEFAULT_ADMIN_AVATAR"
-                      >
+                    <img
+                      alt="管理员头像"
+                      class="w-24 h-24 rounded-xl object-cover border-2 border-primary/30"
+                      :src="currentUser.avatarUrl || DEFAULT_ADMIN_AVATAR"
+                    >
+                    <div class="absolute -bottom-2 -right-2 bg-primary rounded-lg p-1">
+                      <span class="material-symbols-outlined text-black text-sm setting-icon-filled">verified</span>
                     </div>
-                    <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-primary border-2 border-surface-container-high rounded-full" />
                   </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-zinc-100">
+                  <div class="space-y-1">
+                    <h3 class="text-2xl font-bold text-zinc-100">
                       {{ currentUser.nickname || currentUser.username || '系统管理员' }}
                     </h3>
-                    <p class="text-emerald-400 text-xs font-space tracking-widest uppercase">
-                      {{ currentUserRoleText }}
-                    </p>
-                    <div class="mt-3 flex gap-2">
-                      <span class="px-2 py-0.5 bg-zinc-800 text-[10px] text-zinc-400 rounded">最后登录 {{ formatLastLogin(currentUser.lastLoginTime) }}</span>
+                    <div class="flex flex-wrap items-center gap-3">
+                      <span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded uppercase font-bold tracking-widest">
+                        {{ currentUserRoleText }}
+                      </span>
+                      <span class="text-zinc-500 text-sm">
+                        工号: {{ currentUser.employeeNo || '-' }}
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1 pt-3 text-xs text-zinc-500">
+                      <span class="material-symbols-outlined text-sm">schedule</span>
+                      <span>上次登录: {{ formatLastLogin(currentUser.lastLoginTime) }}</span>
                     </div>
                   </div>
                 </div>
+                <button
+                  class="flex items-center justify-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-white/10 rounded-lg transition-all duration-300"
+                  @click="openUserDialog"
+                >
+                  <span class="material-symbols-outlined text-lg">edit_square</span>
+                  <span class="text-sm font-medium">编辑个人资料</span>
+                </button>
               </div>
+            </section>
 
-              <div class="xl:col-span-2 p-6 rounded-xl bg-surface-container-high overflow-hidden">
+            <section
+              v-if="isSuperAdmin"
+              class="p-6 rounded-xl bg-surface-container-high overflow-hidden"
+            >
                 <div class="flex justify-between items-center mb-6">
                   <h3 class="text-sm font-semibold text-zinc-300 flex items-center gap-2">
                     <span class="material-symbols-outlined text-emerald-400 text-lg">shield_person</span>
@@ -2297,16 +2299,17 @@
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
+            </section>
 
             <section class="space-y-8">
-              <div class="flex items-center gap-4">
-                <div class="h-px flex-1 bg-zinc-800/50" />
-                <h2 class="text-3xl font-bold font-space text-zinc-100 tracking-tight px-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-secondary text-xl">database</span>
+                  <h2 class="text-xl font-medium text-zinc-100">
                   数据配置
-                </h2>
-                <div class="h-px flex-1 bg-zinc-800/50" />
+                  </h2>
+                </div>
+                <span class="text-xs text-zinc-500 uppercase tracking-widest">Master Data Control Center</span>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">
@@ -2586,6 +2589,7 @@ const currentUser = reactive({
   nickname: '',
   role: '',
   roleName: '',
+  employeeNo: '',
   avatarUrl: '',
   avatarFileId: '',
   lastLoginTime: null
@@ -2606,6 +2610,8 @@ const currentUserRoleText = computed(() => {
   return currentUser.roleName || currentUser.role || '系统管理员'
 })
 
+const isSuperAdmin = computed(() => currentUser.role === 'ADMIN_SUPER')
+
 const formatLastLogin = (value) => {
   if (!value) return '-'
   const date = value.$date ? new Date(value.$date) : new Date(value)
@@ -2621,6 +2627,7 @@ const applyUserInfo = (user) => {
     nickname: user.nickname || user.username || '',
     role: user.role || 'user',
     roleName: user.roleName || user.role || '系统管理员',
+    employeeNo: user.employeeNo || '',
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',
     lastLoginTime: user.lastLoginTime || null

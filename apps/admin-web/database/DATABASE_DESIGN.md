@@ -8,7 +8,9 @@
 用于管理后台登录账号。
 - `username` (string): 登录账号
 - `password` (string): MD5 加密后的密码
-- `role` (string): 角色（如 admin）
+- `role` (string): 角色标识（如 ADMIN_SUPER、ADMIN_COM）
+- `roleName` (string): 角色名称（如 超级系统管理员、系统管理员）
+- `employeeNo` (string): 工号
 - `nickname` (string): 用户昵称
 - `avatarUrl` (string): 用户头像访问地址
 - `avatarFileId` (string): 用户头像云存储文件 ID
