@@ -29,11 +29,20 @@
       <div class="p-6 border-t border-white/5">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center overflow-hidden">
-            <User class="text-primary w-6 h-6" />
+            <img
+              v-if="currentUser.avatarUrl"
+              :src="currentUser.avatarUrl"
+              alt="用户头像"
+              class="w-full h-full object-cover"
+            >
+            <User
+              v-else
+              class="text-primary w-6 h-6"
+            />
           </div>
-          <div class="flex flex-col">
-            <span class="text-xs font-bold">管理员</span>
-            <span class="text-[10px] text-on-surface-variant uppercase tracking-widest">系统管理员</span>
+          <div class="flex flex-col min-w-0">
+            <span class="text-xs font-bold truncate">{{ currentUser.nickname || currentUser.username || '管理员' }}</span>
+            <span class="text-[10px] text-on-surface-variant uppercase tracking-widest truncate">{{ currentUserRoleText }}</span>
           </div>
         </div>
       </div>
@@ -2197,6 +2206,19 @@
 
         <template v-else-if="activeMenu === 'settings'">
           <section class="settings-page relative space-y-12 pb-20">
+            <div class="flex justify-between items-end">
+              <div>
+                <h2 class="text-3xl font-bold tracking-tight mb-2">
+                  系统设置中心
+                </h2>
+                <div class="flex gap-2 text-xs text-on-surface-variant uppercase tracking-widest">
+                  <span class="text-primary">设置</span>
+                  <span>/</span>
+                  <span>系统配置</span>
+                </div>
+              </div>
+            </div>
+
             <section class="space-y-6">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-xl">person</span>
@@ -3322,6 +3344,14 @@ const savingProject = ref(false)
 const today = ref(new Date())
 let todayTimer = null
 
+const getLongTermPeriodEnd = (project, fallbackNow = today.value.toISOString()) => {
+  if (!project) return fallbackNow
+  if (project.status === 'terminated') {
+    return (project.period && project.period[1]) || project.terminatedTime || project.updateTime || fallbackNow
+  }
+  return fallbackNow
+}
+
 onMounted(() => {
   todayTimer = window.setInterval(() => {
     today.value = new Date()
@@ -3339,7 +3369,7 @@ watch(today, () => {
     if (!p.isHistorical) {
       const now = today.value.toISOString();
       const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-      const pEnd = p.settledTime || now;
+      const pEnd = p.type === 'long_term' ? getLongTermPeriodEnd(p, now) : (p.settledTime || now);
       const pDays = calculateDiffDays(pStart, pEnd);
       
       const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
@@ -3368,7 +3398,8 @@ watch(today, () => {
     if (p && !p.isHistorical) {
       const now = today.value.toISOString()
       const pStart = p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
-      form.period = [pStart, p.settledTime || now]
+      const pEnd = p.type === 'long_term' ? getLongTermPeriodEnd(p, now) : (p.settledTime || now)
+      form.period = [pStart, pEnd]
       if (p.constructingTime) {
         form.constructionPeriod = [p.constructingTime, p.completedTime || now]
       }
@@ -4117,7 +4148,10 @@ const handleInlineStatusChange = async (row, newVal) => {
         row.status = newVal
 
         if (row.type === 'long_term' && row.period && row.period[0]) {
-          row.period = [row.period[0], new Date().toISOString()]
+          const periodEnd = newVal === 'terminated'
+            ? (res.data?.period?.[1] || new Date().toISOString())
+            : new Date().toISOString()
+          row.period = [row.period[0], periodEnd]
           const days = calculateDiffDays(row.period[0], row.period[1])
           row.projectDaysText = days ? `${days}天` : '-'
           const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-'
@@ -4144,7 +4178,7 @@ const handleInlineStatusChange = async (row, newVal) => {
           
           // 重新计算活跃项目的周期天数
           const pStart = row.negotiatingTime || (row.period && row.period[0]) || row.createTime
-          const pEnd = row.settledTime || now
+          const pEnd = row.type === 'long_term' ? getLongTermPeriodEnd(row, now) : (row.settledTime || now)
           const pDays = calculateDiffDays(pStart, pEnd)
           
           let conDays = null
@@ -4643,7 +4677,7 @@ const loadProjects = async () => {
           const now = today.value.toISOString();
           const pStart = (p.type === 'long_term' ? (p.period && p.period[0]) : null) || p.negotiatingTime || (p.period && p.period[0]) || p.createTime;
           const pEnd = p.type === 'long_term'
-            ? ((p.period && p.period[1]) || now)
+            ? getLongTermPeriodEnd(p, now)
             : (p.settledTime || now);
           pDays = calculateDiffDays(pStart, pEnd);
           pRange = `${formatDate(pStart)} - ${formatDate(pEnd)}`;

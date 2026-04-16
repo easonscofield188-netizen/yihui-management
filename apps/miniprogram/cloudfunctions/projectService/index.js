@@ -387,11 +387,12 @@ async function updateProject(params) {
     if (settlingTime) updateDataFinal.settlingTime = settlingTime;
     if (settledTime) updateDataFinal.settledTime = settledTime;
 
-    // 长期项目状态切换时，项目周期结束日期立即联动到当天
-    if (status && status !== oldProject.status && oldProject.type === 'long_term') {
-      const today = new Date().toISOString().split('T')[0];
-      const periodStart = (oldProject.period && oldProject.period[0]) || today;
-      updateDataFinal.period = [periodStart, today];
+    // 长期项目只有进入“已终止”时冻结项目周期结束日期，已终止后不再自动更新
+    if (status && status !== oldProject.status && oldProject.type === 'long_term' && status === 'terminated') {
+      const now = new Date().toISOString();
+      const periodStart = (oldProject.period && oldProject.period[0]) || now;
+      updateDataFinal.period = [periodStart, now];
+      updateDataFinal.terminatedTime = now;
     }
 
     // 状态变更自动记录时间节点及周期联动 (仅针对常规项目)
