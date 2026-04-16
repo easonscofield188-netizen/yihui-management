@@ -1,138 +1,138 @@
-﻿{
+{
   "entities": {
     "User": {
-      "title": "鐢ㄦ埛",
-      "description": "system admin account info",
+      "title": "用户",
+      "description": "系统管理员账号信息",
       "type": "object",
       "properties": {
-        "username": { "type": "string", "description": "login username" },
-        "password": { "type": "string", "description": "md5 password" },
-        "role": { "type": "string", "description": "user role" },
-        "nickname": { "type": "string", "description": "user nickname" },
-        "avatarUrl": { "type": "string", "description": "user avatar url" },
-        "avatarFileId": { "type": "string", "description": "user avatar cloud file id" },
-        "lastLoginTime": { "type": "string", "description": "last login time" },
-        "updateTime": { "type": "string", "description": "last update time" }
+        "username": { "type": "string", "description": "登录账号" },
+        "password": { "type": "string", "description": "MD5 加密后的密码" },
+        "role": { "type": "string", "description": "用户角色" },
+        "nickname": { "type": "string", "description": "用户昵称" },
+        "avatarUrl": { "type": "string", "description": "用户头像访问地址" },
+        "avatarFileId": { "type": "string", "description": "用户头像云存储文件 ID" },
+        "lastLoginTime": { "type": "string", "description": "最后登录时间" },
+        "updateTime": { "type": "string", "description": "最后更新时间" }
       },
       "required": ["username", "password"]
     },
     "Project": {
-      "title": "椤圭洰",
-      "description": "鍥灄鏅椤圭洰鏍稿績淇℃伅",
+      "title": "项目",
+      "description": "园林景观项目核心信息",
       "type": "object",
       "properties": {
-        "clientId": { "type": "string", "description": "鍏宠仈鐨勫鎴稩D" },
-        "name": { "type": "string", "description": "椤圭洰鍚嶇О" },
-        "client": { "type": "string", "description": "瀹㈡埛鍗曚綅鍚嶇О (鍐椾綑瀛樺偍)" },
-        "clientRole": { "type": "string", "description": "瀹㈡埛瑙掕壊 (鍐椾綑瀛樺偍)" },
-        "startDate": { "type": "string", "format": "date", "description": "椤圭洰寮€濮嬫棩鏈? },
-        "endDate": { "type": "string", "format": "date", "description": "椤圭洰缁撴潫鏃ユ湡" },
-        "staffCount": { "type": "number", "description": "鎶曞叆浜哄憳鏁伴噺" },
-        "totalAmount": { "type": "number", "description": "椤圭洰鎬昏鍗曢噾棰? },
-        "receivedAmount": { "type": "number", "description": "宸叉敹璐︽閲戦" },
-        "unreceivedAmount": { "type": "number", "description": "鏈敹璐︽閲戦 (鑷姩璁＄畻)" },
-        "payableAmount": { "type": "number", "description": "搴斾粯璐︽閲戦 (鑷姩璁＄畻)" },
-        "paidAmount": { "type": "number", "description": "宸蹭粯璐︽閲戦 (鑷姩璁＄畻)" },
-        "description": { "type": "string", "description": "椤圭洰璇︾粏鎻忚堪" },
-        "statusCode": { "type": "string", "description": "椤圭洰鐘舵€佹爣璇?(瀵瑰簲绯荤粺閰嶇疆涓殑 PROJECT_STATUS)" },
-        "statusLabel": { "type": "string", "description": "椤圭洰鐘舵€佸悕绉?(鍐椾綑鏄剧ず)" },
-        "negotiatingTime": { "type": "string", "format": "date-time", "description": "杩涘叆璋堝垽鐘舵€佺殑鏃堕棿鑺傜偣" },
-        "constructingTime": { "type": "string", "format": "date-time", "description": "杩涘叆浜や粯鐘舵€佺殑鏃堕棿鑺傜偣" },
-        "completedTime": { "type": "string", "format": "date-time", "description": "杩涘叆宸蹭氦浠樼姸鎬佺殑鏃堕棿鑺傜偣" },
-        "settledTime": { "type": "string", "format": "date-time", "description": "杩涘叆缁撴竻鐘舵€佺殑鏃堕棿鑺傜偣" },
-        "isHasContract": { "type": "string", "description": "鏄惁鏈夊悎鍚?(鏄?鍚?", "enum": ["鏄?, "鍚?] },
-        "isHasPreview": { "type": "string", "description": "鏄惁鏈夐瑙堝浘 (鏄?鍚?", "enum": ["鏄?, "鍚?] },
-        "type": { "type": "string", "description": "椤圭洰绫诲瀷 (normal: 甯歌, historical: 琛ュ綍)" },
-        "completionTime": { "type": "string", "format": "date-time", "description": "琛ュ綍鍗曪細瀹岀粨鏃堕棿" },
-        "isHistorical": { "type": "boolean", "description": "鏄惁涓哄巻鍙茶ˉ褰曟暟鎹? },
-        "constructionPeriod": { "type": "array", "description": "鍘嗗彶琛ュ綍锛氭柦宸ュ懆鏈熸棩鏈熻寖鍥? },
-        "collectionPeriod": { "type": "array", "description": "鍘嗗彶琛ュ綍锛氬洖娆惧懆鏈熸棩鏈熻寖鍥? },
-        "amountEditCount": { "type": "number", "description": "璁㈠崟閲戦淇敼娆℃暟 (鍒涘缓鎴愬姛鍚庢渶澶氬厑璁镐慨鏀逛竴娆?" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "鍒涘缓鏃堕棿" },
-        "updatedAt": { "type": "string", "format": "date-time", "description": "鏈€鍚庢洿鏂版椂闂? }
+        "clientId": { "type": "string", "description": "关联的客户 ID" },
+        "name": { "type": "string", "description": "项目名称" },
+        "client": { "type": "string", "description": "客户单位名称（冗余存储）" },
+        "clientRole": { "type": "string", "description": "客户角色（冗余存储）" },
+        "startDate": { "type": "string", "format": "date", "description": "项目开始日期" },
+        "endDate": { "type": "string", "format": "date", "description": "项目结束日期" },
+        "staffCount": { "type": "number", "description": "投入人员数量" },
+        "totalAmount": { "type": "number", "description": "项目订单金额" },
+        "receivedAmount": { "type": "number", "description": "已收账款金额" },
+        "unreceivedAmount": { "type": "number", "description": "未收账款金额（自动计算）" },
+        "payableAmount": { "type": "number", "description": "应付账款金额（自动计算）" },
+        "paidAmount": { "type": "number", "description": "已付账款金额（自动计算）" },
+        "description": { "type": "string", "description": "项目详细描述" },
+        "statusCode": { "type": "string", "description": "项目状态标识（对应系统配置中的 PROJECT_STATUS）" },
+        "statusLabel": { "type": "string", "description": "项目状态名称（冗余显示）" },
+        "negotiatingTime": { "type": "string", "format": "date-time", "description": "进入洽谈状态的时间节点" },
+        "constructingTime": { "type": "string", "format": "date-time", "description": "进入交付状态的时间节点" },
+        "completedTime": { "type": "string", "format": "date-time", "description": "进入已交付状态的时间节点" },
+        "settledTime": { "type": "string", "format": "date-time", "description": "进入结清状态的时间节点" },
+        "isHasContract": { "type": "string", "description": "是否有合同（是/否）", "enum": ["是", "否"] },
+        "isHasPreview": { "type": "string", "description": "是否有预览图（是/否）", "enum": ["是", "否"] },
+        "type": { "type": "string", "description": "项目类型（normal: 常规, historical: 补录, long_term: 长期）" },
+        "completionTime": { "type": "string", "format": "date-time", "description": "补录单：完结时间" },
+        "isHistorical": { "type": "boolean", "description": "是否为历史补录数据" },
+        "constructionPeriod": { "type": "array", "description": "历史补录：施工周期日期范围" },
+        "collectionPeriod": { "type": "array", "description": "历史补录：回款周期日期范围" },
+        "amountEditCount": { "type": "number", "description": "订单金额修改次数（创建成功后最多允许修改一次）" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "最后更新时间" }
       },
       "required": ["name", "clientId", "totalAmount", "statusCode"]
     },
     "Client": {
-      "title": "瀹㈡埛",
-      "description": "瀹㈡埛绠＄悊淇℃伅",
+      "title": "客户",
+      "description": "客户管理信息",
       "type": "object",
       "properties": {
-        "name": { "type": "string", "description": "瀹㈡埛鍚嶇О" },
-        "role": { "type": "string", "description": "瀹㈡埛瑙掕壊 (鍐椾綑鏄剧ず)" },
-        "roleCode": { "type": "string", "description": "瀹㈡埛瑙掕壊鏍囪瘑 (瀵瑰簲绯荤粺閰嶇疆涓殑 CLIENT_ROLE)" },
-        "source": { "type": "string", "description": "瀹㈡埛鏉ユ簮" },
-        "paymentCycle": { "type": "string", "description": "鍥炴鍛ㄦ湡" },
-        "description": { "type": "string", "description": "瀹㈡埛鎻忚堪" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "鍒涘缓鏃堕棿" }
+        "name": { "type": "string", "description": "客户名称" },
+        "role": { "type": "string", "description": "客户角色（冗余显示）" },
+        "roleCode": { "type": "string", "description": "客户角色标识（对应系统配置中的 CLIENT_ROLE）" },
+        "source": { "type": "string", "description": "客户来源" },
+        "paymentCycle": { "type": "string", "description": "回款周期" },
+        "description": { "type": "string", "description": "客户描述" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间" }
       },
       "required": ["name", "roleCode"]
     },
     "SystemConfig": {
-      "title": "绯荤粺閫氱敤閰嶇疆",
-      "description": "缁熶竴绠＄悊涓嬫媺閫夐」閰嶇疆锛堣鑹层€佺姸鎬併€佺被鐩瓑锛?,
+      "title": "系统通用配置",
+      "description": "统一管理下拉选项配置（角色、状态、类目等）",
       "type": "object",
       "properties": {
-        "group": { "type": "string", "description": "閰嶇疆鍒嗙粍 (濡傦細CLIENT_ROLE, PROJECT_STATUS, COST_CATEGORY)" },
-        "label": { "type": "string", "description": "鏄剧ず鍚嶇О (濡傦細椤圭洰缁忕悊)" },
-        "value": { "type": "string", "description": "鍞竴鏍囪瘑/浠ｇ爜 (濡傦細pm)" },
-        "sortOrder": { "type": "number", "description": "鎺掑簭鏉冮噸" },
-        "isActive": { "type": "boolean", "description": "鏄惁鍚敤" },
-        "description": { "type": "string", "description": "澶囨敞璇存槑" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "鍒涘缓鏃堕棿" }
+        "group": { "type": "string", "description": "配置分组（如：CLIENT_ROLE, PROJECT_STATUS, COST_CATEGORY）" },
+        "label": { "type": "string", "description": "显示名称（如：项目经理）" },
+        "value": { "type": "string", "description": "唯一标识/代码（如：pm）" },
+        "sortOrder": { "type": "number", "description": "排序权重" },
+        "isActive": { "type": "boolean", "description": "是否启用" },
+        "description": { "type": "string", "description": "备注说明" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间" }
       },
       "required": ["group", "label", "value"]
     },
     "Cost": {
-      "title": "鎴愭湰椤?,
-      "description": "椤圭洰鐨勫叿浣撴垚鏈敮鍑烘槑缁?,
+      "title": "成本项",
+      "description": "项目的具体成本支出明细",
       "type": "object",
       "properties": {
-        "projectId": { "type": "string", "description": "鍏宠仈鐨勯」鐩甀D" },
-        "categoryCode": { "type": "string", "description": "鎴愭湰绫荤洰鏍囪瘑 (瀵瑰簲绯荤粺閰嶇疆涓殑 COST_CATEGORY)" },
-        "categoryLabel": { "type": "string", "description": "鎴愭湰绫荤洰鍚嶇О (鍐椾綑鏄剧ず)" },
-        "supplier": { "type": "string", "description": "渚涘簲鍟嗗悕绉? },
-        "amount": { "type": "number", "description": "鏀嚭閲戦" },
-        "isSettled": { "type": "boolean", "description": "鏄惁宸茬粨娓? },
-        "createdAt": { "type": "string", "format": "date-time", "description": "璁板綍鏃堕棿" }
+        "projectId": { "type": "string", "description": "关联的项目 ID" },
+        "categoryCode": { "type": "string", "description": "成本类目标识（对应系统配置中的 COST_CATEGORY）" },
+        "categoryLabel": { "type": "string", "description": "成本类目名称（冗余显示）" },
+        "supplier": { "type": "string", "description": "供应商名称" },
+        "amount": { "type": "number", "description": "支出金额" },
+        "isSettled": { "type": "boolean", "description": "是否已结清" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "记录时间" }
       },
       "required": ["projectId", "categoryCode", "amount"]
     },
     "Voucher": {
-      "title": "鍑瘉",
-      "description": "椤圭洰鐩稿叧鐨勫崟鎹垨鍥剧墖鍑瘉",
+      "title": "凭证",
+      "description": "项目相关的单据或图片凭证",
       "type": "object",
       "properties": {
-        "projectId": { "type": "string", "description": "鍏宠仈鐨勯」鐩甀D" },
-        "url": { "type": "string", "description": "鍑瘉鍥剧墖鍦ㄤ簯瀛樺偍涓殑URL" },
-        "name": { "type": "string", "description": "鍑瘉鍚嶇О鎴栨弿杩? },
-        "createdAt": { "type": "string", "format": "date-time", "description": "涓婁紶鏃堕棿" }
+        "projectId": { "type": "string", "description": "关联的项目 ID" },
+        "url": { "type": "string", "description": "凭证图片在云存储中的 URL" },
+        "name": { "type": "string", "description": "凭证名称或描述" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "上传时间" }
       },
       "required": ["projectId", "url"]
     },
     "Contract": {
-      "title": "椤圭洰鍚堝悓",
-      "description": "椤圭洰鐩稿叧鐨勫悎鍚屾枃浠?(鍥剧墖鎴朠DF)",
+      "title": "项目合同",
+      "description": "项目相关的合同文件（图片或 PDF）",
       "type": "object",
       "properties": {
-        "projectId": { "type": "string", "description": "鍏宠仈鐨勯」鐩甀D" },
-        "url": { "type": "string", "description": "鏂囦欢鍦ㄤ簯瀛樺偍涓殑URL" },
-        "fileId": { "type": "string", "description": "浜戝瓨鍌ㄦ枃浠禝D" },
-        "name": { "type": "string", "description": "鏂囦欢鍚嶇О" },
-        "type": { "type": "string", "description": "鏂囦欢绫诲瀷 (image/pdf)" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "涓婁紶鏃堕棿" }
+        "projectId": { "type": "string", "description": "关联的项目 ID" },
+        "url": { "type": "string", "description": "文件在云存储中的 URL" },
+        "fileId": { "type": "string", "description": "云存储文件 ID" },
+        "name": { "type": "string", "description": "文件名称" },
+        "type": { "type": "string", "description": "文件类型（image/pdf）" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "上传时间" }
       },
       "required": ["projectId", "url", "fileId"]
     },
     "PreviewImage": {
-      "title": "椤圭洰棰勮鍥?,
-      "description": "椤圭洰鏁堟灉棰勮鍥?(浠呴檺鍥剧墖)",
+      "title": "项目预览图",
+      "description": "项目效果预览图（仅限图片）",
       "type": "object",
       "properties": {
-        "projectId": { "type": "string", "description": "鍏宠仈鐨勯」鐩甀D" },
-        "url": { "type": "string", "description": "鍥剧墖鍦ㄤ簯瀛樺偍涓殑URL" },
-        "fileId": { "type": "string", "description": "浜戝瓨鍌ㄦ枃浠禝D" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "涓婁紶鏃堕棿" }
+        "projectId": { "type": "string", "description": "关联的项目 ID" },
+        "url": { "type": "string", "description": "图片在云存储中的 URL" },
+        "fileId": { "type": "string", "description": "云存储文件 ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "上传时间" }
       },
       "required": ["projectId", "url", "fileId"]
     }
@@ -140,35 +140,35 @@
   "firestore": {
     "users": {
       "schema": { "$ref": "User" },
-      "description": "绠＄悊鍛橀泦鍚?
+      "description": "管理员集合"
     },
     "projects": {
       "schema": { "$ref": "Project" },
-      "description": "椤圭洰淇℃伅闆嗗悎"
+      "description": "项目信息集合"
     },
     "clients": {
       "schema": { "$ref": "Client" },
-      "description": "瀹㈡埛淇℃伅闆嗗悎"
+      "description": "客户信息集合"
     },
     "system_configs": {
       "schema": { "$ref": "SystemConfig" },
-      "description": "绯荤粺閫氱敤閰嶇疆闆嗗悎"
+      "description": "系统通用配置集合"
     },
     "costs": {
       "schema": { "$ref": "Cost" },
-      "description": "鎴愭湰鏄庣粏闆嗗悎"
+      "description": "成本明细集合"
     },
     "vouchers": {
       "schema": { "$ref": "Voucher" },
-      "description": "椤圭洰鍑瘉闆嗗悎"
+      "description": "项目凭证集合"
     },
     "project_contracts": {
       "schema": { "$ref": "Contract" },
-      "description": "椤圭洰鍚堝悓闆嗗悎"
+      "description": "项目合同集合"
     },
     "project_previews": {
       "schema": { "$ref": "PreviewImage" },
-      "description": "椤圭洰棰勮鍥鹃泦鍚?
+      "description": "项目预览图集合"
     }
   }
 }
