@@ -2342,7 +2342,7 @@
                   <div class="flex flex-wrap gap-2">
                     <span
                       v-for="tag in getSettingConfigItems(card)"
-                      :key="tag.value"
+                      :key="tag.id || tag._id || tag.value"
                       class="inline-flex h-8 items-center gap-2 pl-3 pr-1 text-[10px] leading-none rounded transition-colors border"
                       :class="tag.isActive === false ? 'bg-zinc-950/60 text-zinc-600 border-zinc-800' : 'bg-zinc-950 text-zinc-300 hover:bg-zinc-900 border-emerald-900/30'"
                     >
@@ -2350,7 +2350,7 @@
                       <button
                         class="inline-flex h-5 items-center rounded px-1.5 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"
                         :class="tag.isActive === false ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-zinc-500 hover:text-amber-300 hover:bg-amber-500/10'"
-                        :disabled="updatingConfigKey === tag.id"
+                        :disabled="updatingConfigKey === (tag.id || tag._id)"
                         :aria-label="tag.isActive === false ? `启用${tag.label}` : `停用${tag.label}`"
                         :title="tag.isActive === false ? '启用配置' : '停用配置'"
                         @click.stop="handleToggleConfigStatus(card, tag)"
@@ -2515,14 +2515,6 @@
             show-word-limit
           />
         </div>
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">用户角色</label>
-          <el-input
-            v-model="userDialog.form.role"
-            class="custom-input"
-            maxlength="20"
-          />
-        </div>
       </div>
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -2593,6 +2585,7 @@ const currentUser = reactive({
   username: '',
   nickname: '',
   role: '',
+  roleName: '',
   avatarUrl: '',
   avatarFileId: '',
   lastLoginTime: null
@@ -2604,18 +2597,13 @@ const userDialog = reactive({
   form: {
     username: '',
     nickname: '',
-    role: '',
     avatarUrl: '',
     avatarFileId: ''
   }
 })
 
 const currentUserRoleText = computed(() => {
-  const roleMap = {
-    admin: '超级管理员',
-    user: '系统管理员'
-  }
-  return roleMap[currentUser.role] || currentUser.role || '系统管理员'
+  return currentUser.roleName || currentUser.role || '系统管理员'
 })
 
 const formatLastLogin = (value) => {
@@ -2632,6 +2620,7 @@ const applyUserInfo = (user) => {
     username: user.username || '',
     nickname: user.nickname || user.username || '',
     role: user.role || 'user',
+    roleName: user.roleName || user.role || '系统管理员',
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',
     lastLoginTime: user.lastLoginTime || null
@@ -2663,7 +2652,6 @@ const openUserDialog = () => {
   Object.assign(userDialog.form, {
     username: currentUser.username,
     nickname: currentUser.nickname,
-    role: currentUser.role,
     avatarUrl: currentUser.avatarUrl,
     avatarFileId: currentUser.avatarFileId
   })
@@ -2730,7 +2718,6 @@ const handleUpdateUser = async () => {
   try {
     const res = await updateInfo({
       nickname: userDialog.form.nickname.trim(),
-      role: userDialog.form.role.trim(),
       avatarUrl: userDialog.form.avatarUrl,
       avatarFileId: userDialog.form.avatarFileId
     })
@@ -2949,6 +2936,10 @@ const loadSettingConfigItems = async () => {
     }
     settingConfigItems[group] = Array.isArray(res.data)
       ? res.data.filter(item => item.group === group)
+        .map(item => ({
+          ...item,
+          id: item.id || item._id
+        }))
       : []
   })
 }
@@ -3023,7 +3014,8 @@ const handleCreateConfig = async () => {
  */
 const handleToggleConfigStatus = async (card, tag) => {
   const group = configGroupMap[card.title]
-  if (!group || !tag?.id || updatingConfigKey.value) return
+  const configId = tag?.id || tag?._id
+  if (!group || !configId || updatingConfigKey.value) return
 
   const nextActive = tag.isActive === false
   const actionText = nextActive ? '启用' : '停用'
@@ -3046,9 +3038,9 @@ const handleToggleConfigStatus = async (card, tag) => {
       }
     )
 
-    updatingConfigKey.value = tag.id
+    updatingConfigKey.value = configId
     const res = await updateConfigStatus({
-      id: tag.id,
+      id: configId,
       group,
       isActive: nextActive
     })
