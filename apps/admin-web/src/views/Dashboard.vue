@@ -2343,17 +2343,19 @@
                     <span
                       v-for="tag in getSettingConfigItems(card)"
                       :key="tag.value"
-                      class="inline-flex h-8 items-center gap-2 pl-3 pr-1 bg-zinc-950 text-zinc-300 text-[10px] leading-none rounded hover:bg-zinc-900 transition-colors border border-emerald-900/30"
+                      class="inline-flex h-8 items-center gap-2 pl-3 pr-1 text-[10px] leading-none rounded transition-colors border"
+                      :class="tag.isActive === false ? 'bg-zinc-950/60 text-zinc-600 border-zinc-800' : 'bg-zinc-950 text-zinc-300 hover:bg-zinc-900 border-emerald-900/30'"
                     >
                       <span>{{ tag.label }}</span>
                       <button
-                        class="inline-flex w-5 h-5 items-center justify-center rounded text-zinc-600 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                        :disabled="deletingConfigKey === tag.id"
-                        :aria-label="`删除${tag.label}`"
-                        title="删除配置"
-                        @click.stop="handleDeleteConfig(card, tag)"
+                        class="inline-flex h-5 items-center rounded px-1.5 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"
+                        :class="tag.isActive === false ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-zinc-500 hover:text-amber-300 hover:bg-amber-500/10'"
+                        :disabled="updatingConfigKey === tag.id"
+                        :aria-label="tag.isActive === false ? `启用${tag.label}` : `停用${tag.label}`"
+                        :title="tag.isActive === false ? '启用配置' : '停用配置'"
+                        @click.stop="handleToggleConfigStatus(card, tag)"
                       >
-                        <span class="material-symbols-outlined text-[13px]">close</span>
+                        {{ tag.isActive === false ? '启用' : '停用' }}
                       </button>
                     </span>
                     <span
@@ -2547,7 +2549,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, getGlobalConfig, createConfig, deleteConfig, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { getInfo, updateInfo, uploadAvatar } from '../api/user'
@@ -2901,7 +2903,12 @@ const configDialog = reactive({
     description: ''
   }
 })
-const deletingConfigKey = ref('')
+const updatingConfigKey = ref('')
+const settingConfigItems = reactive({
+  CLIENT_SOURCE: [],
+  COST_CATEGORY: [],
+  CLIENT_ROLE: []
+})
 
 const configGroupMap = {
   '客户来源': 'CLIENT_SOURCE',
@@ -2920,10 +2927,27 @@ const configGroupMap = {
  */
 const getSettingConfigItems = (card) => {
   const group = configGroupMap[card.title]
-  if (group === 'CLIENT_SOURCE') return clientSources.value
-  if (group === 'COST_CATEGORY') return costCategories.value
-  if (group === 'CLIENT_ROLE') return clientRoles.value
-  return []
+  return settingConfigItems[group] || []
+}
+
+/**
+ * 获取系统设置配置状态列表
+ * @returns {Promise<void>} 无
+ * @throws {Error} 查询异常时向上抛出
+ */
+const loadSettingConfigItems = async () => {
+  const groups = ['CLIENT_SOURCE', 'COST_CATEGORY', 'CLIENT_ROLE']
+  const responses = await Promise.all(groups.map(group => queryConfig({
+    group,
+    isActive: 'all'
+  })))
+
+  responses.forEach((res, index) => {
+    if (res.code !== 0) {
+      throw new Error(res.message || '配置查询失败')
+    }
+    settingConfigItems[groups[index]] = Array.isArray(res.data) ? res.data : []
+  })
 }
 
 const configValuePreview = computed(() => {
@@ -2988,52 +3012,58 @@ const handleCreateConfig = async () => {
 }
 
 /**
- * 删除系统配置
+ * 切换系统配置启用状态
  * @param {Object} card 配置卡片
  * @param {Object} tag 配置项
  * @returns {Promise<void>} 无
  * @throws {Error} 接口异常时提示错误
  */
-const handleDeleteConfig = async (card, tag) => {
+const handleToggleConfigStatus = async (card, tag) => {
   const group = configGroupMap[card.title]
-  if (!group || !tag?.id || deletingConfigKey.value) return
+  if (!group || !tag?.id || updatingConfigKey.value) return
+
+  const nextActive = tag.isActive === false
+  const actionText = nextActive ? '启用' : '停用'
 
   try {
     const { ElMessageBox, ElMessage } = await import('element-plus')
     await ElMessageBox.confirm(
-      `确定要删除“${tag.label}”吗？删除后不会再出现在新增项目的下拉配置中，历史数据不会被物理删除。`,
-      '删除配置',
+      nextActive
+        ? `确定要启用“${tag.label}”吗？启用后会重新出现在新增项目的下拉配置中。`
+        : `确定要停用“${tag.label}”吗？停用后不会再出现在新增项目的下拉配置中，历史数据不受影响。`,
+      `${actionText}配置`,
       {
-        confirmButtonText: '确定删除',
+        confirmButtonText: `确定${actionText}`,
         cancelButtonText: '取消',
         type: 'warning',
-        confirmButtonClass: '!bg-red-500 !border-red-500 !text-white',
+        confirmButtonClass: nextActive ? '!bg-primary !border-primary !text-black' : '!bg-amber-500 !border-amber-500 !text-black',
         cancelButtonClass: '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white',
-        customClass: 'danger-message-box',
+        customClass: 'custom-message-box',
         center: true
       }
     )
 
-    deletingConfigKey.value = tag.id
-    const res = await deleteConfig({
+    updatingConfigKey.value = tag.id
+    const res = await updateConfigStatus({
       id: tag.id,
-      group
+      group,
+      isActive: nextActive
     })
     if (res.code !== 0) {
-      throw new Error(res.message || '删除失败')
+      throw new Error(res.message || '状态更新失败')
     }
 
     localStorage.removeItem('APP_GLOBAL_CONFIGS')
     localStorage.removeItem('APP_CONFIG_TIMESTAMP')
     await initGlobalConfigs(true)
-    ElMessage.success('配置已删除')
+    ElMessage.success(`配置已${actionText}`)
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') {
       const { ElMessage } = await import('element-plus')
-      ElMessage.error(error.message || '删除失败，请稍后再试')
+      ElMessage.error(error.message || '状态更新失败，请稍后再试')
     }
   } finally {
-    deletingConfigKey.value = ''
+    updatingConfigKey.value = ''
   }
 }
 
@@ -3459,6 +3489,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
         if (label === '已竣工') label = '已交付';
         return { ...s, label };
       })
+      await loadSettingConfigItems()
       return
     }
 
@@ -3502,6 +3533,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
           ElMessage.success('配置同步成功')
         })
       }
+      await loadSettingConfigItems()
     } else {
       throw new Error(res?.message || '获取配置失败')
     }

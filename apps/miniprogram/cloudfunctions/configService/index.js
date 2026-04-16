@@ -56,8 +56,8 @@ exports.main = async (event, context) => {
         return await queryConfig(data);
       case 'createConfig':
         return await createConfig(data);
-      case 'deleteConfig':
-        return await deleteConfig(data);
+      case 'updateConfigStatus':
+        return await updateConfigStatus(data);
       default:
         // 处理未知操作
         return {
@@ -355,7 +355,7 @@ async function queryConfig(params) {
     }
 
     // 状态筛选：默认只查询已启用的配置 (isActive == true)
-    if (isActive !== undefined) {
+    if (isActive !== undefined && isActive !== 'all') {
       query = query.where({
         isActive: isActive === 'true' || isActive === true
       });
@@ -474,17 +474,20 @@ async function createConfig(params) {
 }
 
 /**
- * 删除配置项（软删除）
+ * 更新配置项启用状态
  */
-async function deleteConfig(params) {
-  const { id, group } = params || {};
+async function updateConfigStatus(params) {
+  const { id, group, isActive } = params || {};
   const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
 
   if (!id || !String(id).trim()) {
     return { code: 400, message: '缺少配置 ID' };
   }
+  if (typeof isActive !== 'boolean') {
+    return { code: 400, message: '缺少启用状态' };
+  }
   if (!group || !allowedGroups.includes(group)) {
-    return { code: 400, message: '配置分组不支持删除' };
+    return { code: 400, message: '配置分组不支持修改状态' };
   }
 
   try {
@@ -499,15 +502,19 @@ async function deleteConfig(params) {
     if (config.group !== group) {
       return { code: 400, message: '配置分组不匹配' };
     }
-    if (config.isActive === false) {
-      return { code: 0, message: '配置已删除' };
+    if (config.isActive === isActive) {
+      return {
+        code: 0,
+        message: isActive ? '配置已启用' : '配置已停用',
+        data: { id, isActive }
+      };
     }
 
     await db.collection('system_configs')
       .doc(id)
       .update({
         data: {
-          isActive: false,
+          isActive,
           updateTime: db.serverDate()
         }
       });
@@ -517,11 +524,11 @@ async function deleteConfig(params) {
 
     return {
       code: 0,
-      message: '删除成功',
-      data: { id }
+      message: isActive ? '启用成功' : '停用成功',
+      data: { id, isActive }
     };
   } catch (err) {
-    console.error('删除配置项失败:', err);
-    return { code: 500, message: '删除失败', error: err.message };
+    console.error('更新配置状态失败:', err);
+    return { code: 500, message: '状态更新失败', error: err.message };
   }
 }

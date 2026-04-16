@@ -65,15 +65,15 @@ export function createConfig(data) {
 }
 
 /**
- * 删除系统配置项（软删除）
- * @param {Object} data - { id, group }
+ * 更新系统配置启用状态
+ * @param {Object} data - { id, group, isActive }
  */
-export function deleteConfig(data) {
+export function updateConfigStatus(data) {
   return request({
     url: '/configService',
     method: 'post',
     data: {
-      action: 'deleteConfig',
+      action: 'updateConfigStatus',
       data
     }
   });
