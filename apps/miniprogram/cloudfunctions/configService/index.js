@@ -5,6 +5,8 @@
  */
 'use strict';
 
+const crypto = require('crypto');
+const https = require('https');
 const cloud = require("wx-server-sdk");
 
 // 初始化云开发环境
@@ -152,6 +154,107 @@ function isSafeInput(str) {
   return !unsafePattern.test(str);
 }
 
+/**
+ * 生成 MD5 签名
+ * @param {string} text - 待签名文本
+ * @returns {string} MD5 签名
+ * @throws {Error} 无
+ */
+function md5(text) {
+  return crypto.createHash('md5').update(text, 'utf8').digest('hex');
+}
+
+/**
+ * 规范化翻译结果为数据库 value
+ * @param {string} text - 英文翻译文本
+ * @returns {string} 英文唯一标识基础值
+ * @throws {Error} 无
+ */
+function normalizeTranslatedValue(text) {
+  return String(text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_')
+    .slice(0, 40);
+}
+
+/**
+ * 调用百度翻译将中文配置名翻译为英文
+ * @param {string} label - 中文配置名
+ * @returns {Promise<string>} 英文翻译文本
+ * @throws {Error} 百度翻译接口异常
+ */
+function translateByBaidu(label) {
+  return new Promise((resolve, reject) => {
+    const appId = process.env.BAIDU_TRANSLATE_APP_ID;
+    const appKey = process.env.BAIDU_TRANSLATE_APP_KEY;
+    const q = String(label || '').trim();
+
+    if (!q) {
+      resolve('');
+      return;
+    }
+    if (!appId || !appKey) {
+      reject(new Error('百度翻译环境变量未配置'));
+      return;
+    }
+
+    const salt = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+    const sign = md5(`${appId}${q}${salt}${appKey}`);
+    const params = new URLSearchParams({
+      q,
+      from: 'zh',
+      to: 'en',
+      appid: appId,
+      salt,
+      sign
+    });
+    const body = params.toString();
+
+    const req = https.request({
+      hostname: 'fanyi-api.baidu.com',
+      path: '/api/trans/vip/translate',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      timeout: 5000
+    }, (res) => {
+      let responseBody = '';
+
+      res.on('data', chunk => {
+        responseBody += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(responseBody);
+          if (result.error_code) {
+            reject(new Error(result.error_msg || `百度翻译失败：${result.error_code}`));
+            return;
+          }
+
+          resolve(result.trans_result?.[0]?.dst || '');
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy(new Error('百度翻译请求超时'));
+    });
+    req.write(body);
+    req.end();
+  });
+}
+
 function normalizeEnglishValue(label) {
   const raw = String(label || '').trim().toLowerCase();
   const asciiValue = raw
@@ -217,7 +320,7 @@ function normalizeEnglishValue(label) {
 }
 
 async function ensureUniqueValue(group, baseValue) {
-  let value = baseValue;
+  let value = baseValue || 'config';
   let index = 1;
 
   while (true) {
@@ -228,7 +331,7 @@ async function ensureUniqueValue(group, baseValue) {
 
     if (!res.data || res.data.length === 0) return value;
     index += 1;
-    value = `${baseValue}_${index}`;
+    value = `${baseValue || 'config'}_${index}`;
   }
 }
 
@@ -319,7 +422,19 @@ async function createConfig(params) {
     const nextSortOrder = lastRes.data && lastRes.data.length > 0
       ? (Number(lastRes.data[0].sortOrder) || 0) + 1
       : 1;
-    const baseValue = normalizeEnglishValue(normalizedLabel);
+
+    let baseValue = '';
+    try {
+      const translatedText = await translateByBaidu(normalizedLabel);
+      baseValue = normalizeTranslatedValue(translatedText);
+    } catch (error) {
+      console.error('百度翻译生成配置标识失败，使用本地规则兜底:', error);
+    }
+
+    if (!baseValue) {
+      baseValue = normalizeEnglishValue(normalizedLabel);
+    }
+
     const value = await ensureUniqueValue(group, baseValue);
     const now = db.serverDate();
     const configData = {

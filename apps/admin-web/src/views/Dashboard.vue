@@ -2914,77 +2914,9 @@ const getSettingConfigItems = (card) => {
   return []
 }
 
-/**
- * 根据中文名生成英文标识预览
- * @param {string} label 中文名
- * @returns {string} 英文标识
- * @throws {Error} 无
- */
-const generateConfigValue = (label) => {
-  const raw = String(label || '').trim().toLowerCase()
-  const asciiValue = raw
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .replace(/_{2,}/g, '_')
-
-  if (asciiValue) return asciiValue
-
-  const wordMap = {
-    '老': 'old',
-    '客户': 'client',
-    '推荐': 'referral',
-    '官网': 'official_site',
-    '咨询': 'inquiry',
-    '行业': 'industry',
-    '展会': 'exhibition',
-    '线上': 'online',
-    '搜索': 'search',
-    '主动': 'active',
-    '开发': 'outreach',
-    '其他': 'other',
-    '真': 'real',
-    '植物': 'plant',
-    '仿真': 'artificial',
-    '人工': 'labor',
-    '餐食': 'meal',
-    '石材': 'stone',
-    '铺装': 'paving',
-    '项目': 'project',
-    '经理': 'manager',
-    '老板': 'boss',
-    '本人': 'owner',
-    '中间人': 'agent',
-    '负责人': 'principal',
-    '采购': 'purchase',
-    '代理': 'agent',
-    '设计': 'design',
-    '代表': 'representative',
-    '甲方': 'client'
-  }
-
-  let converted = raw
-  Object.keys(wordMap)
-    .sort((a, b) => b.length - a.length)
-    .forEach(key => {
-      converted = converted.replace(new RegExp(key, 'g'), `_${wordMap[key]}_`)
-    })
-
-  const mappedValue = converted
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .replace(/_{2,}/g, '_')
-
-  if (mappedValue) return mappedValue
-
-  let hash = 0
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i)
-    hash |= 0
-  }
-  return raw ? `config_${Math.abs(hash)}` : ''
-}
-
-const configValuePreview = computed(() => generateConfigValue(configDialog.form.label))
+const configValuePreview = computed(() => {
+  return configDialog.form.label.trim() ? '创建时自动翻译生成' : ''
+})
 
 /**
  * 打开新增配置弹窗
