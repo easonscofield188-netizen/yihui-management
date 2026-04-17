@@ -1264,20 +1264,20 @@
 
                   <!-- Has Contract -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">?????</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
                     <el-select 
                       v-model="form.isHasContract" 
-                      placeholder="???" 
+                      placeholder="请选择" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('isHasContract')"
                     >
                       <el-option
-                        label="?"
+                        label="是"
                         :value="YES_NO_VALUE.YES"
                       />
                       <el-option
-                        label="?"
+                        label="否"
                         :value="YES_NO_VALUE.NO"
                       />
                     </el-select>
@@ -1285,20 +1285,20 @@
 
                   <!-- Has Preview -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">??????</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有预览图</label>
                     <el-select 
                       v-model="form.isHasPreview" 
-                      placeholder="???" 
+                      placeholder="请选择" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('isHasPreview')"
                     >
                       <el-option
-                        label="?"
+                        label="是"
                         :value="YES_NO_VALUE.YES"
                       />
                       <el-option
-                        label="?"
+                        label="否"
                         :value="YES_NO_VALUE.NO"
                       />
                     </el-select>
@@ -1309,20 +1309,20 @@
                     v-if="form.type !== 'long_term'"
                     class="space-y-2"
                   >
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">???????</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭证</label>
                     <el-select 
                       v-model="form.isHasVoucher" 
-                      placeholder="???" 
+                      placeholder="请选择" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('isHasVoucher')"
                     >
                       <el-option
-                        label="?"
+                        label="是"
                         :value="YES_NO_VALUE.YES"
                       />
                       <el-option
-                        label="?"
+                        label="否"
                         :value="YES_NO_VALUE.NO"
                       />
                     </el-select>
