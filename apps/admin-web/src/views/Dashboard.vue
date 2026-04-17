@@ -127,6 +127,205 @@
           </div>
         </template>
 
+        <template v-else-if="activeMenu === 'logs'">
+          <section class="operation-log-page space-y-8">
+            <header class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <h2 class="text-3xl font-bold tracking-tight mb-2">
+                  操作日志
+                </h2>
+                <p class="text-on-surface-variant/80 max-w-3xl text-sm leading-6">
+                  监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更。
+                </p>
+              </div>
+              <div class="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit">
+                <span class="material-symbols-outlined text-sm">verified_user</span>
+                <span class="text-xs">实时监控已开启</span>
+              </div>
+            </header>
+
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">选择用户</label>
+                <select
+                  v-model="operationLogFilters.user"
+                  class="operation-log-control"
+                >
+                  <option value="">所有用户</option>
+                  <option
+                    v-for="user in operationLogUsers"
+                    :key="user"
+                    :value="user"
+                  >
+                    {{ user }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">日期范围</label>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <input
+                    v-model="operationLogFilters.startDate"
+                    class="operation-log-control"
+                    type="date"
+                  >
+                  <span class="text-on-surface-variant/40 text-xs text-center">至</span>
+                  <input
+                    v-model="operationLogFilters.endDate"
+                    class="operation-log-control"
+                    type="date"
+                  >
+                </div>
+              </div>
+
+              <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">所属模块</label>
+                <select
+                  v-model="operationLogFilters.module"
+                  class="operation-log-control"
+                >
+                  <option value="">全部模块</option>
+                  <option
+                    v-for="module in operationLogModules"
+                    :key="module"
+                    :value="module"
+                  >
+                    {{ module }}
+                  </option>
+                </select>
+              </div>
+            </section>
+
+            <section class="bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-surface-container-high/50 border-b border-white/5">
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作时间</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作人</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">所属模块</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作内容</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5">
+                    <tr
+                      v-for="log in pagedOperationLogs"
+                      :key="log.id"
+                      class="hover:bg-surface-container-highest/30 transition-colors"
+                    >
+                      <td class="px-6 py-5">
+                        <div class="flex flex-col">
+                          <span class="text-on-surface font-medium">{{ log.date }}</span>
+                          <span class="text-xs text-on-surface-variant/60">{{ log.time }}</span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-5">
+                        <div class="flex items-center gap-3">
+                          <div
+                            class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                            :class="log.avatarClass"
+                          >
+                            {{ log.initials }}
+                          </div>
+                          <span class="text-on-surface whitespace-nowrap">{{ log.user }}</span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-5">
+                        <span class="px-3 py-1 bg-surface-container-highest rounded text-xs text-on-surface border border-white/5 whitespace-nowrap">
+                          {{ log.module }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-5">
+                        <p class="text-sm text-on-surface-variant max-w-xl line-clamp-1">
+                          {{ log.content }}
+                        </p>
+                      </td>
+                      <td class="px-6 py-5">
+                        <div
+                          class="flex items-center gap-2"
+                          :class="operationLogStatusClass(log.status)"
+                        >
+                          <span class="w-1.5 h-1.5 rounded-full" :class="operationLogDotClass(log.status)"></span>
+                          <span class="text-xs font-bold">{{ log.status }}</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-if="pagedOperationLogs.length === 0">
+                      <td
+                        colspan="5"
+                        class="px-6 py-12 text-center text-sm text-on-surface-variant"
+                      >
+                        暂无符合条件的操作日志
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="bg-surface-container-high/30 px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-t border-white/5">
+                <span class="text-xs text-on-surface-variant/60">
+                  显示 {{ operationLogPageStart }} 到 {{ operationLogPageEnd }} 项，共 {{ filteredOperationLogs.length }} 项
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="operation-log-page-btn"
+                    :disabled="operationLogPage === 1"
+                    @click="operationLogPage = Math.max(1, operationLogPage - 1)"
+                  >
+                    <span class="material-symbols-outlined text-xl">chevron_left</span>
+                  </button>
+                  <button
+                    v-for="page in operationLogTotalPages"
+                    :key="page"
+                    class="operation-log-number-btn"
+                    :class="page === operationLogPage ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:bg-surface-container-highest'"
+                    @click="operationLogPage = page"
+                  >
+                    {{ page }}
+                  </button>
+                  <button
+                    class="operation-log-page-btn"
+                    :disabled="operationLogPage === operationLogTotalPages"
+                    @click="operationLogPage = Math.min(operationLogTotalPages, operationLogPage + 1)"
+                  >
+                    <span class="material-symbols-outlined text-xl">chevron_right</span>
+                  </button>
+                  <button
+                    class="ml-2 px-4 py-2 rounded-lg bg-primary text-black text-xs font-bold hover:brightness-110"
+                    @click="exportOperationLogs"
+                  >
+                    导出日志
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div
+                v-for="item in operationLogStats"
+                :key="item.label"
+                class="operation-log-stat p-6 rounded-2xl relative overflow-hidden border border-white/5 bg-surface-container-high"
+              >
+                <h3 class="text-on-surface-variant text-xs font-bold tracking-widest uppercase mb-4">
+                  {{ item.label }}
+                </h3>
+                <div class="flex items-end gap-3">
+                  <span class="text-4xl font-bold text-on-surface">{{ item.value }}</span>
+                  <span
+                    class="text-sm font-medium mb-1 flex items-center gap-1"
+                    :class="item.colorClass"
+                  >
+                    <span class="material-symbols-outlined text-xs">{{ item.icon }}</span>
+                    {{ item.trend }}
+                  </span>
+                </div>
+              </div>
+            </section>
+          </section>
+        </template>
+
         <template v-else-if="activeMenu === 'projects'">
         <!-- Page Header -->
         <div class="flex justify-between items-end">
@@ -2897,6 +3096,8 @@ const menuItems = ref([
  * @returns {void}
  * @throws {Error} 无
  */
+menuItems.value.splice(2, 0, { name: 'logs', label: '操作日志', icon: markRaw(View), active: false })
+
 const handleMenuClick = (menuName) => {
   if (menuName === 'dashboard' && !hasPermission('VIEW_DASHBOARD')) {
     import('element-plus').then(({ ElMessage }) => {
@@ -2904,7 +3105,13 @@ const handleMenuClick = (menuName) => {
     })
     return
   }
-  if (!['dashboard', 'projects', 'settings'].includes(menuName)) return;
+  if (menuName === 'logs' && !hasPermission('VIEW_OPERATION_LOGS')) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('暂无查看操作记录日志权限')
+    })
+    return
+  }
+  if (!['dashboard', 'projects', 'logs', 'settings'].includes(menuName)) return;
   activeMenu.value = menuName;
   menuItems.value = menuItems.value.map(item => ({
     ...item,
@@ -2995,6 +3202,7 @@ const hasPermission = (permissionKey) => {
 const visibleMenuItems = computed(() => {
   return menuItems.value.filter(item => {
     if (item.name === 'dashboard') return hasPermission('VIEW_DASHBOARD')
+    if (item.name === 'logs') return hasPermission('VIEW_OPERATION_LOGS')
     return true
   })
 })
@@ -3304,6 +3512,192 @@ const dashboardOverview = computed(() => {
     { label: '订单总额', value: `¥${totalAmount.toLocaleString()}` }
   ]
 })
+
+const operationLogPageSize = 5
+const operationLogPage = ref(1)
+const operationLogFilters = reactive({
+  user: '',
+  module: '',
+  startDate: '',
+  endDate: ''
+})
+const operationLogs = ref([
+  {
+    id: 'LOG-001',
+    date: '2026-04-16',
+    time: '14:22:05',
+    user: '系统管理员',
+    initials: '管',
+    avatarClass: 'bg-primary/20 text-primary',
+    module: '项目管理',
+    content: '删除项目“西湖隐秀园林景观设计”',
+    status: '成功'
+  },
+  {
+    id: 'LOG-002',
+    date: '2026-04-16',
+    time: '11:05:48',
+    user: '项目经理',
+    initials: '项',
+    avatarClass: 'bg-secondary/20 text-secondary',
+    module: '数据总览',
+    content: '查看经营数据总览',
+    status: '成功'
+  },
+  {
+    id: 'LOG-003',
+    date: '2026-04-15',
+    time: '16:45:12',
+    user: '普通访客',
+    initials: '访',
+    avatarClass: 'bg-red-500/20 text-red-300',
+    module: '系统权限设置',
+    content: '尝试访问未授权的操作日志页面',
+    status: '失败'
+  },
+  {
+    id: 'LOG-004',
+    date: '2026-04-15',
+    time: '09:12:33',
+    user: '财务主管',
+    initials: '财',
+    avatarClass: 'bg-amber-500/20 text-amber-300',
+    module: '成本项目',
+    content: '调整仿真植物材料成本配置',
+    status: '警告'
+  },
+  {
+    id: 'LOG-005',
+    date: '2026-04-14',
+    time: '18:01:55',
+    user: '系统管理员',
+    initials: '管',
+    avatarClass: 'bg-primary/20 text-primary',
+    module: '系统配置',
+    content: '停用客户来源配置“老客户推荐”',
+    status: '成功'
+  },
+  {
+    id: 'LOG-006',
+    date: '2026-04-14',
+    time: '10:36:21',
+    user: '超级系统管理员',
+    initials: '超',
+    avatarClass: 'bg-emerald-500/20 text-emerald-300',
+    module: '系统权限设置',
+    content: '为系统管理员配置“查看操作记录日志”权限',
+    status: '成功'
+  }
+])
+
+const operationLogUsers = computed(() => {
+  return [...new Set(operationLogs.value.map(item => item.user))]
+})
+
+const operationLogModules = computed(() => {
+  return [...new Set(operationLogs.value.map(item => item.module))]
+})
+
+const filteredOperationLogs = computed(() => {
+  return operationLogs.value.filter(item => {
+    const matchUser = !operationLogFilters.user || item.user === operationLogFilters.user
+    const matchModule = !operationLogFilters.module || item.module === operationLogFilters.module
+    const matchStartDate = !operationLogFilters.startDate || item.date >= operationLogFilters.startDate
+    const matchEndDate = !operationLogFilters.endDate || item.date <= operationLogFilters.endDate
+    return matchUser && matchModule && matchStartDate && matchEndDate
+  })
+})
+
+const operationLogTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredOperationLogs.value.length / operationLogPageSize))
+})
+
+const pagedOperationLogs = computed(() => {
+  const startIndex = (operationLogPage.value - 1) * operationLogPageSize
+  return filteredOperationLogs.value.slice(startIndex, startIndex + operationLogPageSize)
+})
+
+const operationLogPageStart = computed(() => {
+  if (!filteredOperationLogs.value.length) return 0
+  return (operationLogPage.value - 1) * operationLogPageSize + 1
+})
+
+const operationLogPageEnd = computed(() => {
+  return Math.min(operationLogPage.value * operationLogPageSize, filteredOperationLogs.value.length)
+})
+
+const operationLogStats = computed(() => {
+  const failedCount = operationLogs.value.filter(item => item.status === '失败').length
+  const warningCount = operationLogs.value.filter(item => item.status === '警告').length
+  return [
+    { label: '今日操作总数', value: operationLogs.value.filter(item => item.date === '2026-04-16').length, trend: '12%', icon: 'trending_up', colorClass: 'text-primary' },
+    { label: '异常状态警告', value: failedCount + warningCount, trend: '关键', icon: 'priority_high', colorClass: 'text-red-300' },
+    { label: '最活跃模块', value: '项目管理', trend: '高频', icon: 'analytics', colorClass: 'text-secondary' }
+  ]
+})
+
+/**
+ * 功能：返回日志状态文字样式
+ * @param {string} status 状态
+ * @returns {string} 样式类名
+ * @throws {Error} 无
+ */
+const operationLogStatusClass = (status) => {
+  if (status === '失败') return 'text-red-300'
+  if (status === '警告') return 'text-secondary'
+  return 'text-primary'
+}
+
+/**
+ * 功能：返回日志状态圆点样式
+ * @param {string} status 状态
+ * @returns {string} 样式类名
+ * @throws {Error} 无
+ */
+const operationLogDotClass = (status) => {
+  if (status === '失败') return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
+  if (status === '警告') return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
+  return 'bg-primary shadow-[0_0_8px_#52ee8a]'
+}
+
+/**
+ * 功能：导出当前筛选后的操作日志
+ * @returns {void}
+ * @throws {Error} 导出失败时提示用户
+ */
+const exportOperationLogs = () => {
+  try {
+    const rows = filteredOperationLogs.value.map(item => [
+      `${item.date} ${item.time}`,
+      item.user,
+      item.module,
+      item.content,
+      item.status
+    ])
+    const csvContent = [['操作时间', '操作人', '所属模块', '操作内容', '状态'], ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'operation-logs.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出操作日志失败', error)
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error('导出操作日志失败')
+    })
+  }
+}
+
+watch(
+  () => ({ ...operationLogFilters }),
+  () => {
+    operationLogPage.value = 1
+  }
+)
 
 // 项目列表筛选状态
 const projectFilters = reactive({
@@ -6603,5 +6997,60 @@ const handleLogout = () => {
     background: rgba(82, 238, 138, 0.08);
     border-color: rgba(82, 238, 138, 0.25);
   }
+}
+
+.operation-log-control {
+  width: 100%;
+  height: 40px;
+  background: #0e0e0f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #e5e2e3;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+
+  &:focus {
+    border-color: rgba(82, 238, 138, 0.7);
+    box-shadow: 0 0 0 1px rgba(82, 238, 138, 0.35);
+  }
+}
+
+.operation-log-page-btn,
+.operation-log-number-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.operation-log-page-btn {
+  color: #a3a3a3;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e2e3;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+}
+
+.operation-log-stat::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: rgba(82, 238, 138, 0.06);
+  filter: blur(24px);
 }
 </style>
