@@ -386,7 +386,7 @@ async function queryConfig(params) {
  */
 async function createConfig(params) {
   const { group, label, description = '' } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
+  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
 
   if (!group || !allowedGroups.includes(group)) {
     return { code: 400, message: '配置分组不支持新增' };
@@ -476,7 +476,7 @@ async function createConfig(params) {
  */
 async function updateConfigStatus(params) {
   const { id, group, isActive } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
+  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
 
   if (!id || !String(id).trim()) {
     return { code: 400, message: '缺少配置 ID' };

@@ -18,8 +18,8 @@
 - `updateTime` (timestamp): 最后更新时间
 
 ### 1.2 系统通用配置表 (`system_configs`)
-统一管理所有下拉选项（客户角色、项目状态、成本类目、客户来源等）。
-- `group` (string): 配置分组 (CLIENT_ROLE, PROJECT_STATUS, COST_CATEGORY, CLIENT_SOURCE)
+统一管理所有下拉选项（客户角色、项目状态、成本类目、客户来源、项目场景等）。
+- `group` (string): 配置分组 (CLIENT_ROLE, PROJECT_STATUS, COST_CATEGORY, CLIENT_SOURCE, PROJECT_SCENE)
 - `label` (string): 显示名称 (如：项目经理)
 - `value` (string): 唯一标识/代码 (如：pm)
 - `sortOrder` (number): 排序权重
@@ -42,6 +42,7 @@
 - `clientId` (string): 关联的客户 ID (外键)
 - `name` (string): 项目名称
 - `type` (string): 项目类型 (historical: 补录, normal: 常规, long_term: 长期)
+- `scene` (string): 项目场景标识 (对应 `system_configs` 中的 `PROJECT_SCENE`)
 - `completionTime` (timestamp): 补录单：完结时间
 - `client` (string): 客户单位 (冗余显示)
 - `clientRole` (string): 客户角色 (冗余显示)
@@ -59,7 +60,7 @@
   - `content` (string): 项目内容 (植物养护, 植物换新, 景观优化, 环境治理)
   - `startDate` (string): 开始日期
   - `amount` (number): 订单金额
-  - `isHasVoucher` (string): 是否有发票凭证 (是/否)
+  - `isHasVoucher` (string): 是否有发票凭证 (yes/no)
   - `vouchers` (array): 凭证列表
     - `id` (string): 凭证 ID
     - `fileId` (string): 云存储文件 ID
@@ -70,8 +71,9 @@
     - `supplier` (string): 供应商
     - `amount` (number): 支出金额
     - `isSettled` (boolean): 是否结清
-- `isHasContract` (string): 是否有合同 (是/否)
-- `isHasPreview` (string): 是否有预览图 (是/否)
+- `isHasContract` (string): 是否有合同 (yes/no)
+- `isHasPreview` (string): 是否有预览图 (yes/no)
+- `isHasVoucher` (string): 是否有发票凭证 (yes/no，常规项目用于控制成本支出凭证上传是否必填)
 - `amountEditCount` (number): 订单金额修改次数 (创建成功后最多允许修改一次)
 - `createdAt` (timestamp): 创建时间
 - `updatedAt` (timestamp): 更新时间

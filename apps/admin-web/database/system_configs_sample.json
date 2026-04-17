@@ -25,6 +25,11 @@
   { "group": "CLIENT_SOURCE", "label": "主动开发", "value": "outreach", "sortOrder": 4, "isActive": true, "description": "地推或电销" },
   { "group": "CLIENT_SOURCE", "label": "其他", "value": "other", "sortOrder": 5, "isActive": true, "description": "其他渠道" },
 
+  { "group": "PROJECT_SCENE", "label": "公司布景", "value": "company_scene", "sortOrder": 1, "isActive": true, "description": "企业办公或商业空间布景" },
+  { "group": "PROJECT_SCENE", "label": "门店造景", "value": "store_landscape", "sortOrder": 2, "isActive": true, "description": "门店展示与消费空间造景" },
+  { "group": "PROJECT_SCENE", "label": "私人住宅", "value": "private_residence", "sortOrder": 3, "isActive": true, "description": "私宅庭院、阳台或室内景观" },
+  { "group": "PROJECT_SCENE", "label": "机关单位", "value": "government_unit", "sortOrder": 4, "isActive": true, "description": "机关、事业单位及公共空间" },
+
   { "group": "PROJECT_TYPE", "label": "补录", "value": "historical", "sortOrder": 1, "isActive": true, "description": "历史数据录入" },
   { "group": "PROJECT_TYPE", "label": "常规", "value": "normal", "sortOrder": 2, "isActive": true, "description": "常规项目" },
   { "group": "PROJECT_TYPE", "label": "长期", "value": "long_term", "sortOrder": 3, "isActive": true, "description": "长期项目" }

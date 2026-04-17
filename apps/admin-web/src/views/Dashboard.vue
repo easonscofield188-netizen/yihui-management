@@ -974,6 +974,25 @@
                     </el-select>
                   </div>
 
+                  <!-- Project Scene -->
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目场景</label>
+                    <el-select 
+                      v-model="form.scene" 
+                      placeholder="请选择项目场景" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || isFieldReadOnly('scene')"
+                    >
+                      <el-option 
+                        v-for="item in projectScenes" 
+                        :key="item.value" 
+                        :label="item.label" 
+                        :value="item.value" 
+                      />
+                    </el-select>
+                  </div>
+
                   <!-- Start Date (Only for New Project Mode) -->
                   <div
                     v-if="isCreating && form.type !== 'historical'"
@@ -1245,42 +1264,66 @@
 
                   <!-- Has Contract -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">?????</label>
                     <el-select 
                       v-model="form.isHasContract" 
-                      placeholder="请选择" 
+                      placeholder="???" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('isHasContract')"
                     >
                       <el-option
-                        label="是"
-                        value="是"
+                        label="?"
+                        :value="YES_NO_VALUE.YES"
                       />
                       <el-option
-                        label="否"
-                        value="否"
+                        label="?"
+                        :value="YES_NO_VALUE.NO"
                       />
                     </el-select>
                   </div>
 
                   <!-- Has Preview -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有预览图</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">??????</label>
                     <el-select 
                       v-model="form.isHasPreview" 
-                      placeholder="请选择" 
+                      placeholder="???" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('isHasPreview')"
                     >
                       <el-option
-                        label="是"
-                        value="是"
+                        label="?"
+                        :value="YES_NO_VALUE.YES"
                       />
                       <el-option
-                        label="否"
-                        value="否"
+                        label="?"
+                        :value="YES_NO_VALUE.NO"
+                      />
+                    </el-select>
+                  </div>
+
+                  <!-- Has Voucher -->
+                  <div
+                    v-if="form.type !== 'long_term'"
+                    class="space-y-2"
+                  >
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">???????</label>
+                    <el-select 
+                      v-model="form.isHasVoucher" 
+                      placeholder="???" 
+                      class="w-full custom-select" 
+                      popper-class="custom-dropdown"
+                      :disabled="isViewMode || isFieldReadOnly('isHasVoucher')"
+                    >
+                      <el-option
+                        label="?"
+                        :value="YES_NO_VALUE.YES"
+                      />
+                      <el-option
+                        label="?"
+                        :value="YES_NO_VALUE.NO"
                       />
                     </el-select>
                   </div>
@@ -1509,7 +1552,10 @@
                   </div>
 
                   <!-- Vouchers Section -->
-                  <div class="mt-8 border-t border-white/5 pt-6">
+                  <div
+                    v-if="form.isHasVoucher === YES_NO_VALUE.YES"
+                    class="mt-8 border-t border-white/5 pt-6"
+                  >
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
                         单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多选)
@@ -1627,7 +1673,7 @@
 
             <!-- Project Contract Management Section -->
             <section
-              v-if="form.isHasContract === '是'"
+              v-if="form.isHasContract === YES_NO_VALUE.YES"
               class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300"
             >
               <div 
@@ -1760,7 +1806,7 @@
 
             <!-- Project Preview Management Section -->
             <section
-              v-if="form.isHasPreview === '是'"
+              v-if="form.isHasPreview === YES_NO_VALUE.YES"
               class="bg-surface-container-high rounded-xl overflow-hidden border border-white/5 shadow-2xl transition-all duration-300"
             >
               <div 
@@ -2000,8 +2046,8 @@
                             popper-class="custom-dropdown"
                             :disabled="isViewMode || isLongTermTerminated"
                           >
-                            <el-option label="是" value="是" />
-                            <el-option label="否" value="否" />
+                            <el-option label="是" :value="YES_NO_VALUE.YES" />
+                            <el-option label="否" :value="YES_NO_VALUE.NO" />
                           </el-select>
                         </div>
                       </div>
@@ -2114,7 +2160,7 @@
 
                       <!-- 子项目凭证上传区域 -->
                       <div 
-                        v-if="sp.isHasVoucher === '是'"
+                        v-if="sp.isHasVoucher === YES_NO_VALUE.YES"
                         class="mb-10 space-y-4"
                       >
                         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">发票凭证上传</label>
@@ -2839,6 +2885,24 @@ import {
 // 获取API域名
 const DEFAULT_ADMIN_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDjlwOlzc23T2bj6EUmlx2AkEAQqItGaRRXbTZNKA9uZtUWNLACpgTrMyCTqQbBxVgnAbjSGch7y7up5-T7Xm7dfwOQFwV9fokxxCTSC_Q1_KfdPFnpUg2cXuyCANDhpGLDIhvEC6y5hAuosFC5R4U4NPiqRiH6iVeYdWASI_lTeVcufcmzVBuuuf-Gm3UkZyDW8gzrB2R_dxs0WYHYSDkbZlv5k6cAer0sHeV3n5A2dSKy4zNYUmz1hitr0fhydNn8pYcg2yAEZPA'
 const apiDomain = import.meta.env.VITE_TCB_BASE_URL || ''
+const YES_NO_VALUE = {
+  YES: 'yes',
+  NO: 'no'
+}
+const LEGACY_YES_NO_VALUE = {
+  YES: '\u662f',
+  NO: '\u5426'
+}
+
+const normalizeYesNo = (value, defaultValue = YES_NO_VALUE.NO) => {
+  if (value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES || value === true) return YES_NO_VALUE.YES
+  if (value === YES_NO_VALUE.NO || value === LEGACY_YES_NO_VALUE.NO || value === false) return YES_NO_VALUE.NO
+  return defaultValue
+}
+
+const isCostSettled = (value) => {
+  return value === true || value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES
+}
 
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
 const isLoadingProject = ref(false)
@@ -3235,6 +3299,15 @@ const settingConfigCards = [
     iconHover: 'group-hover:bg-emerald-400/20',
     hoverBorder: 'hover:border-emerald-400',
     tags: ['甲方老板', '项目负责人', '采购代理', '设计代表']
+  },
+  {
+    title: '项目场景',
+    description: '维护项目基础信息中的场景选项',
+    icon: 'scene',
+    iconColor: 'text-cyan-400',
+    iconHover: 'group-hover:bg-cyan-400/20',
+    hoverBorder: 'hover:border-cyan-400',
+    tags: ['公司布景', '门店造景', '私人住宅', '机关单位']
   }
 ]
 
@@ -3253,16 +3326,15 @@ const updatingConfigKey = ref('')
 const settingConfigItems = reactive({
   CLIENT_SOURCE: [],
   COST_CATEGORY: [],
-  CLIENT_ROLE: []
+  CLIENT_ROLE: [],
+  PROJECT_SCENE: []
 })
 
 const configGroupMap = {
   '客户来源': 'CLIENT_SOURCE',
-  '瀹㈡埛鏉ユ簮': 'CLIENT_SOURCE',
   '成本项目': 'COST_CATEGORY',
-  '鎴愭湰椤圭洰': 'COST_CATEGORY',
   '客户角色': 'CLIENT_ROLE',
-  '瀹㈡埛瑙掕壊': 'CLIENT_ROLE'
+  '项目场景': 'PROJECT_SCENE'
 }
 
 /**
@@ -3282,7 +3354,7 @@ const getSettingConfigItems = (card) => {
  * @throws {Error} 查询异常时向上抛出
  */
 const loadSettingConfigItems = async () => {
-  const groups = ['CLIENT_SOURCE', 'COST_CATEGORY', 'CLIENT_ROLE']
+  const groups = ['CLIENT_SOURCE', 'COST_CATEGORY', 'CLIENT_ROLE', 'PROJECT_SCENE']
   const responses = await Promise.all(groups.map(group => queryConfig({
     group,
     isActive: 'all'
@@ -3835,6 +3907,7 @@ watch(filteredProjects, (newVal) => {
 const form = reactive({
   name: '',           // 项目名称
   type: 'normal',     // 项目类型
+  scene: '',          // 项目场景
   period: [null, null],       // 项目周期（日期范围数组）
   startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
   constructionPeriod: [null, null], // 施工周期（历史模式）
@@ -3849,8 +3922,9 @@ const form = reactive({
   receivedAmount: null,  // 已收账款
   desc: '',           // 项目描述
   isHistorical: false, // 标识是否为历史补录项目
-  isHasContract: '否', // 是否有合同
-  isHasPreview: '否',   // 是否有预览图
+  isHasContract: YES_NO_VALUE.NO, // 是否有合同
+  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
+  isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭证
   amountEditCount: 0,   // 订单金额修改次数
   subProjects: []      // 子项目列表
 })
@@ -3962,7 +4036,7 @@ const addSubProject = () => {
     content: '植物养护',
     startDate: new Date().toISOString().split('T')[0],
     amount: 0,
-    isHasVoucher: '否',
+    isHasVoucher: YES_NO_VALUE.NO,
     vouchers: [],
     costs: [],
     isCollapsed: false
@@ -3993,6 +4067,14 @@ const removeSubProjectCost = (subProject, costIndex) => {
 
 // 项目类型列表（由接口获取）
 const projectTypes = ref([])
+const projectScenes = ref([])
+
+const defaultProjectScenes = [
+  { label: '公司布景', value: 'company_scene' },
+  { label: '门店造景', value: 'store_landscape' },
+  { label: '私人住宅', value: 'private_residence' },
+  { label: '机关单位', value: 'government_unit' }
+]
 
 // 成本类目列表（由接口获取）
 const costCategories = ref([])
@@ -4042,6 +4124,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
       costCategories.value = deduplicate(configs['COST_CATEGORY'])
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
+      projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
         if (label === '谈判中') label = '洽谈中';
@@ -4075,6 +4158,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       clientSources.value = deduplicate(configs['CLIENT_SOURCE'])
       costCategories.value = deduplicate(configs['COST_CATEGORY'])
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
+      projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
         if (label === '谈判中') label = '洽谈中';
@@ -4173,7 +4257,7 @@ const collectionDays = computed(() => {
 // 监听是否有合同切换
 watch(() => form.isHasContract, async (newVal, oldVal) => {
   if (isLoadingProject.value) return // 加载中不触发清理逻辑
-  if (newVal === '否' && oldVal === '是') {
+  if (newVal === YES_NO_VALUE.NO && oldVal === YES_NO_VALUE.YES) {
     if (contracts.value.length > 0) {
       try {
         await import('element-plus').then(async ({ ElMessageBox, ElMessage }) => {
@@ -4195,7 +4279,7 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
             ElMessage.success('合同文件已清理')
           } catch {
             // 用户取消，恢复为“是”
-            form.isHasContract = '是'
+            form.isHasContract = YES_NO_VALUE.YES
           }
         })
       } catch (err) {
@@ -4208,7 +4292,7 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
 // 监听是否有预览图切换
 watch(() => form.isHasPreview, async (newVal, oldVal) => {
   if (isLoadingProject.value) return // 加载中不触发清理逻辑
-  if (newVal === '否' && oldVal === '是') {
+  if (newVal === YES_NO_VALUE.NO && oldVal === YES_NO_VALUE.YES) {
     if (previews.value.length > 0) {
       try {
         await import('element-plus').then(async ({ ElMessageBox, ElMessage }) => {
@@ -4230,7 +4314,7 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
             ElMessage.success('预览图已清理')
           } catch {
             // 用户取消，恢复为“是”
-            form.isHasPreview = '是'
+            form.isHasPreview = YES_NO_VALUE.YES
           }
         })
       } catch (err) {
@@ -4393,14 +4477,14 @@ const paidAmount = computed(() => {
     form.subProjects.forEach(sp => {
       if (sp.costs) {
         total += sp.costs
-          .filter(item => item.isSettled === true || item.isSettled === '是')
+          .filter(item => isCostSettled(item.isSettled))
           .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
       }
     });
     return total.toFixed(2);
   }
   return costs.value
-    .filter(item => item.isSettled === true || item.isSettled === '是')
+    .filter(item => isCostSettled(item.isSettled))
     .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
     .toFixed(2);
 });
@@ -4498,7 +4582,7 @@ const isFieldReadOnly = (fieldName) => {
   if (!isProjectClosed.value) return false;
   
   // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账款
-  const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
+  const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'isHasVoucher', 'receivedAmount'];
   return !allowedFields.includes(fieldName);
 };
 
@@ -4938,6 +5022,7 @@ const handleViewProject = async (project) => {
   Object.assign(form, {
     name: project.name,
     type: project.type || (project.isHistorical ? 'historical' : 'normal'),
+    scene: project.scene || '',
     period: project.type === 'long_term'
       ? (project.period || [pStart, now])
       : (project.isHistorical ? (project.period || [null, null]) : [pStart, project.settledTime || now]),
@@ -4954,12 +5039,14 @@ const handleViewProject = async (project) => {
     desc: project.desc,
     isHistorical: !!project.isHistorical,
     completionTime: project.completionTime ? new Date(project.completionTime).toISOString().split('T')[0] : null,
-    isHasContract: project.isHasContract || '否',
-    isHasPreview: project.isHasPreview || '否',
+    isHasContract: normalizeYesNo(project.isHasContract, YES_NO_VALUE.NO),
+    isHasPreview: normalizeYesNo(project.isHasPreview, YES_NO_VALUE.NO),
+    isHasVoucher: normalizeYesNo(project.isHasVoucher, YES_NO_VALUE.YES),
     amountEditCount: project.amountEditCount || 0,
     subProjects: project.subProjects ? project.subProjects.map(sp => ({
       ...sp,
       id: sp.id || Date.now() + Math.random(),
+      isHasVoucher: normalizeYesNo(sp.isHasVoucher, YES_NO_VALUE.NO),
       isCollapsed: true // 默认折叠
     })) : []
   })
@@ -4973,7 +5060,7 @@ const handleViewProject = async (project) => {
     category: c.category,
     supplier: c.supplier,
     amount: c.amount,
-    isSettled: c.isSettled !== undefined ? c.isSettled : true // 历史数据默认为已结清
+    isSettled: c.isSettled !== undefined ? isCostSettled(c.isSettled) : true // 历史数据默认为已结清
   })) : []
   
   // 回显凭证：先清空，再从接口获取最新凭证
@@ -4994,7 +5081,7 @@ const handleViewProject = async (project) => {
 
   // 回显合同
   contracts.value = []
-  if (form.isHasContract === '是') {
+  if (form.isHasContract === YES_NO_VALUE.YES) {
     try {
       const res = await getContracts({ projectId: project.id })
       if (res.code === 0) {
@@ -5013,7 +5100,7 @@ const handleViewProject = async (project) => {
 
   // 回显预览图
   previews.value = []
-  if (form.isHasPreview === '是') {
+  if (form.isHasPreview === YES_NO_VALUE.YES) {
     try {
       const res = await getPreviews({ projectId: project.id })
       if (res.code === 0) {
@@ -5284,6 +5371,7 @@ const resetForm = () => {
   Object.assign(form, {
     name: '',
     type: 'normal',
+    scene: '',
     period: [null, null],
     startDate: new Date().toISOString().split('T')[0],
     constructionPeriod: [null, null],
@@ -5298,8 +5386,9 @@ const resetForm = () => {
     receivedAmount: null,
     desc: '',
     isHistorical: false,
-    isHasContract: '否',
-    isHasPreview: '否',
+    isHasContract: YES_NO_VALUE.NO,
+    isHasPreview: YES_NO_VALUE.NO,
+    isHasVoucher: YES_NO_VALUE.YES,
     amountEditCount: 0,
     subProjects: []
   })
@@ -5431,8 +5520,8 @@ const validateProjectForm = (checkVouchers = true) => {
   }
 
   if (checkVouchers) {
-    if (form.isHasContract === '是' && contracts.value.length === 0) return '请上传至少一个合同文件';
-    if (form.isHasPreview === '是' && previews.value.length === 0) return '请上传至少一张预览图';
+    if (form.isHasContract === YES_NO_VALUE.YES && contracts.value.length === 0) return '请上传至少一个合同文件';
+    if (form.isHasPreview === YES_NO_VALUE.YES && previews.value.length === 0) return '请上传至少一张预览图';
   }
   
   if (!form.client) return '请输入客户名称';
@@ -5443,6 +5532,7 @@ const validateProjectForm = (checkVouchers = true) => {
   if (isNewClient.value && !form.clientSource) return '请选择新客户来源';
 
   if (!form.status) return '请选择项目状态';
+  if (!form.scene) return '请选择项目场景';
 
   if (form.type !== 'long_term') {
     if (form.staffCount === null || form.staffCount === undefined) return '请输入人员数量';
@@ -5458,7 +5548,7 @@ const validateProjectForm = (checkVouchers = true) => {
       if (new Date(sp.startDate) > new Date()) return `子项目 ${i + 1} 开始日期不能晚于当前日期`;
       if (sp.amount === null || sp.amount === undefined) return `子项目 ${i + 1} 请输入订单金额`;
       
-      if (checkVouchers && sp.isHasVoucher === '是') {
+      if (checkVouchers && sp.isHasVoucher === YES_NO_VALUE.YES) {
         if (!sp.vouchers || sp.vouchers.length === 0) return `子项目 ${i + 1} 已开启发票凭证，请上传凭证图片`;
       }
     }
@@ -5478,7 +5568,7 @@ const validateProjectForm = (checkVouchers = true) => {
     if (isNaN(parseFloat(cost.amount))) return '成本金额必须为数字';
   }
 
-  if (checkVouchers && form.type !== 'long_term' && vouchers.value.length === 0) {
+  if (checkVouchers && form.type !== 'long_term' && form.isHasVoucher === YES_NO_VALUE.YES && vouchers.value.length === 0) {
     return '请上传至少一张凭证照片';
   }
   
@@ -5538,6 +5628,8 @@ const handleSaveProject = async () => {
     const projectData = {
       name: form.name,
       type: form.type,
+      scene: form.scene,
+      sceneLabel: projectScenes.value.find(item => item.value === form.scene)?.label || '',
       client: form.client,
       role: form.role,
       clientSource: form.clientSource,
@@ -5549,26 +5641,27 @@ const handleSaveProject = async () => {
       isHistorical: !!form.isHistorical,
       isHasContract: form.isHasContract,
       isHasPreview: form.isHasPreview,
+      isHasVoucher: form.isHasVoucher,
       completionTime: form.completionTime ? new Date(form.completionTime).toISOString() : null,
       costs: costs.value.map(item => ({
         category: item.category,
         supplier: item.supplier,
         amount: Number(item.amount),
-        isSettled: item.isSettled
+        isSettled: isCostSettled(item.isSettled)
       })),
       subProjects: form.subProjects.map(sp => ({
         id: sp.id,
         content: sp.content,
         startDate: sp.startDate,
         amount: Number(sp.amount),
-        isHasVoucher: sp.isHasVoucher || '否',
+        isHasVoucher: normalizeYesNo(sp.isHasVoucher, YES_NO_VALUE.NO),
         vouchers: sp.vouchers || [],
         costs: (sp.costs || []).map(c => ({
           id: c.id,
           category: c.category,
           supplier: c.supplier,
           amount: Number(c.amount),
-          isSettled: c.isSettled
+          isSettled: isCostSettled(c.isSettled)
         }))
       }))
     }
@@ -5850,7 +5943,7 @@ const handleContractUpload = async (event) => {
     if (successfulUploads.length > 0) {
       contracts.value.push(...successfulUploads)
       // 自动切换状态为“是”
-      form.isHasContract = '是'
+      form.isHasContract = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 个合同文件`)
       })
@@ -5940,7 +6033,7 @@ const handlePreviewUpload = async (event) => {
     if (successfulUploads.length > 0) {
       previews.value.push(...successfulUploads)
       // 自动切换状态为“是”
-      form.isHasPreview = '是'
+      form.isHasPreview = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 张预览图`)
       })
@@ -6139,6 +6232,11 @@ const removeSubProjectVoucher = async (subProject, index) => {
  * 上传凭证
  */
 const handleVoucherUpload = async (event) => {
+  if (form.isHasVoucher !== YES_NO_VALUE.YES) {
+    event.target.value = ''
+    return
+  }
+
   // 0. 拦截校验：必须先填写基础信息和成本
   const error = validateProjectForm(false);
   if (error) {

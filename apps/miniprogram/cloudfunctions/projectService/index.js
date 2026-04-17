@@ -11,6 +11,28 @@ cloud.init({
 });
 
 const db = cloud.database();
+const YES_NO_VALUE = {
+  YES: 'yes',
+  NO: 'no'
+};
+const LEGACY_YES_NO_VALUE = {
+  YES: '\u662f',
+  NO: '\u5426'
+};
+
+function normalizeYesNo(value, defaultValue = YES_NO_VALUE.NO) {
+  if (value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES || value === true) return YES_NO_VALUE.YES;
+  if (value === YES_NO_VALUE.NO || value === LEGACY_YES_NO_VALUE.NO || value === false) return YES_NO_VALUE.NO;
+  return defaultValue;
+}
+
+function isYes(value) {
+  return normalizeYesNo(value, YES_NO_VALUE.NO) === YES_NO_VALUE.YES;
+}
+
+function isNo(value) {
+  return normalizeYesNo(value, YES_NO_VALUE.YES) === YES_NO_VALUE.NO;
+}
 
 exports.main = async (event, context) => {
   let action, data;
@@ -61,7 +83,7 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
     costs.forEach(cost => {
       const costAmount = parseFloat(cost.amount) || 0;
       payable += costAmount;
-      if (cost.isSettled === true || cost.isSettled === '是') {
+      if (isYes(cost.isSettled)) {
         paid += costAmount;
       }
     });
@@ -74,7 +96,7 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
         sp.costs.forEach(cost => {
           const costAmount = parseFloat(cost.amount) || 0;
           payable += costAmount;
-          if (cost.isSettled === true || cost.isSettled === '是') {
+          if (isYes(cost.isSettled)) {
             paid += costAmount;
           }
         });
@@ -241,14 +263,14 @@ async function deleteProject(params, event) {
 }
 
 async function updateProject(params) {
-  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, clientSource, subProjects } = params;
+  const { id, name, type, scene, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
   }
 
   // 安全校验
-  if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc) || !isSafeInput(clientSource)) {
+  if (!isSafeInput(name) || !isSafeInput(scene) || !isSafeInput(client) || !isSafeInput(desc) || !isSafeInput(clientSource)) {
     return { code: 400, message: '输入包含非法字符' };
   }
 
@@ -311,7 +333,7 @@ async function updateProject(params) {
     }
 
     if (oldProject.status === 'closed' && oldProject.type !== 'historical') {
-      const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
+      const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'isHasVoucher', 'receivedAmount'];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
       
       // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
@@ -356,6 +378,7 @@ async function updateProject(params) {
 
     if (name) updateDataFinal.name = name;
     if (type) updateDataFinal.type = type;
+    if (scene !== undefined) updateDataFinal.scene = scene;
     if (period) updateDataFinal.period = period;
     if (client) updateDataFinal.client = client;
     if (role) updateDataFinal.role = role;
@@ -376,7 +399,7 @@ async function updateProject(params) {
         category: item.category || '',
         supplier: item.supplier || '',
         amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
-        isSettled: item.isSettled || '否'
+        isSettled: isYes(item.isSettled)
       }));
     }
     
@@ -388,14 +411,14 @@ async function updateProject(params) {
         content: sp.content || '',
         startDate: sp.startDate || '',
         amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
-        isHasVoucher: sp.isHasVoucher || '否',
+        isHasVoucher: normalizeYesNo(sp.isHasVoucher, YES_NO_VALUE.NO),
         vouchers: sp.vouchers || [],
         costs: (sp.costs || []).map(c => ({
           id: c.id || Date.now() + Math.random(),
           category: c.category || '',
           supplier: c.supplier || '',
           amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-          isSettled: c.isSettled || false
+          isSettled: isYes(c.isSettled)
         }))
       }));
     }
@@ -407,8 +430,9 @@ async function updateProject(params) {
     if (collectionPeriod !== undefined) updateDataFinal.collectionPeriod = collectionPeriod;
     if (completionTime !== undefined) updateDataFinal.completionTime = completionTime;
     
-    if (isHasContract !== undefined) updateDataFinal.isHasContract = isHasContract;
-    if (isHasPreview !== undefined) updateDataFinal.isHasPreview = isHasPreview;
+    if (isHasContract !== undefined) updateDataFinal.isHasContract = normalizeYesNo(isHasContract, YES_NO_VALUE.NO);
+    if (isHasPreview !== undefined) updateDataFinal.isHasPreview = normalizeYesNo(isHasPreview, YES_NO_VALUE.NO);
+    if (isHasVoucher !== undefined) updateDataFinal.isHasVoucher = normalizeYesNo(isHasVoucher, YES_NO_VALUE.YES);
 
     // 时间节点显式更新
     if (negotiatingTime) updateDataFinal.negotiatingTime = negotiatingTime;
@@ -475,7 +499,7 @@ async function updateProject(params) {
     Object.assign(updateDataFinal, financials);
 
     // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
-    if (oldProject.isHasContract === '是' && isHasContract === '否') {
+    if (isYes(oldProject.isHasContract) && isNo(isHasContract)) {
       console.log(`项目 ${id} 合同状态由 是 改为 否，触发清理逻辑...`);
       try {
         await cloud.callFunction({
@@ -486,7 +510,7 @@ async function updateProject(params) {
         console.error('清理合同文件失败:', err);
       }
     }
-    if (oldProject.isHasPreview === '是' && isHasPreview === '否') {
+    if (isYes(oldProject.isHasPreview) && isNo(isHasPreview)) {
       console.log(`项目 ${id} 预览图状态由 是 改为 否，触发清理逻辑...`);
       try {
         await cloud.callFunction({
@@ -517,10 +541,10 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects } = params;
+  const { name, type, scene, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, isHasVoucher, contractFileIds, previewFileIds, subProjects } = params;
 
   // 1. 基础完整性校验
-  if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
+  if (!name || !scene || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
   }
 
@@ -537,12 +561,12 @@ async function createProject(params) {
   }
 
   // 合同/预览图校验
-  if (isHasContract === '是') {
+  if (isYes(isHasContract)) {
     if (!contractFileIds || !Array.isArray(contractFileIds) || contractFileIds.length === 0) {
       return { code: 400, message: '请上传合同文件后再创建项目' };
     }
   }
-  if (isHasPreview === '是') {
+  if (isYes(isHasPreview)) {
     if (!previewFileIds || !Array.isArray(previewFileIds) || previewFileIds.length === 0) {
       return { code: 400, message: '请上传预览图后再创建项目' };
     }
@@ -565,7 +589,7 @@ async function createProject(params) {
     return { code: 400, message: '项目开始日期不能晚于当前日期' };
   }
 
-  if (!isSafeInput(name) || !isSafeInput(client) || !isSafeInput(desc)) {
+  if (!isSafeInput(name) || !isSafeInput(scene) || !isSafeInput(client) || !isSafeInput(desc)) {
     return { code: 400, message: '输入包含非法字符，请检查后重试' };
   }
 
@@ -587,14 +611,14 @@ async function createProject(params) {
       content: sp.content || '',
       startDate: sp.startDate || '',
       amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
-      isHasVoucher: sp.isHasVoucher || '否',
+      isHasVoucher: normalizeYesNo(sp.isHasVoucher, YES_NO_VALUE.NO),
       vouchers: sp.vouchers || [],
       costs: (sp.costs || []).map(c => ({
         id: c.id || Date.now() + Math.random(),
         category: c.category || '',
         supplier: c.supplier || '',
         amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-        isSettled: c.isSettled || false
+        isSettled: isYes(c.isSettled)
       }))
     })) : [];
 
@@ -603,6 +627,9 @@ async function createProject(params) {
     
     const data = {
       ...params,
+      isHasContract: normalizeYesNo(isHasContract, YES_NO_VALUE.NO),
+      isHasPreview: normalizeYesNo(isHasPreview, YES_NO_VALUE.NO),
+      isHasVoucher: normalizeYesNo(isHasVoucher, YES_NO_VALUE.YES),
       receivedAmount: received,
       subProjects: subProjectsData,
       amountEditCount: 0, // 初始化修改次数为0
