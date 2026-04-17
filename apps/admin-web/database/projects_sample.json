@@ -1,38 +1,4241 @@
 [
   {
-    "clientId": "client_id_placeholder_1",
-    "name": "艺术科技园林模拟项目",
+    "_id": "project_sample_001",
+    "name": "森屿办公绿植布景",
+    "type": "normal",
     "scene": "company_scene",
     "sceneLabel": "公司布景",
     "client": "雅居乐集团",
-    "clientRole": "项目经理",
-    "startDate": "2023-10-24",
-    "endDate": "2024-03-15",
-    "staffCount": 12,
-    "totalAmount": 120000,
-    "isHasVoucher": "yes",
-    "description": "该项目旨在融合现代智能照明技术与传统苏州园林风格，重点解决耐阴仿真植物的色彩持久性与全自动化喷淋系统的隐蔽性安装。成本需严格控制在65%以内。",
-    "statusCode": "constructing",
-    "statusLabel": "交付中",
-    "createdAt": "2023-10-24T08:00:00Z",
-    "updatedAt": "2023-10-24T08:00:00Z"
+    "role": "pm",
+    "clientSource": "exhibition",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 3,
+    "amount": 18000,
+    "receivedAmount": 900,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 1,
+    "costs": [
+      {
+        "id": "cost_0_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 3406,
+        "isSettled": false
+      },
+      {
+        "id": "cost_0_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 2916,
+        "isSettled": true
+      },
+      {
+        "id": "cost_0_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 4399,
+        "isSettled": true
+      },
+      {
+        "id": "cost_0_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 1058,
+        "isSettled": true
+      },
+      {
+        "id": "cost_0_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 1469,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-04-17T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-04-17T01:00:00.000Z",
+    "createTime": "2026-04-17T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 13248,
+    "paidAmount": 8373,
+    "unreceivedAmount": 17100
   },
   {
-    "clientId": "client_id_placeholder_2",
-    "name": "锦绣华府屋顶花园",
+    "_id": "project_sample_002",
+    "name": "青庭商业门店造景",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "万科地产",
+    "role": "boss",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 4,
+    "amount": 45000,
+    "receivedAmount": 8100,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_1_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 8910,
+        "isSettled": true
+      },
+      {
+        "id": "cost_1_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 7614,
+        "isSettled": true
+      },
+      {
+        "id": "cost_1_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 11466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_1_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 2754,
+        "isSettled": false
+      },
+      {
+        "id": "cost_1_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 3096,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-04-10T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-04-10T01:00:00.000Z",
+    "createTime": "2026-04-10T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 33840,
+    "paidAmount": 31086,
+    "unreceivedAmount": 36900,
+    "constructingTime": "2026-04-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_003",
+    "name": "绿境私宅庭院升级",
+    "type": "normal",
     "scene": "private_residence",
     "sceneLabel": "私人住宅",
-    "client": "万科地产",
-    "clientRole": "老板本身",
-    "startDate": "2023-11-12",
-    "endDate": "2024-02-20",
-    "staffCount": 8,
-    "totalAmount": 85000,
+    "client": "龙湖商业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 5,
+    "amount": 84000,
+    "receivedAmount": 35280,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
     "isHasVoucher": "yes",
-    "description": "屋顶花园景观设计与施工。",
-    "statusCode": "designing",
-    "statusLabel": "设计中",
-    "createdAt": "2023-11-12T09:00:00Z",
-    "updatedAt": "2023-11-12T09:00:00Z"
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_2_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 17371,
+        "isSettled": true
+      },
+      {
+        "id": "cost_2_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 14818,
+        "isSettled": true
+      },
+      {
+        "id": "cost_2_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 22277,
+        "isSettled": false
+      },
+      {
+        "id": "cost_2_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 4334,
+        "isSettled": true
+      },
+      {
+        "id": "cost_2_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 6048,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-04-02T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-04-02T01:00:00.000Z",
+    "createTime": "2026-04-02T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 64848,
+    "paidAmount": 42571,
+    "unreceivedAmount": 48720,
+    "constructingTime": "2026-04-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_004",
+    "name": "云栖机关大厅景观",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "绿城服务",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 6,
+    "amount": 125000,
+    "receivedAmount": 85000,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_3_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 26950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_3_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 22950,
+        "isSettled": false
+      },
+      {
+        "id": "cost_3_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 27950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_3_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 6750,
+        "isSettled": true
+      },
+      {
+        "id": "cost_3_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 9400,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-03-26T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-03-26T01:00:00.000Z",
+    "createTime": "2026-03-26T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 94000,
+    "paidAmount": 71050,
+    "unreceivedAmount": 40000,
+    "constructingTime": "2026-04-16T01:00:00.000Z",
+    "completedTime": "2026-04-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_005",
+    "name": "澜庭年度绿化服务",
+    "type": "long_term",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "滨江置业",
+    "role": "pm",
+    "clientSource": "referral",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 341040,
+    "receivedAmount": 323988,
+    "desc": "公司布景长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_5_1",
+        "content": "植物养护",
+        "startDate": "2026-03-18",
+        "amount": 99760,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_24_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 22386,
+            "isSettled": false
+          },
+          {
+            "id": "cost_24_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 15443,
+            "isSettled": true
+          },
+          {
+            "id": "cost_24_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 23344,
+            "isSettled": true
+          },
+          {
+            "id": "cost_24_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 5626,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_5_2",
+        "content": "植物换新",
+        "startDate": "2026-04-17",
+        "amount": 113680,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_25_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 21508,
+            "isSettled": true
+          },
+          {
+            "id": "cost_25_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 18416,
+            "isSettled": true
+          },
+          {
+            "id": "cost_25_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 27783,
+            "isSettled": true
+          },
+          {
+            "id": "cost_25_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 6684,
+            "isSettled": false
+          }
+        ]
+      },
+      {
+        "id": "sp_5_3",
+        "content": "景观优化",
+        "startDate": "2026-04-17",
+        "amount": 127600,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_26_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 25265,
+            "isSettled": true
+          },
+          {
+            "id": "cost_26_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 21590,
+            "isSettled": true
+          },
+          {
+            "id": "cost_26_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 32512,
+            "isSettled": false
+          },
+          {
+            "id": "cost_26_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 7809,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2026-03-18T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-03-18T01:00:00.000Z",
+    "createTime": "2026-03-18T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 228366,
+    "paidAmount": 166784,
+    "unreceivedAmount": 17052
+  },
+  {
+    "_id": "project_sample_006",
+    "name": "栖野入口形象提升",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "杭州未来科技城",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 8,
+    "amount": 196000,
+    "receivedAmount": 196000,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_5_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 37083,
+        "isSettled": true
+      },
+      {
+        "id": "cost_5_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 31752,
+        "isSettled": true
+      },
+      {
+        "id": "cost_5_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 47902,
+        "isSettled": true
+      },
+      {
+        "id": "cost_5_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 11525,
+        "isSettled": false
+      },
+      {
+        "id": "cost_5_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 15994,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-03-11T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-03-11T01:00:00.000Z",
+    "createTime": "2026-03-11T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 144256,
+    "paidAmount": 132731,
+    "unreceivedAmount": 0,
+    "constructingTime": "2026-04-03T01:00:00.000Z",
+    "completedTime": "2026-04-17T01:00:00.000Z",
+    "settlingTime": "2026-04-17T01:00:00.000Z",
+    "settledTime": "2026-04-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_007",
+    "name": "拾光历史项目补录",
+    "type": "historical",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "西湖文旅集团",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 8,
+    "amount": 227800,
+    "receivedAmount": 227800,
+    "desc": "私人住宅历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2026-04-02T01:00:00.000Z",
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_6_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 45104,
+        "isSettled": true
+      },
+      {
+        "id": "cost_6_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 38544,
+        "isSettled": true
+      },
+      {
+        "id": "cost_6_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 58043,
+        "isSettled": false
+      },
+      {
+        "id": "cost_6_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 13941,
+        "isSettled": true
+      },
+      {
+        "id": "cost_6_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 15673,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-03-03T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2026-03-03T01:00:00.000Z",
+      "2026-04-02T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2026-04-02T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-03-03T01:00:00.000Z",
+    "constructingTime": "2026-03-03T01:00:00.000Z",
+    "completedTime": "2026-04-02T01:00:00.000Z",
+    "settlingTime": "2026-04-02T01:00:00.000Z",
+    "settledTime": "2026-04-17T01:00:00.000Z",
+    "createTime": "2026-03-03T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 171305,
+    "paidAmount": 113262,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_008",
+    "name": "悦荟会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "银泰商业管理",
+    "role": "agent",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 10,
+    "amount": 446000,
+    "receivedAmount": 80280,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_7_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 92233,
+        "isSettled": true
+      },
+      {
+        "id": "cost_7_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 78674,
+        "isSettled": false
+      },
+      {
+        "id": "cost_7_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 118279,
+        "isSettled": true
+      },
+      {
+        "id": "cost_7_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 23014,
+        "isSettled": true
+      },
+      {
+        "id": "cost_7_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 32112,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-02-24T01:00:00.000Z",
+      "2026-03-04T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-02-24T01:00:00.000Z",
+    "createTime": "2026-02-24T01:00:00.000Z",
+    "updateTime": "2026-03-05T01:00:00.000Z",
+    "payableAmount": 344312,
+    "paidAmount": 265638,
+    "unreceivedAmount": 365720,
+    "constructingTime": "2026-03-04T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_009",
+    "name": "嘉木办公绿植布景",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "阿里云创新中心",
+    "role": "pm",
+    "clientSource": "outreach",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 11,
+    "amount": 719000,
+    "receivedAmount": 301980,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_8_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 155016,
+        "isSettled": false
+      },
+      {
+        "id": "cost_8_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 132008,
+        "isSettled": true
+      },
+      {
+        "id": "cost_8_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 160768,
+        "isSettled": true
+      },
+      {
+        "id": "cost_8_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 38826,
+        "isSettled": true
+      },
+      {
+        "id": "cost_8_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 54069,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-02-16T01:00:00.000Z",
+      "2026-03-14T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-02-16T01:00:00.000Z",
+    "createTime": "2026-02-16T01:00:00.000Z",
+    "updateTime": "2026-03-15T01:00:00.000Z",
+    "payableAmount": 540687,
+    "paidAmount": 331602,
+    "unreceivedAmount": 417020,
+    "constructingTime": "2026-03-14T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_010",
+    "name": "隐翠商业门店造景",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "良渚文化园区",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 12,
+    "amount": 972000,
+    "receivedAmount": 660960,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 1,
+    "costs": [
+      {
+        "id": "cost_9_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 218117,
+        "isSettled": true
+      },
+      {
+        "id": "cost_9_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 150466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_9_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 227448,
+        "isSettled": true
+      },
+      {
+        "id": "cost_9_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 54821,
+        "isSettled": false
+      },
+      {
+        "id": "cost_9_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 76205,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-02-09T01:00:00.000Z",
+      "2026-04-04T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-02-09T01:00:00.000Z",
+    "createTime": "2026-02-09T01:00:00.000Z",
+    "updateTime": "2026-04-05T01:00:00.000Z",
+    "payableAmount": 727057,
+    "paidAmount": 672236,
+    "unreceivedAmount": 311040,
+    "constructingTime": "2026-03-08T01:00:00.000Z",
+    "completedTime": "2026-04-04T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_011",
+    "name": "星野年度绿化服务",
+    "type": "long_term",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "钱江新城物业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 399840,
+    "receivedAmount": 379848,
+    "desc": "私人住宅长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_11_1",
+        "content": "植物养护",
+        "startDate": "2026-02-02",
+        "amount": 116960,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_30_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 22129,
+            "isSettled": true
+          },
+          {
+            "id": "cost_30_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 18948,
+            "isSettled": true
+          },
+          {
+            "id": "cost_30_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 28585,
+            "isSettled": false
+          },
+          {
+            "id": "cost_30_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 6877,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_11_2",
+        "content": "植物换新",
+        "startDate": "2026-03-09",
+        "amount": 133280,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_31_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 26389,
+            "isSettled": true
+          },
+          {
+            "id": "cost_31_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 22551,
+            "isSettled": false
+          },
+          {
+            "id": "cost_31_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 33960,
+            "isSettled": true
+          },
+          {
+            "id": "cost_31_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 8157,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_11_3",
+        "content": "景观优化",
+        "startDate": "2026-04-13",
+        "amount": 149600,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_32_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 30937,
+            "isSettled": false
+          },
+          {
+            "id": "cost_32_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 26389,
+            "isSettled": true
+          },
+          {
+            "id": "cost_32_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 39674,
+            "isSettled": true
+          },
+          {
+            "id": "cost_32_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 7719,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2026-02-02T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-02-02T01:00:00.000Z",
+    "createTime": "2026-02-02T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 272315,
+    "paidAmount": 190242,
+    "unreceivedAmount": 19992
+  },
+  {
+    "_id": "project_sample_012",
+    "name": "溪上机关大厅景观",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "湖滨商圈运营部",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 14,
+    "amount": 45000,
+    "receivedAmount": 45000,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_11_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 8910,
+        "isSettled": true
+      },
+      {
+        "id": "cost_11_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 7614,
+        "isSettled": false
+      },
+      {
+        "id": "cost_11_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 11466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_11_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 2754,
+        "isSettled": true
+      },
+      {
+        "id": "cost_11_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 3096,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-01-25T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-01-25T01:00:00.000Z",
+    "createTime": "2026-01-25T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 33840,
+    "paidAmount": 26226,
+    "unreceivedAmount": 0,
+    "constructingTime": "2026-02-23T01:00:00.000Z",
+    "completedTime": "2026-03-24T01:00:00.000Z",
+    "settlingTime": "2026-04-09T01:00:00.000Z",
+    "settledTime": "2026-04-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_013",
+    "name": "森屿屋顶花园改造",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "雅居乐集团",
+    "role": "pm",
+    "clientSource": "exhibition",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 15,
+    "amount": 84000,
+    "receivedAmount": 4200,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_12_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 17371,
+        "isSettled": false
+      },
+      {
+        "id": "cost_12_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 14818,
+        "isSettled": true
+      },
+      {
+        "id": "cost_12_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 22277,
+        "isSettled": true
+      },
+      {
+        "id": "cost_12_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 4334,
+        "isSettled": true
+      },
+      {
+        "id": "cost_12_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 6048,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-01-18T01:00:00.000Z",
+      "2026-01-30T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-01-18T01:00:00.000Z",
+    "createTime": "2026-01-18T01:00:00.000Z",
+    "updateTime": "2026-01-31T01:00:00.000Z",
+    "payableAmount": 64848,
+    "paidAmount": 41429,
+    "unreceivedAmount": 79800
+  },
+  {
+    "_id": "project_sample_014",
+    "name": "青庭历史项目补录",
+    "type": "historical",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "万科地产",
+    "role": "boss",
+    "clientSource": "referral",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 5,
+    "amount": 73100,
+    "receivedAmount": 73100,
+    "desc": "门店造景历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2026-02-16T01:00:00.000Z",
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_13_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 15760,
+        "isSettled": true
+      },
+      {
+        "id": "cost_13_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 13421,
+        "isSettled": true
+      },
+      {
+        "id": "cost_13_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 16345,
+        "isSettled": true
+      },
+      {
+        "id": "cost_13_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 3947,
+        "isSettled": false
+      },
+      {
+        "id": "cost_13_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 5497,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-01-10T01:00:00.000Z",
+      "2026-03-13T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2026-01-10T01:00:00.000Z",
+      "2026-02-16T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2026-02-16T01:00:00.000Z",
+      "2026-03-13T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-01-10T01:00:00.000Z",
+    "constructingTime": "2026-01-10T01:00:00.000Z",
+    "completedTime": "2026-02-16T01:00:00.000Z",
+    "settlingTime": "2026-02-16T01:00:00.000Z",
+    "settledTime": "2026-03-13T01:00:00.000Z",
+    "createTime": "2026-01-10T01:00:00.000Z",
+    "updateTime": "2026-03-13T01:00:00.000Z",
+    "payableAmount": 54970,
+    "paidAmount": 51023,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_015",
+    "name": "绿境中庭生态景观",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "龙湖商业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 17,
+    "amount": 180000,
+    "receivedAmount": 75600,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_14_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 40392,
+        "isSettled": true
+      },
+      {
+        "id": "cost_14_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 27864,
+        "isSettled": true
+      },
+      {
+        "id": "cost_14_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 42120,
+        "isSettled": false
+      },
+      {
+        "id": "cost_14_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 10152,
+        "isSettled": true
+      },
+      {
+        "id": "cost_14_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 14112,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2026-01-03T01:00:00.000Z",
+      "2026-01-23T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2026-01-03T01:00:00.000Z",
+    "createTime": "2026-01-03T01:00:00.000Z",
+    "updateTime": "2026-01-24T01:00:00.000Z",
+    "payableAmount": 134640,
+    "paidAmount": 92520,
+    "unreceivedAmount": 104400,
+    "constructingTime": "2026-01-23T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_016",
+    "name": "云栖会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "绿城服务",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 18,
+    "amount": 196000,
+    "receivedAmount": 133280,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_15_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 37083,
+        "isSettled": true
+      },
+      {
+        "id": "cost_15_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 31752,
+        "isSettled": false
+      },
+      {
+        "id": "cost_15_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 47902,
+        "isSettled": true
+      },
+      {
+        "id": "cost_15_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 11525,
+        "isSettled": true
+      },
+      {
+        "id": "cost_15_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 15994,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-12-26T01:00:00.000Z",
+      "2026-02-18T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-12-26T01:00:00.000Z",
+    "createTime": "2025-12-26T01:00:00.000Z",
+    "updateTime": "2026-02-19T01:00:00.000Z",
+    "payableAmount": 144256,
+    "paidAmount": 112504,
+    "unreceivedAmount": 62720,
+    "constructingTime": "2026-01-16T01:00:00.000Z",
+    "completedTime": "2026-02-18T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_017",
+    "name": "澜庭年度绿化服务",
+    "type": "long_term",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "滨江置业",
+    "role": "pm",
+    "clientSource": "referral",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 478239,
+    "receivedAmount": 454327,
+    "desc": "公司布景长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_17_1",
+        "content": "植物养护",
+        "startDate": "2025-12-19",
+        "amount": 139893,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_36_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 27699,
+            "isSettled": false
+          },
+          {
+            "id": "cost_36_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 23670,
+            "isSettled": true
+          },
+          {
+            "id": "cost_36_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 35645,
+            "isSettled": true
+          },
+          {
+            "id": "cost_36_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 8561,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_17_2",
+        "content": "植物换新",
+        "startDate": "2026-01-23",
+        "amount": 159413,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_37_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 32967,
+            "isSettled": true
+          },
+          {
+            "id": "cost_37_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 28120,
+            "isSettled": true
+          },
+          {
+            "id": "cost_37_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 42276,
+            "isSettled": true
+          },
+          {
+            "id": "cost_37_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 8226,
+            "isSettled": false
+          }
+        ]
+      },
+      {
+        "id": "sp_17_3",
+        "content": "景观优化",
+        "startDate": "2026-02-27",
+        "amount": 178933,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_38_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 38578,
+            "isSettled": true
+          },
+          {
+            "id": "cost_38_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 32852,
+            "isSettled": true
+          },
+          {
+            "id": "cost_38_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 40009,
+            "isSettled": false
+          },
+          {
+            "id": "cost_38_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 9662,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-12-19T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-12-19T01:00:00.000Z",
+    "createTime": "2025-12-19T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 328265,
+    "paidAmount": 252331,
+    "unreceivedAmount": 23912
+  },
+  {
+    "_id": "project_sample_018",
+    "name": "栖野商业门店造景",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "杭州未来科技城",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 4,
+    "amount": 446000,
+    "receivedAmount": 446000,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_17_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 92233,
+        "isSettled": true
+      },
+      {
+        "id": "cost_17_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 78674,
+        "isSettled": true
+      },
+      {
+        "id": "cost_17_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 118279,
+        "isSettled": true
+      },
+      {
+        "id": "cost_17_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 23014,
+        "isSettled": false
+      },
+      {
+        "id": "cost_17_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 32112,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-12-11T01:00:00.000Z",
+      "2026-03-11T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-12-11T01:00:00.000Z",
+    "createTime": "2025-12-11T01:00:00.000Z",
+    "updateTime": "2026-03-12T01:00:00.000Z",
+    "payableAmount": 344312,
+    "paidAmount": 321298,
+    "unreceivedAmount": 0,
+    "constructingTime": "2026-01-03T01:00:00.000Z",
+    "completedTime": "2026-02-07T01:00:00.000Z",
+    "settlingTime": "2026-02-15T01:00:00.000Z",
+    "settledTime": "2026-03-11T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_019",
+    "name": "拾光私宅庭院升级",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "西湖文旅集团",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 5,
+    "amount": 719000,
+    "receivedAmount": 35950,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 1,
+    "costs": [
+      {
+        "id": "cost_18_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 155016,
+        "isSettled": true
+      },
+      {
+        "id": "cost_18_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 132008,
+        "isSettled": true
+      },
+      {
+        "id": "cost_18_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 160768,
+        "isSettled": false
+      },
+      {
+        "id": "cost_18_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 38826,
+        "isSettled": true
+      },
+      {
+        "id": "cost_18_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 54069,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-12-04T01:00:00.000Z",
+      "2025-12-16T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-12-04T01:00:00.000Z",
+    "createTime": "2025-12-04T01:00:00.000Z",
+    "updateTime": "2025-12-17T01:00:00.000Z",
+    "payableAmount": 540687,
+    "paidAmount": 379919,
+    "unreceivedAmount": 683050
+  },
+  {
+    "_id": "project_sample_020",
+    "name": "悦荟机关大厅景观",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "银泰商业管理",
+    "role": "agent",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 6,
+    "amount": 972000,
+    "receivedAmount": 174960,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_19_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 218117,
+        "isSettled": true
+      },
+      {
+        "id": "cost_19_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 150466,
+        "isSettled": false
+      },
+      {
+        "id": "cost_19_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 227448,
+        "isSettled": true
+      },
+      {
+        "id": "cost_19_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 54821,
+        "isSettled": true
+      },
+      {
+        "id": "cost_19_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 76205,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-11-26T01:00:00.000Z",
+      "2025-12-04T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-11-26T01:00:00.000Z",
+    "createTime": "2025-11-26T01:00:00.000Z",
+    "updateTime": "2025-12-05T01:00:00.000Z",
+    "payableAmount": 727057,
+    "paidAmount": 576591,
+    "unreceivedAmount": 797040,
+    "constructingTime": "2025-12-04T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_021",
+    "name": "嘉木历史项目补录",
+    "type": "historical",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "阿里云创新中心",
+    "role": "pm",
+    "clientSource": "outreach",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 2,
+    "amount": 15300,
+    "receivedAmount": 15300,
+    "desc": "公司布景历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2026-01-02T01:00:00.000Z",
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_20_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 2895,
+        "isSettled": false
+      },
+      {
+        "id": "cost_20_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 2479,
+        "isSettled": true
+      },
+      {
+        "id": "cost_20_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 3739,
+        "isSettled": true
+      },
+      {
+        "id": "cost_20_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 900,
+        "isSettled": true
+      },
+      {
+        "id": "cost_20_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 1248,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-11-19T01:00:00.000Z",
+      "2026-01-14T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2025-11-19T01:00:00.000Z",
+      "2026-01-02T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2026-01-02T01:00:00.000Z",
+      "2026-01-14T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-11-19T01:00:00.000Z",
+    "constructingTime": "2025-11-19T01:00:00.000Z",
+    "completedTime": "2026-01-02T01:00:00.000Z",
+    "settlingTime": "2026-01-02T01:00:00.000Z",
+    "settledTime": "2026-01-14T01:00:00.000Z",
+    "createTime": "2025-11-19T01:00:00.000Z",
+    "updateTime": "2026-01-14T01:00:00.000Z",
+    "payableAmount": 11261,
+    "paidAmount": 7118,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_022",
+    "name": "隐翠入口形象提升",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "良渚文化园区",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 8,
+    "amount": 45000,
+    "receivedAmount": 30600,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_21_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 8910,
+        "isSettled": true
+      },
+      {
+        "id": "cost_21_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 7614,
+        "isSettled": true
+      },
+      {
+        "id": "cost_21_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 11466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_21_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 2754,
+        "isSettled": false
+      },
+      {
+        "id": "cost_21_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 3096,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-11-12T01:00:00.000Z",
+      "2026-01-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-11-12T01:00:00.000Z",
+    "createTime": "2025-11-12T01:00:00.000Z",
+    "updateTime": "2026-01-18T01:00:00.000Z",
+    "payableAmount": 33840,
+    "paidAmount": 31086,
+    "unreceivedAmount": 14400,
+    "constructingTime": "2025-12-09T01:00:00.000Z",
+    "completedTime": "2026-01-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_023",
+    "name": "星野年度绿化服务",
+    "type": "long_term",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "钱江新城物业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 439041,
+    "receivedAmount": 417089,
+    "desc": "私人住宅长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_23_1",
+        "content": "植物养护",
+        "startDate": "2025-11-04",
+        "amount": 128427,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_42_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 26559,
+            "isSettled": true
+          },
+          {
+            "id": "cost_42_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 22655,
+            "isSettled": true
+          },
+          {
+            "id": "cost_42_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 34059,
+            "isSettled": false
+          },
+          {
+            "id": "cost_42_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 6627,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_23_2",
+        "content": "植物换新",
+        "startDate": "2025-12-09",
+        "amount": 146347,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_43_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 31552,
+            "isSettled": true
+          },
+          {
+            "id": "cost_43_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 26869,
+            "isSettled": false
+          },
+          {
+            "id": "cost_43_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 32723,
+            "isSettled": true
+          },
+          {
+            "id": "cost_43_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 7903,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_23_3",
+        "content": "景观优化",
+        "startDate": "2026-01-13",
+        "amount": 164267,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_44_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 36862,
+            "isSettled": false
+          },
+          {
+            "id": "cost_44_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 25429,
+            "isSettled": true
+          },
+          {
+            "id": "cost_44_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 38438,
+            "isSettled": true
+          },
+          {
+            "id": "cost_44_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 9265,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-11-04T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-11-04T01:00:00.000Z",
+    "createTime": "2025-11-04T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 298941,
+    "paidAmount": 201151,
+    "unreceivedAmount": 21952
+  },
+  {
+    "_id": "project_sample_024",
+    "name": "溪上会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "湖滨商圈运营部",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 10,
+    "amount": 125000,
+    "receivedAmount": 125000,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_23_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 26950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_23_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 22950,
+        "isSettled": false
+      },
+      {
+        "id": "cost_23_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 27950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_23_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 6750,
+        "isSettled": true
+      },
+      {
+        "id": "cost_23_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 9400,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-10-28T01:00:00.000Z",
+      "2026-02-01T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-10-28T01:00:00.000Z",
+    "createTime": "2025-10-28T01:00:00.000Z",
+    "updateTime": "2026-02-02T01:00:00.000Z",
+    "payableAmount": 94000,
+    "paidAmount": 71050,
+    "unreceivedAmount": 0,
+    "constructingTime": "2025-11-26T01:00:00.000Z",
+    "completedTime": "2026-01-06T01:00:00.000Z",
+    "settlingTime": "2026-01-20T01:00:00.000Z",
+    "settledTime": "2026-02-01T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_025",
+    "name": "森屿办公绿植布景",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "雅居乐集团",
+    "role": "pm",
+    "clientSource": "exhibition",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 11,
+    "amount": 180000,
+    "receivedAmount": 9000,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_24_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 40392,
+        "isSettled": false
+      },
+      {
+        "id": "cost_24_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 27864,
+        "isSettled": true
+      },
+      {
+        "id": "cost_24_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 42120,
+        "isSettled": true
+      },
+      {
+        "id": "cost_24_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 10152,
+        "isSettled": true
+      },
+      {
+        "id": "cost_24_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 14112,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-10-20T01:00:00.000Z",
+      "2025-11-01T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-10-20T01:00:00.000Z",
+    "createTime": "2025-10-20T01:00:00.000Z",
+    "updateTime": "2025-11-02T01:00:00.000Z",
+    "payableAmount": 134640,
+    "paidAmount": 80136,
+    "unreceivedAmount": 171000
+  },
+  {
+    "_id": "project_sample_026",
+    "name": "青庭商业门店造景",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "万科地产",
+    "role": "boss",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 12,
+    "amount": 196000,
+    "receivedAmount": 35280,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_25_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 37083,
+        "isSettled": true
+      },
+      {
+        "id": "cost_25_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 31752,
+        "isSettled": true
+      },
+      {
+        "id": "cost_25_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 47902,
+        "isSettled": true
+      },
+      {
+        "id": "cost_25_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 11525,
+        "isSettled": false
+      },
+      {
+        "id": "cost_25_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 15994,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-10-13T01:00:00.000Z",
+      "2025-10-21T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-10-13T01:00:00.000Z",
+    "createTime": "2025-10-13T01:00:00.000Z",
+    "updateTime": "2025-10-22T01:00:00.000Z",
+    "payableAmount": 144256,
+    "paidAmount": 132731,
+    "unreceivedAmount": 160720,
+    "constructingTime": "2025-10-21T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_027",
+    "name": "绿境私宅庭院升级",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "龙湖商业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 13,
+    "amount": 281000,
+    "receivedAmount": 118020,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_26_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 55638,
+        "isSettled": true
+      },
+      {
+        "id": "cost_26_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 47545,
+        "isSettled": true
+      },
+      {
+        "id": "cost_26_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 71599,
+        "isSettled": false
+      },
+      {
+        "id": "cost_26_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 17197,
+        "isSettled": true
+      },
+      {
+        "id": "cost_26_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 19333,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-10-05T01:00:00.000Z",
+      "2025-10-25T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-10-05T01:00:00.000Z",
+    "createTime": "2025-10-05T01:00:00.000Z",
+    "updateTime": "2025-10-26T01:00:00.000Z",
+    "payableAmount": 211312,
+    "paidAmount": 139713,
+    "unreceivedAmount": 162980,
+    "constructingTime": "2025-10-25T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_028",
+    "name": "云栖历史项目补录",
+    "type": "historical",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "绿城服务",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 9,
+    "amount": 357000,
+    "receivedAmount": 357000,
+    "desc": "机关单位历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2025-11-18T01:00:00.000Z",
+    "isHasContract": "no",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_27_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 73828,
+        "isSettled": true
+      },
+      {
+        "id": "cost_27_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 62975,
+        "isSettled": false
+      },
+      {
+        "id": "cost_27_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 94676,
+        "isSettled": true
+      },
+      {
+        "id": "cost_27_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 18421,
+        "isSettled": true
+      },
+      {
+        "id": "cost_27_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 25704,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-09-28T01:00:00.000Z",
+      "2025-12-07T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2025-09-28T01:00:00.000Z",
+      "2025-11-18T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2025-11-18T01:00:00.000Z",
+      "2025-12-07T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-09-28T01:00:00.000Z",
+    "constructingTime": "2025-09-28T01:00:00.000Z",
+    "completedTime": "2025-11-18T01:00:00.000Z",
+    "settlingTime": "2025-11-18T01:00:00.000Z",
+    "settledTime": "2025-12-07T01:00:00.000Z",
+    "createTime": "2025-09-28T01:00:00.000Z",
+    "updateTime": "2025-12-07T01:00:00.000Z",
+    "payableAmount": 275604,
+    "paidAmount": 212629,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_029",
+    "name": "澜庭年度绿化服务",
+    "type": "long_term",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "滨江置业",
+    "role": "pm",
+    "clientSource": "referral",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 882000,
+    "receivedAmount": 837900,
+    "desc": "公司布景长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_29_1",
+        "content": "植物养护",
+        "startDate": "2025-09-20",
+        "amount": 258000,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_48_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 55625,
+            "isSettled": false
+          },
+          {
+            "id": "cost_48_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 47369,
+            "isSettled": true
+          },
+          {
+            "id": "cost_48_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 57689,
+            "isSettled": true
+          },
+          {
+            "id": "cost_48_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 13932,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_29_2",
+        "content": "植物换新",
+        "startDate": "2025-10-25",
+        "amount": 294000,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_49_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 65974,
+            "isSettled": true
+          },
+          {
+            "id": "cost_49_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 45511,
+            "isSettled": true
+          },
+          {
+            "id": "cost_49_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 68796,
+            "isSettled": true
+          },
+          {
+            "id": "cost_49_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 16582,
+            "isSettled": false
+          }
+        ]
+      },
+      {
+        "id": "sp_29_3",
+        "content": "景观优化",
+        "startDate": "2025-11-29",
+        "amount": 330000,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_50_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 62436,
+            "isSettled": true
+          },
+          {
+            "id": "cost_50_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 53460,
+            "isSettled": true
+          },
+          {
+            "id": "cost_50_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 80652,
+            "isSettled": false
+          },
+          {
+            "id": "cost_50_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 19404,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-09-20T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-09-20T01:00:00.000Z",
+    "createTime": "2025-09-20T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": "2026-04-17T01:00:00.000Z",
+    "payableAmount": 587430,
+    "paidAmount": 434571,
+    "unreceivedAmount": 44100
+  },
+  {
+    "_id": "project_sample_030",
+    "name": "栖野入口形象提升",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "杭州未来科技城",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 16,
+    "amount": 972000,
+    "receivedAmount": 972000,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_29_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 218117,
+        "isSettled": true
+      },
+      {
+        "id": "cost_29_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 150466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_29_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 227448,
+        "isSettled": true
+      },
+      {
+        "id": "cost_29_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 54821,
+        "isSettled": false
+      },
+      {
+        "id": "cost_29_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 76205,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-09-13T01:00:00.000Z",
+      "2025-12-16T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-09-13T01:00:00.000Z",
+    "createTime": "2025-09-13T01:00:00.000Z",
+    "updateTime": "2025-12-17T01:00:00.000Z",
+    "payableAmount": 727057,
+    "paidAmount": 672236,
+    "unreceivedAmount": 0,
+    "constructingTime": "2025-10-06T01:00:00.000Z",
+    "completedTime": "2025-11-22T01:00:00.000Z",
+    "settlingTime": "2025-11-28T01:00:00.000Z",
+    "settledTime": "2025-12-16T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_031",
+    "name": "拾光中庭生态景观",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "西湖文旅集团",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 17,
+    "amount": 18000,
+    "receivedAmount": 900,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_30_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 3406,
+        "isSettled": true
+      },
+      {
+        "id": "cost_30_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 2916,
+        "isSettled": true
+      },
+      {
+        "id": "cost_30_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 4399,
+        "isSettled": false
+      },
+      {
+        "id": "cost_30_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 1058,
+        "isSettled": true
+      },
+      {
+        "id": "cost_30_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 1469,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-09-06T01:00:00.000Z",
+      "2025-09-18T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-09-06T01:00:00.000Z",
+    "createTime": "2025-09-06T01:00:00.000Z",
+    "updateTime": "2025-09-19T01:00:00.000Z",
+    "payableAmount": 13248,
+    "paidAmount": 8849,
+    "unreceivedAmount": 17100
+  },
+  {
+    "_id": "project_sample_032",
+    "name": "悦荟会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "银泰商业管理",
+    "role": "agent",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 18,
+    "amount": 45000,
+    "receivedAmount": 8100,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_31_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 8910,
+        "isSettled": true
+      },
+      {
+        "id": "cost_31_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 7614,
+        "isSettled": false
+      },
+      {
+        "id": "cost_31_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 11466,
+        "isSettled": true
+      },
+      {
+        "id": "cost_31_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 2754,
+        "isSettled": true
+      },
+      {
+        "id": "cost_31_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 3096,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-08-29T01:00:00.000Z",
+      "2025-09-06T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-08-29T01:00:00.000Z",
+    "createTime": "2025-08-29T01:00:00.000Z",
+    "updateTime": "2025-09-07T01:00:00.000Z",
+    "payableAmount": 33840,
+    "paidAmount": 26226,
+    "unreceivedAmount": 36900,
+    "constructingTime": "2025-09-06T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_033",
+    "name": "嘉木办公绿植布景",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "阿里云创新中心",
+    "role": "pm",
+    "clientSource": "outreach",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 3,
+    "amount": 84000,
+    "receivedAmount": 35280,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_32_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 17371,
+        "isSettled": false
+      },
+      {
+        "id": "cost_32_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 14818,
+        "isSettled": true
+      },
+      {
+        "id": "cost_32_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 22277,
+        "isSettled": true
+      },
+      {
+        "id": "cost_32_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 4334,
+        "isSettled": true
+      },
+      {
+        "id": "cost_32_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 6048,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-08-22T01:00:00.000Z",
+      "2025-09-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-08-22T01:00:00.000Z",
+    "createTime": "2025-08-22T01:00:00.000Z",
+    "updateTime": "2025-09-18T01:00:00.000Z",
+    "payableAmount": 64848,
+    "paidAmount": 41429,
+    "unreceivedAmount": 48720,
+    "constructingTime": "2025-09-17T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_034",
+    "name": "隐翠商业门店造景",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "良渚文化园区",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 4,
+    "amount": 125000,
+    "receivedAmount": 85000,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_33_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 26950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_33_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 22950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_33_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 27950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_33_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 6750,
+        "isSettled": false
+      },
+      {
+        "id": "cost_33_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 9400,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-08-14T01:00:00.000Z",
+      "2025-10-31T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-08-14T01:00:00.000Z",
+    "createTime": "2025-08-14T01:00:00.000Z",
+    "updateTime": "2025-11-01T01:00:00.000Z",
+    "payableAmount": 94000,
+    "paidAmount": 87250,
+    "unreceivedAmount": 40000,
+    "constructingTime": "2025-09-10T01:00:00.000Z",
+    "completedTime": "2025-10-31T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_035",
+    "name": "星野历史项目补录",
+    "type": "historical",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "钱江新城物业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 6,
+    "amount": 108800,
+    "receivedAmount": 108800,
+    "desc": "私人住宅历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2025-10-04T01:00:00.000Z",
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_34_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 24415,
+        "isSettled": true
+      },
+      {
+        "id": "cost_34_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 16842,
+        "isSettled": true
+      },
+      {
+        "id": "cost_34_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 25459,
+        "isSettled": false
+      },
+      {
+        "id": "cost_34_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 6136,
+        "isSettled": true
+      },
+      {
+        "id": "cost_34_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 8530,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-08-07T01:00:00.000Z",
+      "2025-10-30T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2025-08-07T01:00:00.000Z",
+      "2025-10-04T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2025-10-04T01:00:00.000Z",
+      "2025-10-30T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-08-07T01:00:00.000Z",
+    "constructingTime": "2025-08-07T01:00:00.000Z",
+    "completedTime": "2025-10-04T01:00:00.000Z",
+    "settlingTime": "2025-10-04T01:00:00.000Z",
+    "settledTime": "2025-10-30T01:00:00.000Z",
+    "createTime": "2025-08-07T01:00:00.000Z",
+    "updateTime": "2025-10-30T01:00:00.000Z",
+    "payableAmount": 81382,
+    "paidAmount": 55923,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_036",
+    "name": "溪上年度绿化服务",
+    "type": "long_term",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "湖滨商圈运营部",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "in_cooperation",
+    "statusLabel": "合作中",
+    "staffCount": 0,
+    "amount": 697840,
+    "receivedAmount": 404747,
+    "desc": "机关单位长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_36_1",
+        "content": "植物养护",
+        "startDate": "2025-07-30",
+        "amount": 144265,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_55_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 27295,
+            "isSettled": true
+          },
+          {
+            "id": "cost_55_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 23371,
+            "isSettled": false
+          },
+          {
+            "id": "cost_55_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 35258,
+            "isSettled": true
+          },
+          {
+            "id": "cost_55_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 8483,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_36_2",
+        "content": "植物换新",
+        "startDate": "2025-09-03",
+        "amount": 164395,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_56_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 32550,
+            "isSettled": false
+          },
+          {
+            "id": "cost_56_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 27816,
+            "isSettled": true
+          },
+          {
+            "id": "cost_56_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 41888,
+            "isSettled": true
+          },
+          {
+            "id": "cost_56_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 10061,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_36_3",
+        "content": "景观优化",
+        "startDate": "2025-10-08",
+        "amount": 184525,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_57_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 38160,
+            "isSettled": true
+          },
+          {
+            "id": "cost_57_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 32550,
+            "isSettled": true
+          },
+          {
+            "id": "cost_57_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 48936,
+            "isSettled": true
+          },
+          {
+            "id": "cost_57_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 9521,
+            "isSettled": false
+          }
+        ]
+      },
+      {
+        "id": "sp_36_4",
+        "content": "环境治理",
+        "startDate": "2025-11-12",
+        "amount": 204655,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_58_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 44124,
+            "isSettled": true
+          },
+          {
+            "id": "cost_58_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 37575,
+            "isSettled": true
+          },
+          {
+            "id": "cost_58_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 45761,
+            "isSettled": false
+          },
+          {
+            "id": "cost_58_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 11051,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-07-30T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-07-30T01:00:00.000Z",
+    "createTime": "2025-07-30T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": null,
+    "payableAmount": 474400,
+    "paidAmount": 363197,
+    "unreceivedAmount": 293093
+  },
+  {
+    "_id": "project_sample_037",
+    "name": "森屿屋顶花园改造",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "雅居乐集团",
+    "role": "pm",
+    "clientSource": "exhibition",
+    "status": "negotiating",
+    "statusLabel": "洽谈中",
+    "staffCount": 7,
+    "amount": 281000,
+    "receivedAmount": 14050,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 1,
+    "costs": [
+      {
+        "id": "cost_36_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 55638,
+        "isSettled": false
+      },
+      {
+        "id": "cost_36_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 47545,
+        "isSettled": true
+      },
+      {
+        "id": "cost_36_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 71599,
+        "isSettled": true
+      },
+      {
+        "id": "cost_36_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 17197,
+        "isSettled": true
+      },
+      {
+        "id": "cost_36_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 19333,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-07-23T01:00:00.000Z",
+      "2025-08-04T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-07-23T01:00:00.000Z",
+    "createTime": "2025-07-23T01:00:00.000Z",
+    "updateTime": "2025-08-05T01:00:00.000Z",
+    "payableAmount": 211312,
+    "paidAmount": 136341,
+    "unreceivedAmount": 266950
+  },
+  {
+    "_id": "project_sample_038",
+    "name": "青庭入口形象提升",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "万科地产",
+    "role": "boss",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 8,
+    "amount": 446000,
+    "receivedAmount": 80280,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_37_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 92233,
+        "isSettled": true
+      },
+      {
+        "id": "cost_37_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 78674,
+        "isSettled": true
+      },
+      {
+        "id": "cost_37_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 118279,
+        "isSettled": true
+      },
+      {
+        "id": "cost_37_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 23014,
+        "isSettled": false
+      },
+      {
+        "id": "cost_37_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 32112,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-07-15T01:00:00.000Z",
+      "2025-07-23T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-07-15T01:00:00.000Z",
+    "createTime": "2025-07-15T01:00:00.000Z",
+    "updateTime": "2025-07-24T01:00:00.000Z",
+    "payableAmount": 344312,
+    "paidAmount": 321298,
+    "unreceivedAmount": 365720,
+    "constructingTime": "2025-07-23T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_039",
+    "name": "绿境中庭生态景观",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "龙湖商业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 9,
+    "amount": 719000,
+    "receivedAmount": 301980,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_38_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 155016,
+        "isSettled": true
+      },
+      {
+        "id": "cost_38_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 132008,
+        "isSettled": true
+      },
+      {
+        "id": "cost_38_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 160768,
+        "isSettled": false
+      },
+      {
+        "id": "cost_38_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 38826,
+        "isSettled": true
+      },
+      {
+        "id": "cost_38_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 54069,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-07-08T01:00:00.000Z",
+      "2025-07-28T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-07-08T01:00:00.000Z",
+    "createTime": "2025-07-08T01:00:00.000Z",
+    "updateTime": "2025-07-29T01:00:00.000Z",
+    "payableAmount": 540687,
+    "paidAmount": 379919,
+    "unreceivedAmount": 417020,
+    "constructingTime": "2025-07-28T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_040",
+    "name": "云栖会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "绿城服务",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 10,
+    "amount": 972000,
+    "receivedAmount": 660960,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_39_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 218117,
+        "isSettled": true
+      },
+      {
+        "id": "cost_39_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 150466,
+        "isSettled": false
+      },
+      {
+        "id": "cost_39_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 227448,
+        "isSettled": true
+      },
+      {
+        "id": "cost_39_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 54821,
+        "isSettled": true
+      },
+      {
+        "id": "cost_39_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 76205,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-06-30T01:00:00.000Z",
+      "2025-08-12T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-06-30T01:00:00.000Z",
+    "createTime": "2025-06-30T01:00:00.000Z",
+    "updateTime": "2025-08-13T01:00:00.000Z",
+    "payableAmount": 727057,
+    "paidAmount": 576591,
+    "unreceivedAmount": 311040,
+    "constructingTime": "2025-07-21T01:00:00.000Z",
+    "completedTime": "2025-08-12T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_041",
+    "name": "澜庭办公绿植布景",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "滨江置业",
+    "role": "pm",
+    "clientSource": "referral",
+    "status": "settling",
+    "statusLabel": "结账中",
+    "staffCount": 11,
+    "amount": 18000,
+    "receivedAmount": 14760,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_40_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 3406,
+        "isSettled": false
+      },
+      {
+        "id": "cost_40_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 2916,
+        "isSettled": true
+      },
+      {
+        "id": "cost_40_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 4399,
+        "isSettled": true
+      },
+      {
+        "id": "cost_40_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 1058,
+        "isSettled": true
+      },
+      {
+        "id": "cost_40_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 1469,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-06-23T01:00:00.000Z",
+      "2025-08-24T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-06-23T01:00:00.000Z",
+    "createTime": "2025-06-23T01:00:00.000Z",
+    "updateTime": "2025-08-25T01:00:00.000Z",
+    "payableAmount": 13248,
+    "paidAmount": 8373,
+    "unreceivedAmount": 3240,
+    "constructingTime": "2025-07-15T01:00:00.000Z",
+    "completedTime": "2025-08-07T01:00:00.000Z",
+    "settlingTime": "2025-08-24T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_042",
+    "name": "栖野历史项目补录",
+    "type": "historical",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "杭州未来科技城",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 3,
+    "amount": 27200,
+    "receivedAmount": 27200,
+    "desc": "门店造景历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2025-08-20T01:00:00.000Z",
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_41_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 5386,
+        "isSettled": true
+      },
+      {
+        "id": "cost_41_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 4602,
+        "isSettled": true
+      },
+      {
+        "id": "cost_41_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 6931,
+        "isSettled": true
+      },
+      {
+        "id": "cost_41_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 1665,
+        "isSettled": false
+      },
+      {
+        "id": "cost_41_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 1871,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-06-16T01:00:00.000Z",
+      "2025-09-02T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2025-06-16T01:00:00.000Z",
+      "2025-08-20T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2025-08-20T01:00:00.000Z",
+      "2025-09-02T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-06-16T01:00:00.000Z",
+    "constructingTime": "2025-06-16T01:00:00.000Z",
+    "completedTime": "2025-08-20T01:00:00.000Z",
+    "settlingTime": "2025-08-20T01:00:00.000Z",
+    "settledTime": "2025-09-02T01:00:00.000Z",
+    "createTime": "2025-06-16T01:00:00.000Z",
+    "updateTime": "2025-09-02T01:00:00.000Z",
+    "payableAmount": 20455,
+    "paidAmount": 18790,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_043",
+    "name": "拾光年度绿化服务",
+    "type": "long_term",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "西湖文旅集团",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "in_cooperation",
+    "statusLabel": "合作中",
+    "staffCount": 0,
+    "amount": 412160,
+    "receivedAmount": 239053,
+    "desc": "私人住宅长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_43_1",
+        "content": "植物养护",
+        "startDate": "2025-06-08",
+        "amount": 192640,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_62_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 39838,
+            "isSettled": true
+          },
+          {
+            "id": "cost_62_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 33982,
+            "isSettled": true
+          },
+          {
+            "id": "cost_62_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 51088,
+            "isSettled": false
+          },
+          {
+            "id": "cost_62_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 9940,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_43_2",
+        "content": "植物换新",
+        "startDate": "2025-07-13",
+        "amount": 219520,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_63_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 47329,
+            "isSettled": true
+          },
+          {
+            "id": "cost_63_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 40304,
+            "isSettled": false
+          },
+          {
+            "id": "cost_63_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 49085,
+            "isSettled": true
+          },
+          {
+            "id": "cost_63_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 11854,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-06-08T01:00:00.000Z",
+      "2026-04-17T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-06-08T01:00:00.000Z",
+    "createTime": "2025-06-08T01:00:00.000Z",
+    "updateTime": "2026-04-17T01:00:00.000Z",
+    "terminatedTime": null,
+    "payableAmount": 283420,
+    "paidAmount": 192028,
+    "unreceivedAmount": 173107
+  },
+  {
+    "_id": "project_sample_044",
+    "name": "悦荟机关大厅景观",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "银泰商业管理",
+    "role": "agent",
+    "clientSource": "referral",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 14,
+    "amount": 125000,
+    "receivedAmount": 22500,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_43_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 26950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_43_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 22950,
+        "isSettled": false
+      },
+      {
+        "id": "cost_43_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 27950,
+        "isSettled": true
+      },
+      {
+        "id": "cost_43_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 6750,
+        "isSettled": true
+      },
+      {
+        "id": "cost_43_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 9400,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-06-01T01:00:00.000Z",
+      "2025-06-09T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-06-01T01:00:00.000Z",
+    "createTime": "2025-06-01T01:00:00.000Z",
+    "updateTime": "2025-06-10T01:00:00.000Z",
+    "payableAmount": 94000,
+    "paidAmount": 71050,
+    "unreceivedAmount": 102500,
+    "constructingTime": "2025-06-09T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_045",
+    "name": "嘉木屋顶花园改造",
+    "type": "normal",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "阿里云创新中心",
+    "role": "pm",
+    "clientSource": "outreach",
+    "status": "constructing",
+    "statusLabel": "交付中",
+    "staffCount": 15,
+    "amount": 180000,
+    "receivedAmount": 75600,
+    "desc": "公司布景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_44_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 40392,
+        "isSettled": false
+      },
+      {
+        "id": "cost_44_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 27864,
+        "isSettled": true
+      },
+      {
+        "id": "cost_44_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 42120,
+        "isSettled": true
+      },
+      {
+        "id": "cost_44_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 10152,
+        "isSettled": true
+      },
+      {
+        "id": "cost_44_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 14112,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-05-24T01:00:00.000Z",
+      "2025-06-19T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-05-24T01:00:00.000Z",
+    "createTime": "2025-05-24T01:00:00.000Z",
+    "updateTime": "2025-06-20T01:00:00.000Z",
+    "payableAmount": 134640,
+    "paidAmount": 80136,
+    "unreceivedAmount": 104400,
+    "constructingTime": "2025-06-19T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_046",
+    "name": "隐翠入口形象提升",
+    "type": "normal",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "良渚文化园区",
+    "role": "boss",
+    "clientSource": "exhibition",
+    "status": "completed",
+    "statusLabel": "已交付",
+    "staffCount": 16,
+    "amount": 196000,
+    "receivedAmount": 133280,
+    "desc": "门店造景项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 1,
+    "costs": [
+      {
+        "id": "cost_45_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 37083,
+        "isSettled": true
+      },
+      {
+        "id": "cost_45_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 31752,
+        "isSettled": true
+      },
+      {
+        "id": "cost_45_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 47902,
+        "isSettled": true
+      },
+      {
+        "id": "cost_45_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 11525,
+        "isSettled": false
+      },
+      {
+        "id": "cost_45_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 15994,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-05-17T01:00:00.000Z",
+      "2025-07-11T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-05-17T01:00:00.000Z",
+    "createTime": "2025-05-17T01:00:00.000Z",
+    "updateTime": "2025-07-12T01:00:00.000Z",
+    "payableAmount": 144256,
+    "paidAmount": 132731,
+    "unreceivedAmount": 62720,
+    "constructingTime": "2025-06-13T01:00:00.000Z",
+    "completedTime": "2025-07-11T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_047",
+    "name": "星野中庭生态景观",
+    "type": "normal",
+    "scene": "private_residence",
+    "sceneLabel": "私人住宅",
+    "client": "钱江新城物业",
+    "role": "pm",
+    "clientSource": "online",
+    "status": "settling",
+    "statusLabel": "结账中",
+    "staffCount": 17,
+    "amount": 281000,
+    "receivedAmount": 230420,
+    "desc": "私人住宅项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_46_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 55638,
+        "isSettled": true
+      },
+      {
+        "id": "cost_46_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 47545,
+        "isSettled": true
+      },
+      {
+        "id": "cost_46_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 71599,
+        "isSettled": false
+      },
+      {
+        "id": "cost_46_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 17197,
+        "isSettled": true
+      },
+      {
+        "id": "cost_46_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 19333,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-05-09T01:00:00.000Z",
+      "2025-07-14T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-05-09T01:00:00.000Z",
+    "createTime": "2025-05-09T01:00:00.000Z",
+    "updateTime": "2025-07-15T01:00:00.000Z",
+    "payableAmount": 211312,
+    "paidAmount": 139713,
+    "unreceivedAmount": 50580,
+    "constructingTime": "2025-06-06T01:00:00.000Z",
+    "completedTime": "2025-07-05T01:00:00.000Z",
+    "settlingTime": "2025-07-14T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_048",
+    "name": "溪上会客区植物陈列",
+    "type": "normal",
+    "scene": "government_unit",
+    "sceneLabel": "机关单位",
+    "client": "湖滨商圈运营部",
+    "role": "agent",
+    "clientSource": "outreach",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 18,
+    "amount": 446000,
+    "receivedAmount": 446000,
+    "desc": "机关单位项目，包含现场勘察、植物配置、材料采购、施工交付与后期维护建议。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "yes",
+    "isHasVoucher": "yes",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_47_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 92233,
+        "isSettled": true
+      },
+      {
+        "id": "cost_47_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 78674,
+        "isSettled": false
+      },
+      {
+        "id": "cost_47_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 118279,
+        "isSettled": true
+      },
+      {
+        "id": "cost_47_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 23014,
+        "isSettled": true
+      },
+      {
+        "id": "cost_47_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 32112,
+        "isSettled": true
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-05-02T01:00:00.000Z",
+      "2025-07-28T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-05-02T01:00:00.000Z",
+    "createTime": "2025-05-02T01:00:00.000Z",
+    "updateTime": "2025-07-29T01:00:00.000Z",
+    "payableAmount": 344312,
+    "paidAmount": 265638,
+    "unreceivedAmount": 0,
+    "constructingTime": "2025-05-31T01:00:00.000Z",
+    "completedTime": "2025-06-30T01:00:00.000Z",
+    "settlingTime": "2025-07-10T01:00:00.000Z",
+    "settledTime": "2025-07-28T01:00:00.000Z"
+  },
+  {
+    "_id": "project_sample_049",
+    "name": "森屿历史项目补录",
+    "type": "historical",
+    "scene": "company_scene",
+    "sceneLabel": "公司布景",
+    "client": "雅居乐集团",
+    "role": "pm",
+    "clientSource": "exhibition",
+    "status": "closed",
+    "statusLabel": "已结清",
+    "staffCount": 10,
+    "amount": 578000,
+    "receivedAmount": 578000,
+    "desc": "公司布景历史项目补录数据，保留订单、成本、回款和交付节点。",
+    "isHistorical": true,
+    "completionTime": "2025-05-21T01:00:00.000Z",
+    "isHasContract": "no",
+    "isHasPreview": "yes",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [
+      {
+        "id": "cost_48_1",
+        "category": "real_plant",
+        "supplier": "杭州绿植苗圃",
+        "amount": 124617,
+        "isSettled": false
+      },
+      {
+        "id": "cost_48_2",
+        "category": "fake_plant",
+        "supplier": "艺辉仿真植物工坊",
+        "amount": 106121,
+        "isSettled": true
+      },
+      {
+        "id": "cost_48_3",
+        "category": "labor",
+        "supplier": "项目施工班组",
+        "amount": 129241,
+        "isSettled": true
+      },
+      {
+        "id": "cost_48_4",
+        "category": "food",
+        "supplier": "现场后勤采购",
+        "amount": 31212,
+        "isSettled": true
+      },
+      {
+        "id": "cost_48_5",
+        "category": "other",
+        "supplier": "综合物料供应商",
+        "amount": 43466,
+        "isSettled": false
+      }
+    ],
+    "subProjects": [],
+    "period": [
+      "2025-04-24T01:00:00.000Z",
+      "2025-06-10T01:00:00.000Z"
+    ],
+    "constructionPeriod": [
+      "2025-04-24T01:00:00.000Z",
+      "2025-05-21T01:00:00.000Z"
+    ],
+    "collectionPeriod": [
+      "2025-05-21T01:00:00.000Z",
+      "2025-06-10T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-04-24T01:00:00.000Z",
+    "constructingTime": "2025-04-24T01:00:00.000Z",
+    "completedTime": "2025-05-21T01:00:00.000Z",
+    "settlingTime": "2025-05-21T01:00:00.000Z",
+    "settledTime": "2025-06-10T01:00:00.000Z",
+    "createTime": "2025-04-24T01:00:00.000Z",
+    "updateTime": "2025-06-10T01:00:00.000Z",
+    "payableAmount": 434657,
+    "paidAmount": 266574,
+    "unreceivedAmount": 0
+  },
+  {
+    "_id": "project_sample_050",
+    "name": "青庭年度绿化服务",
+    "type": "long_term",
+    "scene": "store_landscape",
+    "sceneLabel": "门店造景",
+    "client": "万科地产",
+    "role": "boss",
+    "clientSource": "referral",
+    "status": "terminated",
+    "statusLabel": "已终止",
+    "staffCount": 0,
+    "amount": 1200501,
+    "receivedAmount": 1140476,
+    "desc": "门店造景长期服务项目，按子项目持续记录订单、成本和发票凭证。",
+    "isHistorical": false,
+    "isHasContract": "yes",
+    "isHasPreview": "no",
+    "isHasVoucher": "no",
+    "amountEditCount": 0,
+    "costs": [],
+    "subProjects": [
+      {
+        "id": "sp_50_1",
+        "content": "植物养护",
+        "startDate": "2025-04-17",
+        "amount": 351167,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_69_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 78802,
+            "isSettled": true
+          },
+          {
+            "id": "cost_69_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 54361,
+            "isSettled": true
+          },
+          {
+            "id": "cost_69_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 82173,
+            "isSettled": true
+          },
+          {
+            "id": "cost_69_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 19806,
+            "isSettled": false
+          }
+        ]
+      },
+      {
+        "id": "sp_50_2",
+        "content": "植物换新",
+        "startDate": "2025-05-22",
+        "amount": 400167,
+        "isHasVoucher": "no",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_70_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 75712,
+            "isSettled": true
+          },
+          {
+            "id": "cost_70_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 64827,
+            "isSettled": true
+          },
+          {
+            "id": "cost_70_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 97801,
+            "isSettled": false
+          },
+          {
+            "id": "cost_70_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 23530,
+            "isSettled": true
+          }
+        ]
+      },
+      {
+        "id": "sp_50_3",
+        "content": "景观优化",
+        "startDate": "2025-06-26",
+        "amount": 449167,
+        "isHasVoucher": "yes",
+        "vouchers": [],
+        "costs": [
+          {
+            "id": "cost_71_1",
+            "category": "real_plant",
+            "supplier": "杭州绿植苗圃",
+            "amount": 88935,
+            "isSettled": true
+          },
+          {
+            "id": "cost_71_2",
+            "category": "fake_plant",
+            "supplier": "艺辉仿真植物工坊",
+            "amount": 75999,
+            "isSettled": false
+          },
+          {
+            "id": "cost_71_3",
+            "category": "labor",
+            "supplier": "项目施工班组",
+            "amount": 114448,
+            "isSettled": true
+          },
+          {
+            "id": "cost_71_4",
+            "category": "food",
+            "supplier": "现场后勤采购",
+            "amount": 27489,
+            "isSettled": true
+          }
+        ]
+      }
+    ],
+    "period": [
+      "2025-04-17T01:00:00.000Z",
+      "2025-12-12T01:00:00.000Z"
+    ],
+    "negotiatingTime": "2025-04-17T01:00:00.000Z",
+    "createTime": "2025-04-17T01:00:00.000Z",
+    "updateTime": "2025-12-12T01:00:00.000Z",
+    "terminatedTime": "2025-12-12T01:00:00.000Z",
+    "payableAmount": 803883,
+    "paidAmount": 610277,
+    "unreceivedAmount": 60025
   }
 ]
