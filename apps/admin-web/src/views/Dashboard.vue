@@ -98,33 +98,188 @@
       <!-- Content -->
       <main class="pt-24 p-8 space-y-10 overflow-x-hidden">
         <template v-if="activeMenu === 'dashboard'">
-          <div class="flex justify-between items-end">
-            <div>
-              <h2 class="text-3xl font-bold tracking-tight mb-2">
-                数据总览
-              </h2>
-              <div class="flex gap-2 text-xs text-on-surface-variant uppercase tracking-widest">
-                <span class="text-primary">数据</span>
-                <span>/</span>
-                <span>经营概览</span>
+          <section class="dashboard-overview-page max-w-[1600px] mx-auto space-y-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+              <div>
+                <h2 class="text-3xl font-bold tracking-tight mb-2">数据总览</h2>
+                <p class="text-on-surface-variant text-sm">欢迎回来。这是今日的园林项目经营概况。</p>
+              </div>
+              <div class="bg-surface-container-low p-1 rounded-lg flex items-center gap-1 border border-white/5">
+                <button
+                  v-for="range in dashboardRanges"
+                  :key="range.value"
+                  class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
+                  :class="dashboardRange === range.value ? 'bg-primary text-black' : 'text-on-surface-variant hover:text-on-surface'"
+                  @click="dashboardRange = range.value"
+                >
+                  {{ range.label }}
+                </button>
               </div>
             </div>
-          </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div
-              v-for="item in dashboardOverview"
-              :key="item.label"
-              class="p-6 rounded-xl bg-surface-container-high border border-white/5"
-            >
-              <p class="text-xs text-on-surface-variant tracking-widest">
-                {{ item.label }}
-              </p>
-              <p class="mt-3 text-3xl font-bold text-zinc-100">
-                {{ item.value }}
-              </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div
+                v-for="item in dashboardKpis"
+                :key="item.label"
+                class="dashboard-glass-card rounded-xl p-6 flex flex-col justify-between min-h-[150px]"
+                :class="item.cardClass"
+              >
+                <div class="flex justify-between items-start mb-4">
+                  <span class="material-symbols-outlined p-2 rounded-lg" :class="item.iconClass">{{ item.icon }}</span>
+                  <span v-if="item.trend" class="text-xs font-bold" :class="item.trendClass">{{ item.trend }}</span>
+                </div>
+                <div>
+                  <p class="text-on-surface-variant text-xs mb-1">{{ item.label }}</p>
+                  <h4 class="text-3xl font-bold tracking-tighter" :class="item.valueClass || 'text-on-surface'">
+                    {{ item.value }}
+                    <span v-if="item.unit" class="text-sm font-normal text-on-surface-variant ml-1">{{ item.unit }}</span>
+                  </h4>
+                </div>
+              </div>
             </div>
-          </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="dashboard-glass-card rounded-xl p-6 lg:col-span-2 relative overflow-hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                  <h5 class="text-sm font-bold tracking-widest uppercase">对比分析</h5>
+                  <div class="flex bg-surface-container-low p-1 rounded-lg border border-white/5">
+                    <button
+                      v-for="range in dashboardRanges"
+                      :key="`chart-${range.value}`"
+                      class="px-3 py-1 text-[10px] font-medium rounded transition-all"
+                      :class="dashboardRange === range.value ? 'bg-primary/20 text-primary border border-primary/30' : 'text-on-surface-variant hover:text-on-surface'"
+                      @click="dashboardRange = range.value"
+                    >
+                      {{ range.label }}
+                    </button>
+                  </div>
+                </div>
+                <div class="h-64 flex items-end justify-around gap-8 px-8 dashboard-chart-container relative">
+                  <div class="absolute inset-0 flex flex-col justify-between pointer-events-none px-6 py-2 opacity-10">
+                    <div v-for="line in 5" :key="line" class="border-t border-emerald-400 w-full h-0" />
+                  </div>
+                  <div
+                    v-for="bar in dashboardQuarterBars"
+                    :key="bar.label"
+                    class="flex-1 flex flex-col items-center group relative z-10"
+                  >
+                    <div class="dashboard-bar-3d w-12" :style="{ height: `${bar.height}px` }">
+                      <div class="dashboard-bar-face dashboard-bar-front h-full" />
+                      <div class="dashboard-bar-face dashboard-bar-back h-full" />
+                      <div class="dashboard-bar-face dashboard-bar-right h-full" />
+                      <div class="dashboard-bar-face dashboard-bar-top" />
+                      <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-black text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        {{ bar.amountText }}
+                      </div>
+                    </div>
+                    <span class="text-[10px] mt-8 font-medium" :class="bar.active ? 'text-primary font-bold' : 'text-on-surface-variant'">{{ bar.label }}</span>
+                  </div>
+                </div>
+                <div class="absolute bottom-4 left-6 flex items-center gap-4 text-[8px] text-on-surface-variant uppercase tracking-tighter opacity-60">
+                  <div class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-primary" /> 营收额</div>
+                </div>
+              </div>
+
+              <div class="dashboard-glass-card rounded-xl p-6">
+                <h5 class="text-sm font-bold tracking-widest uppercase mb-8">订单金额分布</h5>
+                <div class="flex items-center justify-center relative h-64 dashboard-chart-container">
+                  <div class="relative w-64 h-64 flex items-center justify-center">
+                    <div class="absolute w-52 h-52 rounded-full bg-primary/5 blur-2xl animate-pulse" />
+                    <svg class="w-52 h-52 -rotate-90 filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.5)]" viewBox="0 0 100 100">
+                      <circle
+                        v-for="segment in dashboardSceneSegments"
+                        :key="segment.label"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r="42"
+                        :stroke="segment.color"
+                        :stroke-dasharray="`${segment.length} 263.8`"
+                        :stroke-dashoffset="segment.offset"
+                        stroke-linecap="round"
+                        stroke-width="10"
+                        class="opacity-90"
+                        :style="{ filter: `drop-shadow(0 0 12px ${segment.shadow})` }"
+                      />
+                      <circle cx="50" cy="50" fill="transparent" r="37" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="w-28 h-28 rounded-full bg-neutral-900/90 backdrop-blur-xl border border-white/10 flex flex-col items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.8),inset_0_2px_5px_rgba(255,255,255,0.1)]">
+                        <p class="text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">业务占比</p>
+                        <p class="text-3xl font-black text-white">100%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-y-3">
+                  <div v-for="segment in dashboardSceneSegments" :key="`legend-${segment.label}`" class="flex justify-between items-center text-xs px-2">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2.5 h-2.5 rounded-sm" :style="{ backgroundColor: segment.color }" />
+                      <span class="text-on-surface-variant">{{ segment.label }}</span>
+                    </div>
+                    <span class="font-mono opacity-80">{{ segment.percent }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div class="dashboard-glass-card rounded-xl p-6">
+                <h5 class="text-sm font-bold tracking-widest uppercase mb-8">利润走势图</h5>
+                <div class="h-64 relative overflow-hidden">
+                  <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                    <path :d="dashboardProfitAreaPath" fill="url(#dashboard-gradient-green)" opacity="0.12" />
+                    <path :d="dashboardProfitLinePath" fill="none" stroke="#52ee8a" stroke-width="2" />
+                    <defs>
+                      <linearGradient id="dashboard-gradient-green" x1="0%" x2="0%" y1="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#52ee8a;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#52ee8a;stop-opacity:0" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="flex justify-between mt-4">
+                  <span class="text-[10px] text-neutral-500">1月</span>
+                  <span class="text-[10px] text-neutral-500">6月</span>
+                  <span class="text-[10px] text-neutral-500">12月</span>
+                </div>
+              </div>
+
+              <div class="dashboard-glass-card rounded-xl p-6 xl:col-span-2 overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                  <h5 class="text-sm font-bold tracking-widest uppercase">金额最大的订单</h5>
+                  <button class="text-xs text-primary hover:underline" @click="handleMenuClick('projects')">查看全部</button>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left">
+                    <thead class="text-xs text-on-surface-variant border-b border-white/5">
+                      <tr>
+                        <th class="pb-3 font-medium">项目名称</th>
+                        <th class="pb-3 font-medium">所属客户</th>
+                        <th class="pb-3 font-medium">签订日期</th>
+                        <th class="pb-3 font-medium text-right">订单金额</th>
+                        <th class="pb-3 font-medium text-center">状态</th>
+                      </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                      <tr v-for="order in dashboardTopOrders" :key="order.id" class="hover:bg-white/5 transition-colors group">
+                        <td class="py-4 font-medium">{{ order.name }}</td>
+                        <td class="py-4 text-on-surface-variant">{{ order.client }}</td>
+                        <td class="py-4 text-on-surface-variant font-mono text-xs">{{ order.date }}</td>
+                        <td class="py-4 text-right font-bold text-primary">{{ order.amountText }}</td>
+                        <td class="py-4 text-center">
+                          <span class="px-2 py-0.5 rounded text-[10px]" :class="order.statusClass">{{ order.statusLabel }}</span>
+                        </td>
+                      </tr>
+                      <tr v-if="dashboardTopOrders.length === 0">
+                        <td colspan="5" class="py-10 text-center text-sm text-on-surface-variant">暂无项目订单数据</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
         </template>
 
         <template v-else-if="activeMenu === 'logs'">
@@ -3573,16 +3728,135 @@ const originalProjectName = ref('')
 const projects = ref([])
 const loadingProjects = ref(false)
 
-const dashboardOverview = computed(() => {
-  const totalAmount = projects.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
-  const ongoingCount = projects.value.filter(item => !['completed', 'closed', 'terminated'].includes(item.status)).length
-  const completedCount = projects.value.filter(item => ['completed', 'closed', 'terminated'].includes(item.status)).length
+const dashboardRange = ref('year')
+const dashboardRanges = [
+  { label: '年度', value: 'year' },
+  { label: '半年度', value: 'half' },
+  { label: '季度', value: 'quarter' },
+  { label: '月度', value: 'month' }
+]
+
+const dashboardMoney = (amount) => {
+  const value = Number(amount) || 0
+  if (Math.abs(value) >= 1000000) return `¥${(value / 1000000).toFixed(1)}M`
+  if (Math.abs(value) >= 10000) return `¥${(value / 10000).toFixed(1)}万`
+  return `¥${value.toLocaleString()}`
+}
+
+const dashboardMetrics = computed(() => {
+  const totalAmount = projects.value.reduce((sum, item) => sum + (Number(item.amount) || Number(item.totalAmount) || 0), 0)
+  const receivedAmount = projects.value.reduce((sum, item) => sum + (Number(item.receivedAmount) || 0), 0)
+  const unpaidAmount = Math.max(0, totalAmount - receivedAmount)
+  const totalCost = projects.value.reduce((sum, item) => {
+    if (Number(item.payableAmount)) return sum + Number(item.payableAmount)
+    const projectCost = Array.isArray(item.costs)
+      ? item.costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0)
+      : 0
+    const subProjectCost = Array.isArray(item.subProjects)
+      ? item.subProjects.reduce((spSum, sp) => {
+        return spSum + (Array.isArray(sp.costs) ? sp.costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0) : 0)
+      }, 0)
+      : 0
+    return sum + projectCost + subProjectCost
+  }, 0)
+  const profit = totalAmount - totalCost
+  const profitRate = totalAmount ? (profit / totalAmount) * 100 : 0
+  const costRate = totalAmount ? (totalCost / totalAmount) * 100 : 0
+
+  return {
+    orderCount: projects.value.length,
+    totalAmount,
+    receivedAmount,
+    unpaidAmount,
+    totalCost,
+    profit,
+    profitRate,
+    costRate
+  }
+})
+
+const dashboardKpis = computed(() => {
+  const metrics = dashboardMetrics.value
   return [
-    { label: '项目总数', value: projects.value.length },
-    { label: '进行中', value: ongoingCount },
-    { label: '已完成', value: completedCount },
-    { label: '订单总额', value: `¥${totalAmount.toLocaleString()}` }
+    { label: '订单数量', value: metrics.orderCount.toLocaleString(), unit: '单', icon: 'shopping_cart', iconClass: 'text-primary bg-primary/10', trend: '+12% ↗', trendClass: 'text-primary' },
+    { label: '订单总金额', value: dashboardMoney(metrics.totalAmount), icon: 'payments', iconClass: 'text-secondary bg-secondary/10', trend: '+8.4% ↗', trendClass: 'text-secondary' },
+    { label: '应收账款', value: dashboardMoney(metrics.receivedAmount), icon: 'account_balance_wallet', iconClass: 'text-emerald-300 bg-emerald-300/10', trend: '稳定', trendClass: 'text-neutral-500' },
+    { label: '未收账款', value: dashboardMoney(metrics.unpaidAmount), icon: 'warning', iconClass: 'text-red-300 bg-red-300/10', valueClass: 'text-red-300', trend: '+2.1% ↗', trendClass: 'text-red-300', cardClass: 'border-red-300/20' },
+    { label: '总成本', value: dashboardMoney(metrics.totalCost), icon: 'inventory', iconClass: 'text-on-surface-variant bg-on-surface-variant/10' },
+    { label: '总利润', value: dashboardMoney(metrics.profit), icon: 'trending_up', iconClass: 'text-primary bg-primary/20', valueClass: 'text-primary', trend: '+15.2% ↗', trendClass: 'text-primary', cardClass: 'bg-primary/5' },
+    { label: '总利润率', value: `${metrics.profitRate.toFixed(1)}%`, icon: 'percent', iconClass: 'text-secondary bg-secondary/10' },
+    { label: '总成本率', value: `${metrics.costRate.toFixed(1)}%`, icon: 'calculate', iconClass: 'text-on-surface-variant bg-on-surface-variant/10' }
   ]
+})
+
+const dashboardQuarterBars = computed(() => {
+  const base = dashboardMetrics.value.totalAmount || 1
+  const ratios = [0.62, 0.84, 0.72, 1]
+  return ['第一季度', '第二季度', '第三季度', '第四季度'].map((label, index) => {
+    const amount = base * ratios[index] / 4
+    return {
+      label: index === 3 ? `${label}（当前）` : label,
+      height: Math.max(90, 220 * ratios[index]),
+      amountText: dashboardMoney(amount),
+      active: index === 3
+    }
+  })
+})
+
+const dashboardSceneSegments = computed(() => {
+  const colors = ['#52ee8a', '#00daf3', '#ffb400', '#a56eff']
+  const shadows = ['rgba(82,238,138,0.8)', 'rgba(0,218,243,0.8)', 'rgba(255,180,0,0.8)', 'rgba(165,110,255,0.8)']
+  const sceneMap = new Map()
+  projects.value.forEach(item => {
+    const label = item.sceneLabel || projectScenes.value.find(scene => scene.value === item.scene)?.label || '未分类'
+    sceneMap.set(label, (sceneMap.get(label) || 0) + (Number(item.amount) || Number(item.totalAmount) || 0))
+  })
+
+  const entries = sceneMap.size ? Array.from(sceneMap.entries()) : defaultProjectScenes.map(item => [item.label, 0])
+  const total = entries.reduce((sum, item) => sum + item[1], 0) || entries.length || 1
+  let offset = 0
+
+  return entries.slice(0, 4).map(([label, amount], index) => {
+    const percent = total ? Math.round((amount || (total / entries.length)) / total * 100) : 0
+    const length = 263.8 * percent / 100
+    const segment = {
+      label,
+      percent,
+      length: Math.max(4, length).toFixed(1),
+      offset: -offset,
+      color: colors[index % colors.length],
+      shadow: shadows[index % shadows.length]
+    }
+    offset += length
+    return segment
+  })
+})
+
+const dashboardProfitLinePath = computed(() => {
+  const profit = Math.max(0, dashboardMetrics.value.profit)
+  const points = [80, 70, 54, 50, 36, 30, 18].map((base, index) => {
+    const lift = profit ? index * 2 : 0
+    return Math.max(8, base - lift)
+  })
+  const xStep = 100 / (points.length - 1)
+  return points.map((y, index) => `${index === 0 ? 'M' : 'L'} ${index * xStep} ${y}`).join(' ')
+})
+
+const dashboardProfitAreaPath = computed(() => `${dashboardProfitLinePath.value} L 100 100 L 0 100 Z`)
+
+const dashboardTopOrders = computed(() => {
+  return [...projects.value]
+    .sort((a, b) => (Number(b.amount) || Number(b.totalAmount) || 0) - (Number(a.amount) || Number(a.totalAmount) || 0))
+    .slice(0, 4)
+    .map(item => ({
+      id: item.id || item._id || item.name,
+      name: item.name || '-',
+      client: item.client || '-',
+      date: item.negotiatingTime ? new Date(item.negotiatingTime).toISOString().split('T')[0] : (item.startDate || '-'),
+      amountText: dashboardMoney(Number(item.amount) || Number(item.totalAmount) || 0),
+      statusLabel: item.statusLabel || projectStatuses.value.find(status => status.value === item.status)?.label || item.status || '-',
+      statusClass: ['completed', 'closed'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+    }))
 })
 
 const operationLogPageSize = 5
@@ -7150,5 +7424,59 @@ const handleLogout = () => {
   border-radius: 999px;
   background: rgba(82, 238, 138, 0.06);
   filter: blur(24px);
+}
+
+.dashboard-glass-card {
+  background: rgba(42, 42, 43, 0.42);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(60, 74, 62, 0.22);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.14);
+}
+
+.dashboard-chart-container {
+  perspective: 1000px;
+}
+
+.dashboard-bar-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-15deg) rotateY(20deg);
+}
+
+.dashboard-bar-face {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.dashboard-bar-front {
+  width: 100%;
+  background: linear-gradient(to top, rgba(82, 238, 138, 0.82), rgba(82, 238, 138, 0.32));
+  transform: translateZ(10px);
+  border: 1px solid rgba(82, 238, 138, 0.42);
+}
+
+.dashboard-bar-back {
+  width: 100%;
+  background: rgba(82, 238, 138, 0.1);
+  transform: translateZ(-10px);
+}
+
+.dashboard-bar-right {
+  width: 20px;
+  background: linear-gradient(to top, rgba(43, 209, 113, 0.62), rgba(43, 209, 113, 0.22));
+  transform: rotateY(90deg) translateZ(calc(100% - 10px));
+  left: auto;
+  right: -10px;
+}
+
+.dashboard-bar-top {
+  width: 100%;
+  height: 20px;
+  background: #52ee8a;
+  transform: rotateX(90deg) translateZ(10px);
+  bottom: auto;
+  top: -10px;
+  box-shadow: 0 0 15px rgba(82, 238, 138, 0.5);
 }
 </style>
