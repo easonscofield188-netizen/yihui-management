@@ -3163,8 +3163,8 @@ const YES_NO_VALUE = {
   NO: 'no'
 }
 const LEGACY_YES_NO_VALUE = {
-  YES: '\u662f',
-  NO: '\u5426'
+  YES: '是',
+  NO: '否'
 }
 
 const normalizeYesNo = (value, defaultValue = YES_NO_VALUE.NO) => {
@@ -3180,7 +3180,7 @@ const isCostSettled = (value) => {
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
 const isLoadingProject = ref(false)
 
-// 基础项目信息折叠状�?
+// 基础项目信息折叠状态
 const avatarInputRef = ref(null)
 const currentUser = reactive({
   id: '',
@@ -3288,7 +3288,7 @@ const handleAvatarChange = async (event) => {
   if (!file) return
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('头像仅支�?JPG、PNG、WebP')
+      ElMessage.warning('头像仅支持JPG、PNG、WebP')
     })
     event.target.value = ''
     return
@@ -3362,13 +3362,13 @@ const handleUpdateUser = async () => {
 
 const isBasicInfoCollapsed = ref(false)
 
-// 成本支出管理折叠状�?
+// 成本支出管理折叠状态
 const isCostInfoCollapsed = ref(false)
 
-// 合同管理折叠状�?
+// 合同管理折叠状态
 const isContractInfoCollapsed = ref(false)
 
-// 预览图管理折叠状�?
+// 预览图管理折叠状态
 const isPreviewInfoCollapsed = ref(false)
 
 // 悬浮回到顶部按钮逻辑
@@ -3402,7 +3402,7 @@ const stopDrag = () => {
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
   
-  // 边界检�?
+  // 边界检查
   const margin = 20
   const btnSize = 48
   floatBtnPos.value.x = Math.max(margin, Math.min(window.innerWidth - btnSize - margin, floatBtnPos.value.x))
@@ -3410,11 +3410,11 @@ const stopDrag = () => {
 }
 
 const scrollToTop = () => {
-  if (hasMoved.value) return // 如果是拖拽则不触发点�?
+  if (hasMoved.value) return // 如果是拖拽则不触发点击
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 监听窗口大小变化，防止按钮跑出屏�?
+// 监听窗口大小变化，防止按钮跑出屏幕
 const handleResize = () => {
   const margin = 20
   const btnSize = 48
@@ -3437,7 +3437,7 @@ const sessionTimeoutMinutes = ref(DEFAULT_SESSION_TIMEOUT_MINUTES)
 let sessionLogoutTimer = null
 const sessionActivityEvents = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart']
 
-// 侧边栏菜单配�?
+// 侧边栏菜单配置
 const activeMenu = ref('dashboard')
 const menuItems = ref([
   { name: 'dashboard', label: '数据总览', icon: markRaw(DataBoard), active: true },
@@ -3449,9 +3449,9 @@ const menuItems = ref([
 ])
 
 /**
- * 切换侧边栏菜�? * @param {string} menuName 菜单名称
+ * 切换侧边栏菜单 * @param {string} menuName 菜单名称
  * @returns {void}
- * @throws {Error} �? */
+ * @throws {Error} 无 */
 menuItems.value.splice(2, 0, { name: 'logs', label: '操作日志', icon: markRaw(View), active: false })
 
 const handleMenuClick = (menuName) => {
@@ -3543,9 +3543,9 @@ const settingPermissions = reactive([
 ])
 
 /**
- * 功能：切换角色权�? * @param {Object} permission 权限�? * @param {string} roleValue 角色标识
+ * 功能：切换角色权限 * @param {Object} permission 权限对象 * @param {string} roleValue 角色标识
  * @returns {void}
- * @throws {Error} �? */
+ * @throws {Error} 无 */
 const togglePermissionRole = (permission, roleValue) => {
   const roleIndex = permission.enabledRoles.indexOf(roleValue)
   if (roleIndex > -1) {
@@ -3559,7 +3559,7 @@ const togglePermissionRole = (permission, roleValue) => {
 /**
  * 功能：读取本地保存的权限矩阵
  * @returns {void}
- * @throws {Error} 读取失败时保留默认权限矩�? */
+ * @throws {Error} 读取失败时保留默认权限矩阵 */
 const loadSettingPermissions = () => {
   try {
     const savedPermissions = localStorage.getItem(PERMISSION_STORAGE_KEY)
@@ -3578,7 +3578,7 @@ const loadSettingPermissions = () => {
 /**
  * 功能：保存权限矩阵到本地
  * @returns {void}
- * @throws {Error} 保存失败时输出错误日�? */
+ * @throws {Error} 保存失败时输出错误日志 */
 const saveSettingPermissions = () => {
   try {
     const permissionMap = settingPermissions.reduce((map, permission) => {
@@ -3674,15 +3674,20 @@ const configGroupMap = {
 }
 
 /**
- * 获取系统设置卡片配置�? * @param {Object} card 配置卡片
- * @returns {Array} 配置项列�? * @throws {Error} �? */
+ * 获取系统设置卡片配置项
+ * @param {Object} card 配置卡片
+ * @returns {Array} 配置项列表
+ */
 const getSettingConfigItems = (card) => {
   const group = configGroupMap[card.title]
   return settingConfigItems[group] || []
 }
 
 /**
- * 获取系统设置配置状态列�? * @returns {Promise<void>} �? * @throws {Error} 查询异常时向上抛�? */
+ * 获取系统设置配置状态列表
+ * @returns {Promise<void>}
+ * @throws {Error} 查询异常时向上抛出
+ */
 const loadSettingConfigItems = async () => {
   const groups = ['CLIENT_SOURCE', 'COST_CATEGORY', 'CLIENT_ROLE', 'PROJECT_SCENE']
   const responses = await Promise.all(groups.map(group => queryConfig({
@@ -3713,7 +3718,7 @@ const configValuePreview = computed(() => {
  * 打开新增配置弹窗
  * @param {Object} card 配置卡片
  * @returns {void}
- * @throws {Error} �? */
+ */
 const openConfigDialog = (card) => {
   const group = configGroupMap[card.title]
   if (!group) return
@@ -3726,7 +3731,9 @@ const openConfigDialog = (card) => {
 
 /**
  * 创建系统配置
- * @returns {Promise<void>} �? * @throws {Error} 接口异常时提示错�? */
+ * @returns {Promise<void>}
+ * @throws {Error} 接口异常时提示错误
+ */
 const handleCreateConfig = async () => {
   const label = configDialog.form.label.trim()
   if (!label) {
@@ -3764,8 +3771,12 @@ const handleCreateConfig = async () => {
 }
 
 /**
- * 切换系统配置启用状�? * @param {Object} card 配置卡片
- * @param {Object} tag 配置�? * @returns {Promise<void>} �? * @throws {Error} 接口异常时提示错�? */
+ * 切换系统配置启用状态
+ * @param {Object} card 配置卡片
+ * @param {Object} tag 配置项
+ * @returns {Promise<void>}
+ * @throws {Error} 接口异常时提示错误
+ */
 const handleToggleConfigStatus = async (card, tag) => {
   const group = configGroupMap[card.title]
   const configId = tag?.id || tag?._id
@@ -3777,10 +3788,10 @@ const handleToggleConfigStatus = async (card, tag) => {
   try {
     const { ElMessageBox, ElMessage } = await import('element-plus')
     await ElMessageBox.confirm(
-      nextActive
-        ? `确定要启用�?{tag.label}”吗？启用后会重新出现在新增项目的下拉配置中。`
-        : `确定要停用�?{tag.label}”吗？停用后不会再出现在新增项目的下拉配置中，历史数据不受影响。`,
-      `${actionText}配置`,
+        nextActive
+          ? `确定要启用"${tag.label}"吗？启用后会重新出现在新增项目的下拉配置中。`
+          : `确定要停用"${tag.label}"吗？停用后不会再出现在新增项目的下拉配置中，历史数据不受影响。`,
+        `${actionText}配置`,
       {
         confirmButtonText: `确定${actionText}`,
         cancelButtonText: '取消',
@@ -3805,7 +3816,7 @@ const handleToggleConfigStatus = async (card, tag) => {
     localStorage.removeItem('APP_GLOBAL_CONFIGS')
     localStorage.removeItem('APP_CONFIG_TIMESTAMP')
     await initGlobalConfigs(true)
-    ElMessage.success(`配置�?{actionText}`)
+    ElMessage.success(`配置${actionText}`)
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') {
       const { ElMessage } = await import('element-plus')
@@ -3988,7 +3999,7 @@ const createDashboardBuckets = () => {
     const bucketStart = new Date(start.getTime() + bucketSize * index)
     const bucketEnd = new Date(index === bucketCount - 1 ? end.getTime() : start.getTime() + bucketSize * (index + 1) - 1)
     const label = range.value === 'month'
-      ? `�?{index + 1}周`
+      ? `${index + 1}周`
       : `${bucketStart.getMonth() + 1}月`
     return {
       label,
@@ -4323,8 +4334,8 @@ const operationLogStats = computed(() => {
 })
 
 /**
- * 功能：返回日志状态文字样�? * @param {string} status 状�? * @returns {string} 样式类名
- * @throws {Error} �? */
+ * 功能：返回日志状态文字样式 * @param {string} status 状态 * @returns {string} 样式类名
+ * @throws {Error} 无 */
 const operationLogStatusClass = (status) => {
   if (status === '失败') return 'text-red-300'
   if (status === '警告') return 'text-secondary'
@@ -4332,8 +4343,8 @@ const operationLogStatusClass = (status) => {
 }
 
 /**
- * 功能：返回日志状态圆点样�? * @param {string} status 状�? * @returns {string} 样式类名
- * @throws {Error} �? */
+ * 功能：返回日志状态圆点样式 * @param {string} status 状态 * @returns {string} 样式类名
+ * @throws {Error} 无 */
 const operationLogDotClass = (status) => {
   if (status === '失败') return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
   if (status === '警告') return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
@@ -4341,8 +4352,8 @@ const operationLogDotClass = (status) => {
 }
 
 /**
- * 功能：导出当前筛选后的操作日�? * @returns {void}
- * @throws {Error} 导出失败时提示用�? */
+ * 功能：导出当前筛选后的操作日志 * @returns {void}
+ * @throws {Error} 导出失败时提示用户 */
 const exportOperationLogs = () => {
   try {
     const rows = filteredOperationLogs.value.map(item => [
@@ -4512,39 +4523,38 @@ watch(filteredProjects, (newVal) => {
   }
 })
 
-// 项目录入表单响应式对�?
+// 项目录入表单响应式对象
 const form = reactive({
   name: '',           // 项目名称
   type: 'normal',     // 项目类型
   scene: '',          // 项目场景
   period: [null, null],       // 项目周期（日期范围数组）
-  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式�?
+  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
   constructionPeriod: [null, null], // 施工周期（历史模式）
   collectionPeriod: [null, null],   // 回款周期（历史模式）
-  completionTime: null, // 完结时间（补录单专用�?
+  completionTime: null, // 完结时间（补录单专用）
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
-  status: '',         // 项目状�?
+  status: '',         // 项目状态
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
   receivedAmount: null,  // 已收账款
   desc: '',           // 项目描述
-  isHistorical: false, // 标识是否为历史补录项�?
-  isHasContract: YES_NO_VALUE.NO, // 是否有合�?  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
-  isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭�?  amountEditCount: 0,   // 订单金额修改次数
-  subProjects: []      // 子项目列�?
+  isHistorical: false, // 标识是否为历史补录项目  isHasContract: YES_NO_VALUE.NO, // 是否有合同  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
+  isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭证  amountEditCount: 0,   // 订单金额修改次数
+  subProjects: []      // 子项目列表
 })
 
 // 项目合同列表
 const contracts = ref([])
-// 项目预览图列�?
+// 项目预览图列表
 const previews = ref([])
 
 // 是否为新客户标识：用于控制“客户来源”显示及“客户角色”是否可编辑
 const isNewClient = ref(true)
 
-// 加载状态控�?
+// 加载状态控制
 const clientLoading = ref(false)
 const configSyncing = ref(false)
 const savingProject = ref(false)
@@ -4564,7 +4574,7 @@ const getLongTermPeriodEnd = (project, fallbackNow = today.value.toISOString()) 
 onMounted(() => {
   todayTimer = window.setInterval(() => {
     today.value = new Date()
-  }, 60000) // 每分钟更新一�?
+  }, 60000) // 每分钟更新一次
 })
 
 onUnmounted(() => {
@@ -4602,7 +4612,7 @@ watch(today, () => {
     }
   });
 
-  // 如果当前正在查看活跃项目，同步更新表单中的周期显�?
+  // 如果当前正在查看活跃项目，同步更新表单中的周期显示
   if (isViewMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value)
     if (p && !p.isHistorical) {
@@ -4620,13 +4630,13 @@ watch(today, () => {
   }
 });
 
-// 现有客户列表（由接口获取�?
+// 现有客户列表（由接口获取）
 const existingClients = ref([])
 
-// 客户角色列表（由接口获取�?
+// 客户角色列表（由接口获取）
 const clientRoles = ref([])
 
-// 客户来源列表（由接口获取�?
+// 客户来源列表（由接口获取）
 const clientSources = ref([])
 
 // 子项目内容选项
@@ -4637,7 +4647,7 @@ const subProjectContents = [
   { label: '环境治理', value: '环境治理' }
 ]
 
-// 添加子项�?
+// 添加子项目
 const addSubProject = () => {
   form.subProjects.push({
     id: Date.now(),
@@ -4651,7 +4661,7 @@ const addSubProject = () => {
   })
 }
 
-// 移除子项�?
+// 移除子项目
 const removeSubProject = (index) => {
   form.subProjects.splice(index, 1)
 }
@@ -4673,7 +4683,7 @@ const removeSubProjectCost = (subProject, costIndex) => {
   subProject.costs.splice(costIndex, 1)
 }
 
-// 项目类型列表（由接口获取�?
+// 项目类型列表（由接口获取）
 const projectTypes = ref([])
 const projectScenes = ref([])
 
@@ -4693,8 +4703,8 @@ const suppliers = ref([
 ])
 
 /**
- * 初始化全局配置（带 12 小时本地缓存逻辑�?
- * @param {Boolean} forceRefresh - 是否强制从云端同�?
+ * 初始化全局配置（带 12 小时本地缓存逻辑）
+ * @param {Boolean} forceRefresh - 是否强制从云端同步
  */
 const initGlobalConfigs = async (forceRefresh = false) => {
   const CACHE_KEY = 'APP_GLOBAL_CONFIGS'
@@ -4711,12 +4721,12 @@ const initGlobalConfigs = async (forceRefresh = false) => {
     const lastFetchTime = localStorage.getItem(TIME_KEY)
     const now = Date.now()
 
-    // 1. 检查本地缓存是否有�?(如果不强制刷�?
+    // 1. 检查本地缓存是否有效(如果不强制刷新)
     if (!forceRefresh && cachedData && lastFetchTime && (now - parseInt(lastFetchTime) < EXPIRE_TIME)) {
       const configs = JSON.parse(cachedData)
       console.log('📦 [Local Cache Hit] 从本地存储加载配置数据')
       
-      // 统一去重处理，防止数据库脏数据导致前端显示重�?
+      // 统一去重处理，防止数据库脏数据导致前端显示重复
       const deduplicate = (arr) => {
         if (!Array.isArray(arr)) return []
         const seen = new Set()
@@ -5398,15 +5408,16 @@ const handleInlineStatusChange = async (row, newVal) => {
       
       if (res.code === 0) {
         import('element-plus').then(({ ElMessage }) => {
-          ElMessage.success(`项目�?{row.name}”状态已更新`)
+          ElMessage.success(`项目"${row.name}"状态已更新`)
         })
         
-        // 更新本地行数据中�?statusText �?statusColor 以同步显�?
+        // 更新本地行数据中的 statusText 和 statusColor 以同步显示
         const statusConfig = projectStatuses.value.find(s => s.value === newVal)
         row.statusText = statusConfig ? statusConfig.label : '未知状态'
         row.statusColor = newVal === 'constructing' ? 'bg-primary' : 'bg-secondary'
         
-        // 更新状态以供回溯校�?        row.status = newVal
+        // 更新状态以供回溯校对
+        row.status = newVal
 
         if (row.type === 'long_term' && row.period && row.period[0]) {
           const periodEnd = newVal === 'terminated'
@@ -5530,7 +5541,7 @@ const handleInlineStatusChange = async (row, newVal) => {
 }
 
 /**
- * 表单内修改状�?
+ * 表单内修改状态
  */
 const handleFormStatusChange = (newVal) => {
   if (isEditMode.value && originalProjectStatus.value && newVal !== originalProjectStatus.value) {
@@ -5550,8 +5561,8 @@ const handleFormStatusChange = (newVal) => {
           customClass: 'custom-message-box'
         }
       ).then(() => {
-        // 确认修改，无需额外操作，v-model已更�?
-        // 补录单子编辑时状态从“结账中”改为“已结清�?
+        // 确认修改，无需额外操作，v-model已更新
+        // 补录单子编辑时状态从“结账中”改为“已结清”
         if (form.isHistorical && originalProjectStatus.value === 'settling' && newVal === 'closed') {
           const conEnd = form.constructionPeriod?.[1] ? new Date(form.constructionPeriod[1]) : null;
           if (conEnd && !isNaN(conEnd.getTime())) {
@@ -5566,7 +5577,7 @@ const handleFormStatusChange = (newVal) => {
           }
         }
       }).catch(() => {
-        // 取消修改，回退表单状�?
+        // 取消修改，回退表单状态
         form.status = originalProjectStatus.value
       })
     })
@@ -5606,10 +5617,10 @@ const handleDeleteProject = (project) => {
       })
       
       try {
-        // 1. 删除项目关联的所有凭证（云存储文�?+ 数据库记录）
+        // 1. 删除项目关联的所有凭证（云存储文件 + 数据库记录）
         await deleteVouchersByProject({ projectId: project.id })
         
-        // 2. 删除项目关联的所有合同文�?
+        // 2. 删除项目关联的所有合同文件
         await axios.post(`${apiDomain}/contractPreviewService`, {
           action: 'deleteAllByProject',
           data: { projectId: project.id, type: 'contract' }
@@ -5627,7 +5638,7 @@ const handleDeleteProject = (project) => {
         if (res.code === 0) {
           ElMessage.success('项目已成功删除')
           
-          // 如果删除的是当前选中的项目，重置状�?
+          // 如果删除的是当前选中的项目，重置状态
           if (selectedProjectId.value === project.id) {
             selectedProjectId.value = null
             isViewMode.value = false
@@ -5703,7 +5714,7 @@ const handleViewProject = async (project) => {
   // 标记为非新客户，隐藏提示文案
   isNewClient.value = false
   
-  // 回显成本�?
+  // 回显成本项
   costs.value = project.costs ? project.costs.map(c => ({
     id: Date.now() + Math.random(),
     category: c.category,
@@ -5712,7 +5723,7 @@ const handleViewProject = async (project) => {
     isSettled: c.isSettled !== undefined ? isCostSettled(c.isSettled) : true // 历史数据默认为已结清
   })) : []
   
-  // 回显凭证：先清空，再从接口获取最新凭�?
+  // 回显凭证：先清空，再从接口获取最新凭证
   vouchers.value = []
   try {
     const res = await getVouchers({ projectId: project.id })
@@ -5747,7 +5758,7 @@ const handleViewProject = async (project) => {
     }
   }
 
-  // 回显预览�?
+  // 回显预览图
   previews.value = []
   if (form.isHasPreview === YES_NO_VALUE.YES) {
     try {
@@ -5760,11 +5771,11 @@ const handleViewProject = async (project) => {
         }))
       }
     } catch (err) {
-      console.error('获取预览图列表失�?', err)
+      console.error('获取预览图列表失败', err)
     }
   }
 
-  // 数据加载完成后，重置加载状�?
+  // 数据加载完成后，重置加载状态
   setTimeout(() => {
     isLoadingProject.value = false
   }, 100)
@@ -6020,13 +6031,13 @@ const loadProjects = async () => {
         }
       })
       
-      // 如果有数据，默认选中最新的一�?
+      // 如果有数据，默认选中最新的一项
       if (projects.value.length > 0) {
         if (!selectedProjectId.value) {
           handleViewProject(projects.value[0])
         }
       } else {
-        // 如果项目列表为空，默认进入新建项目模�?
+        // 如果项目列表为空，默认进入新建项目模式
         enterCreateMode()
       }
     }
@@ -6054,7 +6065,7 @@ const resetForm = () => {
     client: '',
     role: '',
     clientSource: '',
-    status: 'negotiating', // 默认洽谈�?
+    status: 'negotiating', // 默认洽谈中
     staffCount: null,
     amount: '',
     receivedAmount: null,
@@ -6079,15 +6090,15 @@ const resetForm = () => {
   }, 100)
 }
 
-// 安全校验：拦截特殊字�?
+// 安全校验：拦截特殊字符
 const isSafeInput = (str) => {
   if (!str) return true;
-  // 拦截常见�?XSS �?SQL 注入字符
+  // 拦截常见的 XSS 和 SQL 注入字符
   const unsafePattern = /[<>{}[\]\\^%`|]/;
   return !unsafePattern.test(str);
 };
 
-// 格式化数�?
+// 格式化数字
 const formatNumber = (num) => {
   return Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
@@ -6130,7 +6141,7 @@ const costAnalysisData = computed(() => {
 
   if (allCosts.length === 0 || totalCost.value === 0) return [];
   
-  // 按类别汇�?
+  // 按类别汇总
   const summary = {};
   allCosts.forEach(item => {
     if (item.category && item.amount) {
@@ -6138,7 +6149,7 @@ const costAnalysisData = computed(() => {
     }
   });
 
-  // 定义颜色映射 (使用英文 Value 作为 Key 以确保匹�?
+  // 定义颜色映射 (使用英文 Value 作为 Key 以确保匹配)
   const colorMap = {
     'real_plant': { color: 'bg-emerald-500/30', hover: 'hover:bg-emerald-500/50' },
     'artificial_plant': { color: 'bg-cyan-500/30', hover: 'hover:bg-cyan-500/50' },
@@ -6164,11 +6175,11 @@ const costAnalysisData = computed(() => {
       percentage: parseFloat(percentage),
       ...(colorMap[key] || { color: 'bg-neutral-500/20', hover: 'hover:bg-neutral-500/40' })
     };
-  }).sort((a, b) => b.percentage - a.percentage); // 按比例降序排�?
+  }).sort((a, b) => b.percentage - a.percentage); // 按比例降序排序
 });
 
 /**
- * 校验表单完整�?
+ * 校验表单完整性
  */
 const validateProjectForm = (checkVouchers = true) => {
   if (!form.name) return '请输入项目名称';
@@ -6178,7 +6189,7 @@ const validateProjectForm = (checkVouchers = true) => {
     if (!form.completionTime) return '请选择交付日期';
     if (new Date(form.completionTime) > new Date()) return '交付日期不能晚于当前时间';
   } else {
-    // 常规项目新建时，禁止选择「已结清」状�?
+    // 常规项目新建时，禁止选择「已结清」状态
     if (isCreating.value && form.status === 'closed') {
       return '常规项目新建时，禁止选择「已结清」状态';
     }
@@ -6515,11 +6526,11 @@ const handleSaveProject = async () => {
         projects.value.unshift(updatedItem)
       }
 
-      // 强制重置编辑状�?
+      // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
       
-      // 异步加载最新列表，不阻�?UI 响应
+      // 异步加载最新列表，不阻塞 UI 响应
       loadProjects()
       
       // 保持当前选中项并回显
@@ -6627,7 +6638,7 @@ const handleContractUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       contracts.value.push(...successfulUploads)
-      // 自动切换状态为“是�?
+      // 自动切换状态为“是”
       form.isHasContract = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 个合同文件`)
@@ -6717,7 +6728,7 @@ const handlePreviewUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       previews.value.push(...successfulUploads)
-      // 自动切换状态为“是�?
+      // 自动切换状态为“是”
       form.isHasPreview = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 张预览图`)
@@ -6951,7 +6962,7 @@ const handleVoucherUpload = async (event) => {
       console.log(`📤 开始上传文件 ${index + 1}/${files.length}:`, file.name)
       
       try {
-        // 检查文件类�?
+        // 检查文件类型
         const validTypes = ['image/jpeg', 'image/png', 'image/gif']
         if (!validTypes.includes(file.type)) {
           import('element-plus').then(({ ElMessage }) => {
@@ -6960,7 +6971,7 @@ const handleVoucherUpload = async (event) => {
           return null
         }
         
-        // 检查原始文件大小（限制�?MB�?
+        // 检查原始文件大小（限制为 5MB）
         if (file.size > 5 * 1024 * 1024) {
           import('element-plus').then(({ ElMessage }) => {
             ElMessage.error('图片过大，请选择小于 5MB 的图片')
