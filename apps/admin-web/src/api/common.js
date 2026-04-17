@@ -3,14 +3,31 @@ import request from '../utils/request';
 /**
  * 客户查询接口
  * 对应腾讯云函数名: queryClients
- * HTTP 访问路径: /queryClients
+ * HTTP 访问路径: /clientsService
  * @param {Object} data - { keyword: string }
  */
 export function queryClients(data) {
   return request({
-    url: '/queryClients',
+    url: '/clientsService',
     method: 'post',
     data
+  });
+}
+
+/**
+ * 创建客户接口
+ * 对应腾讯云函数名: queryClients
+ * HTTP 访问路径: /clientsService
+ * @param {Object} data - { name: string, role: string, roleCode: string, source: string }
+ */
+export function createClient(data) {
+  return request({
+    url: '/clientsService',
+    method: 'post',
+    data: {
+      action: 'createClient',
+      data
+    }
   });
 }
 

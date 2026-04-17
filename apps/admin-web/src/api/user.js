@@ -2,12 +2,12 @@ import request from '../utils/request';
 
 /**
  * 登录接口
- * 对应腾讯云函数名: login
- * HTTP 访问路径: /login
+ * 对应腾讯云函数名: loginService
+ * HTTP 访问路径: /loginService
  */
-export function login(data) {
+export function loginService(data) {
   return request({
-    url: '/login',
+    url: '/loginService',
     method: 'post',
     data
   });
@@ -18,7 +18,7 @@ export function login(data) {
  */
 export function getInfo() {
   return request({
-    url: '/login',
+    url: '/loginService',
     method: 'post',
     data: {
       action: 'getUserInfo',
@@ -33,7 +33,7 @@ export function getInfo() {
  */
 export function updateInfo(data) {
   return request({
-    url: '/login',
+    url: '/loginService',
     method: 'post',
     data: {
       action: 'updateUserInfo',
@@ -48,7 +48,7 @@ export function updateInfo(data) {
  */
 export function uploadAvatar(data) {
   return request({
-    url: '/login',
+    url: '/loginService',
     method: 'post',
     data: {
       action: 'uploadAvatar',

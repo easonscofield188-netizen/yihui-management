@@ -142,17 +142,6 @@
               <div class="dashboard-glass-card rounded-xl p-6 lg:col-span-2 relative overflow-hidden">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                   <h5 class="text-sm font-bold tracking-widest uppercase">对比分析</h5>
-                  <div class="flex bg-surface-container-low p-1 rounded-lg border border-white/5">
-                    <button
-                      v-for="range in dashboardRanges"
-                      :key="`chart-${range.value}`"
-                      class="px-3 py-1 text-[10px] font-medium rounded transition-all"
-                      :class="dashboardRange === range.value ? 'bg-primary/20 text-primary border border-primary/30' : 'text-on-surface-variant hover:text-on-surface'"
-                      @click="dashboardRange = range.value"
-                    >
-                      {{ range.label }}
-                    </button>
-                  </div>
                 </div>
                 <div class="h-64 flex items-end justify-around gap-8 px-8 dashboard-chart-container relative">
                   <div class="absolute inset-0 flex flex-col justify-between pointer-events-none px-6 py-2 opacity-10">
@@ -160,35 +149,47 @@
                   </div>
                   <div
                     v-for="bar in dashboardQuarterBars"
-                    :key="bar.label"
+                    :key="`${dashboardRange}-${bar.label}`"
                     class="flex-1 flex flex-col items-center group relative z-10"
+                    @mouseenter="dashboardHoveredBar = bar"
+                    @mouseleave="dashboardHoveredBar = null"
                   >
                     <div class="dashboard-bar-3d w-12" :style="{ height: `${bar.height}px` }">
                       <div class="dashboard-bar-face dashboard-bar-front h-full" />
                       <div class="dashboard-bar-face dashboard-bar-back h-full" />
                       <div class="dashboard-bar-face dashboard-bar-right h-full" />
                       <div class="dashboard-bar-face dashboard-bar-top" />
-                      <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-black text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-black text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap shadow-[0_8px_18px_rgba(82,238,138,0.18)]">
                         {{ bar.amountText }}
                       </div>
+                    </div>
+                    <div
+                      v-if="dashboardHoveredBar?.label === bar.label"
+                      class="dashboard-bar-tooltip"
+                    >
+                      <div class="text-[10px] text-on-surface-variant mb-1">{{ bar.label }}</div>
+                      <div class="text-sm font-bold text-primary">{{ bar.amountText }}</div>
+                      <div class="text-[10px] text-neutral-500 mt-1">订单 {{ bar.orderCount }} </div>
                     </div>
                     <span class="text-[10px] mt-8 font-medium" :class="bar.active ? 'text-primary font-bold' : 'text-on-surface-variant'">{{ bar.label }}</span>
                   </div>
                 </div>
                 <div class="absolute bottom-4 left-6 flex items-center gap-4 text-[8px] text-on-surface-variant uppercase tracking-tighter opacity-60">
-                  <div class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-primary" /> 营收额</div>
+                  <div class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-primary" /> 营收</div>
                 </div>
               </div>
 
               <div class="dashboard-glass-card rounded-xl p-6">
                 <h5 class="text-sm font-bold tracking-widest uppercase mb-8">订单金额分布</h5>
                 <div class="flex items-center justify-center relative h-64 dashboard-chart-container">
-                  <div class="relative w-64 h-64 flex items-center justify-center">
+                  <div class="dashboard-scene-chart relative w-64 h-64 flex items-center justify-center">
                     <div class="absolute w-52 h-52 rounded-full bg-primary/5 blur-2xl animate-pulse" />
-                    <svg class="w-52 h-52 -rotate-90 filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.5)]" viewBox="0 0 100 100">
+                    <svg class="dashboard-scene-svg w-52 h-52 -rotate-90 filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.5)]" viewBox="0 0 100 100">
                       <circle
                         v-for="segment in dashboardSceneSegments"
                         :key="segment.label"
+                        class="dashboard-scene-segment"
+                        :class="{ 'is-active': dashboardActiveScene?.label === segment.label }"
                         cx="50"
                         cy="50"
                         fill="transparent"
@@ -197,27 +198,53 @@
                         :stroke-dasharray="`${segment.length} 263.8`"
                         :stroke-dashoffset="segment.offset"
                         stroke-linecap="round"
-                        stroke-width="10"
-                        class="opacity-90"
-                        :style="{ filter: `drop-shadow(0 0 12px ${segment.shadow})` }"
+                        :stroke-width="dashboardActiveScene?.label === segment.label ? 14 : 10"
+                        :style="{ filter: `drop-shadow(0 0 ${dashboardActiveScene?.label === segment.label ? 18 : 12}px ${segment.shadow})` }"
+                        @mouseenter="handleDashboardSceneEnter($event, segment)"
+                        @mousemove="handleDashboardSceneMove($event)"
+                        @mouseleave="handleDashboardSceneLeave"
                       />
                       <circle cx="50" cy="50" fill="transparent" r="37" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
                     </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div class="w-28 h-28 rounded-full bg-neutral-900/90 backdrop-blur-xl border border-white/10 flex flex-col items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.8),inset_0_2px_5px_rgba(255,255,255,0.1)]">
-                        <p class="text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">业务占比</p>
-                        <p class="text-3xl font-black text-white">100%</p>
+                        <p class="text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">{{ dashboardActiveScene?.label || '业务占比' }}</p>
+                        <p class="text-lg font-black text-white">{{ dashboardActiveScene?.amountText || dashboardMoney(dashboardMetrics.totalAmount) }}</p>
+                        <p class="text-xs font-bold text-primary">{{ dashboardActiveScene ? `${dashboardActiveScene.percent}%` : '100%' }}</p>
                       </div>
+                    </div>
+                    <div
+                      v-if="dashboardActiveScene && dashboardSceneTooltip.visible"
+                      class="dashboard-scene-tooltip"
+                      :style="{
+                        left: `${dashboardSceneTooltip.x}px`,
+                        top: `${dashboardSceneTooltip.y}px`
+                      }"
+                    >
+                      <div class="dashboard-scene-tooltip-title">{{ dashboardActiveScene.label }}</div>
+                      <div class="dashboard-scene-tooltip-amount">{{ dashboardActiveScene.amountText }}</div>
+                      <div class="dashboard-scene-tooltip-meta">
+                        占比 {{ dashboardActiveScene.percent }}% / 订单 {{ dashboardActiveScene.orderCount }} �?                      </div>
                     </div>
                   </div>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-y-3">
-                  <div v-for="segment in dashboardSceneSegments" :key="`legend-${segment.label}`" class="flex justify-between items-center text-xs px-2">
+                  <div
+                    v-for="segment in dashboardSceneSegments"
+                    :key="`legend-${segment.label}`"
+                    class="dashboard-scene-legend flex justify-between items-center text-xs px-2 py-1"
+                    :class="{ 'is-active': dashboardActiveScene?.label === segment.label }"
+                    @mouseenter="dashboardHoveredScene = segment.label"
+                    @mouseleave="dashboardHoveredScene = ''"
+                  >
                     <div class="flex items-center gap-2">
                       <div class="w-2.5 h-2.5 rounded-sm" :style="{ backgroundColor: segment.color }" />
                       <span class="text-on-surface-variant">{{ segment.label }}</span>
                     </div>
-                    <span class="font-mono opacity-80">{{ segment.percent }}%</span>
+                    <div class="text-right">
+                      <div class="font-mono opacity-90">{{ segment.amountText }}</div>
+                      <div class="font-mono opacity-60">{{ segment.percent }}%</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -225,11 +252,62 @@
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <div class="dashboard-glass-card rounded-xl p-6">
-                <h5 class="text-sm font-bold tracking-widest uppercase mb-8">利润走势图</h5>
-                <div class="h-64 relative overflow-hidden">
+                <h5 class="text-sm font-bold tracking-widest uppercase mb-8">利润走势</h5>
+                <div class="h-64 relative overflow-visible dashboard-profit-chart">
                   <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                    <path :d="dashboardProfitAreaPath" fill="url(#dashboard-gradient-green)" opacity="0.12" />
-                    <path :d="dashboardProfitLinePath" fill="none" stroke="#52ee8a" stroke-width="2" />
+                    <g class="dashboard-profit-grid">
+                      <line v-for="line in 5" :key="line" x1="0" x2="100" :y1="line * 18" :y2="line * 18" />
+                    </g>
+                    <path :d="dashboardProfitAreaPath" fill="url(#dashboard-gradient-green)" opacity="0.16" />
+                    <path
+                      :key="`${dashboardRange}-profit-line-glow`"
+                      :d="dashboardProfitLinePath"
+                      class="dashboard-profit-line"
+                      fill="none"
+                      pathLength="1"
+                      stroke="rgba(82,238,138,0.16)"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.8"
+                    />
+                    <path
+                      :key="`${dashboardRange}-profit-line-main`"
+                      :d="dashboardProfitLinePath"
+                      class="dashboard-profit-line"
+                      fill="none"
+                      pathLength="1"
+                      stroke="#52ee8a"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="0.7"
+                    />
+                    <g v-for="point in dashboardProfitPoints" :key="point.label">
+                      <line
+                        v-if="dashboardHoveredProfitPoint?.label === point.label"
+                        :x1="point.x"
+                        :x2="point.x"
+                        y1="8"
+                        y2="92"
+                        class="dashboard-profit-guide"
+                      />
+                      <circle
+                        :cx="point.x"
+                        :cy="point.y"
+                        class="dashboard-profit-hit"
+                        r="8"
+                        @mouseenter="dashboardHoveredProfitPoint = point"
+                        @mouseleave="dashboardHoveredProfitPoint = null"
+                      />
+                      <circle
+                        :cx="point.x"
+                        :cy="point.y"
+                        :class="{ 'is-active': dashboardHoveredProfitPoint?.label === point.label }"
+                        class="dashboard-profit-point"
+                        r="1.2"
+                        @mouseenter="dashboardHoveredProfitPoint = point"
+                        @mouseleave="dashboardHoveredProfitPoint = null"
+                      />
+                    </g>
                     <defs>
                       <linearGradient id="dashboard-gradient-green" x1="0%" x2="0%" y1="0%" y2="100%">
                         <stop offset="0%" style="stop-color:#52ee8a;stop-opacity:1" />
@@ -237,11 +315,27 @@
                       </linearGradient>
                     </defs>
                   </svg>
+                  <div
+                    v-if="dashboardHoveredProfitPoint"
+                    class="dashboard-profit-tooltip"
+                    :style="{
+                      left: `${Math.min(84, Math.max(16, dashboardHoveredProfitPoint.x))}%`,
+                      top: `${Math.min(82, Math.max(18, dashboardHoveredProfitPoint.y))}%`
+                    }"
+                  >
+                    <div class="text-[10px] text-on-surface-variant mb-1">{{ dashboardHoveredProfitPoint.label }}</div>
+                    <div class="text-sm font-bold text-primary">{{ dashboardHoveredProfitPoint.amountText }}</div>
+                    <div class="text-[10px] text-neutral-500 mt-1">项目 {{ dashboardHoveredProfitPoint.orderCount }} </div>
+                  </div>
                 </div>
                 <div class="flex justify-between mt-4">
-                  <span class="text-[10px] text-neutral-500">1月</span>
-                  <span class="text-[10px] text-neutral-500">6月</span>
-                  <span class="text-[10px] text-neutral-500">12月</span>
+                  <span
+                    v-for="label in dashboardProfitLabels"
+                    :key="label"
+                    class="text-[10px] text-neutral-500"
+                  >
+                    {{ label }}
+                  </span>
                 </div>
               </div>
 
@@ -255,10 +349,10 @@
                     <thead class="text-xs text-on-surface-variant border-b border-white/5">
                       <tr>
                         <th class="pb-3 font-medium">项目名称</th>
-                        <th class="pb-3 font-medium">所属客户</th>
+                        <th class="pb-3 font-medium">所属客</th>
                         <th class="pb-3 font-medium">签订日期</th>
                         <th class="pb-3 font-medium text-right">订单金额</th>
-                        <th class="pb-3 font-medium text-center">状态</th>
+                        <th class="pb-3 font-medium text-center">状</th>
                       </tr>
                     </thead>
                     <tbody class="text-sm">
@@ -290,12 +384,11 @@
                   操作日志
                 </h2>
                 <p class="text-on-surface-variant/80 max-w-3xl text-sm leading-6">
-                  监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更。
-                </p>
+                  监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更�?                </p>
               </div>
               <div class="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit">
                 <span class="material-symbols-outlined text-sm">verified_user</span>
-                <span class="text-xs">实时监控已开启</span>
+                <span class="text-xs">实时监控已开</span>
               </div>
             </header>
 
@@ -306,7 +399,7 @@
                   v-model="operationLogFilters.user"
                   class="operation-log-control"
                 >
-                  <option value="">所有用户</option>
+                  <option value="">所有用</option>
                   <option
                     v-for="user in operationLogUsers"
                     :key="user"
@@ -325,7 +418,7 @@
                     class="operation-log-control"
                     type="date"
                   >
-                  <span class="text-on-surface-variant/40 text-xs text-center">至</span>
+                  <span class="text-on-surface-variant/40 text-xs text-center"></span>
                   <input
                     v-model="operationLogFilters.endDate"
                     class="operation-log-control"
@@ -335,7 +428,7 @@
               </div>
 
               <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
-                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">所属模块</label>
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">所属模</label>
                 <select
                   v-model="operationLogFilters.module"
                   class="operation-log-control"
@@ -358,10 +451,10 @@
                   <thead>
                     <tr class="bg-surface-container-high/50 border-b border-white/5">
                       <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作时间</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作人</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">所属模块</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">所属模</th>
                       <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作内容</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">状态</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">状</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-white/5">
@@ -412,8 +505,7 @@
                         colspan="5"
                         class="px-6 py-12 text-center text-sm text-on-surface-variant"
                       >
-                        暂无符合条件的操作日志
-                      </td>
+                        暂无符合条件的操作日�?                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -421,8 +513,7 @@
 
               <div class="bg-surface-container-high/30 px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-t border-white/5">
                 <span class="text-xs text-on-surface-variant/60">
-                  显示 {{ operationLogPageStart }} 到 {{ operationLogPageEnd }} 项，共 {{ filteredOperationLogs.length }} 项
-                </span>
+                  显示 {{ operationLogPageStart }} �?{{ operationLogPageEnd }} 项，�?{{ filteredOperationLogs.length }} �?                </span>
                 <div class="flex items-center gap-2">
                   <button
                     class="operation-log-page-btn"
@@ -544,14 +635,14 @@
                 :class="projectFilters.tab === 'ongoing' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
                 @click="projectFilters.tab = 'ongoing'; currentPage = 1"
               >
-                进行中
+                进行�?
               </button>
               <button 
                 class="px-3 py-1.5 text-[10px] rounded-md transition-all uppercase tracking-wider"
                 :class="projectFilters.tab === 'completed' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
                 @click="projectFilters.tab = 'completed'; currentPage = 1"
               >
-                已交付
+                已交�?
               </button>
             </div>
           </div>
@@ -571,7 +662,7 @@
                 >
               </div>
               
-              <!-- 类别筛选 -->
+              <!-- 类别筛�?-->
               <div class="col-span-2 relative custom-dropdown-trigger">
                 <div
                   class="relative cursor-pointer"
@@ -623,7 +714,7 @@
                 </div>
               </div>
 
-              <!-- 状态筛选 -->
+              <!-- 状态筛�?-->
               <div class="col-span-2 relative custom-dropdown-trigger">
                 <div
                   class="relative cursor-pointer"
@@ -649,13 +740,13 @@
                   >
                     <div class="py-1">
                       <div class="px-3 py-2 text-xs text-on-surface-variant/60 font-bold border-b border-white/5 mb-1">
-                        项目状态
+                        项目状�?
                       </div>
                       <div 
                         class="px-3 py-2 text-xs text-on-surface-variant hover:bg-white/5 cursor-pointer flex justify-between items-center"
                         @click.stop="selectFilter('status', '')"
                       >
-                        <span>全部状态</span>
+                        <span>全部状</span>
                       </div>
                       <div 
                         v-for="item in projectStatuses" 
@@ -905,7 +996,7 @@
                     <span
                       v-else
                       class="text-[10px] text-on-surface-variant/40 italic"
-                    >新建中...</span>
+                    >新建�?..</span>
                   </div>
                 </template>
               </el-table-column>
@@ -928,7 +1019,7 @@
               class="px-6 py-4 border-t border-white/5 flex items-center justify-between"
             >
               <div class="text-xs text-on-surface-variant">
-                显示第 <span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> 到 <span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, totalProjectsCount) }}</span> 条，共 <span class="font-bold text-on-surface">{{ totalProjectsCount }}</span> 条记录
+                显示�?<span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> �?<span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, totalProjectsCount) }}</span> 条，�?<span class="font-bold text-on-surface">{{ totalProjectsCount }}</span> 条记�?
               </div>
               <nav
                 aria-label="Pagination"
@@ -942,7 +1033,7 @@
                   <el-icon class="text-sm mr-1">
                     <ArrowLeft />
                   </el-icon>
-                  上一页
+                  上一�?
                 </button>
                 
                 <template
@@ -974,7 +1065,7 @@
                   class="relative inline-flex items-center rounded-r-md px-3 py-2 text-xs font-medium text-on-surface-variant ring-1 ring-inset ring-white/5 hover:bg-white/5 focus:z-20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   @click="currentPage < totalPages && currentPage++"
                 >
-                  下一页
+                  下一�?
                   <el-icon class="text-sm ml-1">
                     <ArrowRight />
                   </el-icon>
@@ -1053,7 +1144,7 @@
                     <el-button
                       size="small"
                       class="!rounded-full !px-6 !bg-neutral-800 !border-white/10 !text-on-surface-variant hover:!bg-neutral-700 hover:!text-white transition-all duration-300"
-                      @click="cancelEdit"
+                      @click="handleAbandonEdit"
                     >
                       放弃
                     </el-button>
@@ -1110,10 +1201,10 @@
 
                   <!-- Project Status -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状</label>
                     <el-select 
                       v-model="form.status" 
-                      placeholder="请选择项目状态" 
+                      placeholder="请选择项目状态"
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
                       :disabled="isViewMode || isFieldReadOnly('status') || (isCreating && form.type === 'long_term')"
@@ -1153,7 +1244,7 @@
                     v-if="isCreating && form.type !== 'historical'"
                     class="space-y-2"
                   >
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日</label>
                     <el-date-picker
                       v-model="form.startDate"
                       type="date"
@@ -1193,7 +1284,7 @@
                       <span
                         v-if="projectDays > 0"
                         class="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20"
-                      >共 {{ projectDays }} 天</span>
+                      >�?{{ projectDays }} </span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
@@ -1206,7 +1297,7 @@
                         :disabled="form.type === 'long_term' || isHistoricalPeriodDisabled || isFieldReadOnly('period')"
                         :disabled-date="disabledHistoricalProjectDate"
                       />
-                      <span class="text-on-surface-variant/40">至</span>
+                      <span class="text-on-surface-variant/40"></span>
                       <el-date-picker
                         v-model="form.period[1]"
                         type="date"
@@ -1230,20 +1321,20 @@
                       <span
                         v-if="constructionDays > 0"
                         class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
-                      >共 {{ constructionDays }} 天</span>
+                      >�?{{ constructionDays }} </span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
                         v-model="form.constructionPeriod[0]"
                         type="date"
-                        placeholder="开始施工"
+                        placeholder="开始施工日期"
                         class="!w-full custom-date-picker"
                         format="YYYY-MM-DD"
                         value-format="YYYY-MM-DD"
                         :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('constructionPeriod')"
                         :disabled-date="disabledHistoricalConstructionDate"
                       />
-                      <span class="text-on-surface-variant/40">至</span>
+                      <span class="text-on-surface-variant/40"></span>
                       <el-date-picker
                         v-model="form.constructionPeriod[1]"
                         type="date"
@@ -1268,7 +1359,7 @@
                       <span
                         v-if="collectionDays > 0"
                         class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
-                      >共 {{ collectionDays }} 天</span>
+                      >�?{{ collectionDays }} </span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
@@ -1281,7 +1372,7 @@
                         :disabled="isHistoricalPeriodDisabled || isFieldReadOnly('collectionPeriod')"
                         :disabled-date="disabledHistoricalCollectionDate"
                       />
-                      <span class="text-on-surface-variant/40">至</span>
+                      <span class="text-on-surface-variant/40"></span>
                       <el-date-picker
                         v-model="form.collectionPeriod[1]"
                         type="date"
@@ -1419,7 +1510,7 @@
 
                   <!-- Has Contract -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合</label>
                     <el-select 
                       v-model="form.isHasContract" 
                       placeholder="请选择" 
@@ -1464,7 +1555,7 @@
                     v-if="form.type !== 'long_term'"
                     class="space-y-2"
                   >
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭证</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭</label>
                     <el-select 
                       v-model="form.isHasVoucher" 
                       placeholder="请选择" 
@@ -1490,7 +1581,7 @@
                       v-model="form.desc" 
                       type="textarea" 
                       :rows="4" 
-                      placeholder="在此详细说明园林项目的设计要求与技术难点..."
+                      placeholder="在此详细说明园林项目的设计要求与技术难�?.."
                       class="custom-textarea"
                       :disabled="isViewMode || isFieldReadOnly('desc')"
                     />
@@ -1534,7 +1625,7 @@
 
                 <!-- Payable Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付总账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付总账�?(¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(payableAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1542,7 +1633,7 @@
 
                 <!-- Paid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付总账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付总账�?(¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-success/80 cursor-not-allowed">
                     {{ Number(paidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1550,7 +1641,7 @@
 
                 <!-- Unpaid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付总账款 (¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付总账�?(¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
                     {{ Number(unpaidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1608,7 +1699,7 @@
                             类目
                           </th>
                           <th class="px-4 py-2 font-medium w-[25%]">
-                            供应商
+                            供应�?
                           </th>
                           <th class="px-4 py-2 font-medium w-[20%] text-center">
                             成本金额 (¥)
@@ -1647,7 +1738,7 @@
                           <td class="px-4 py-4">
                             <el-select 
                               v-model="item.supplier" 
-                              placeholder="请选择供应商" 
+                              placeholder="请选择供应商"
                               class="w-full custom-select-small supplier-select"
                               popper-class="custom-dropdown"
                               :disabled="isViewMode || isFieldReadOnly('costs')"
@@ -1713,7 +1804,7 @@
                   >
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-                        单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多选)
+                        单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多�?
                       </h4>
                       <label 
                         v-if="!isViewMode && !isFieldReadOnly('vouchers')"
@@ -1746,7 +1837,7 @@
                     >
 
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <!-- 已上传图片展示 -->
+                      <!-- 已上传图片展�?-->
                       <div 
                         v-for="(v, idx) in vouchers" 
                         :key="v.fileId || v.id || idx"
@@ -1878,7 +1969,7 @@
                         {{ uploadingContract ? '正在上传...' : '点击上传项目合同' }}
                       </p>
                       <p class="text-xs text-on-surface-variant mt-2 opacity-60">
-                        支持 JPG, PNG, PDF 格式，请上传清晰的扫描件或照片
+                        支持 JPG, PNG, PDF 格式，请上传清晰的扫描件或照�?
                       </p>
                     </div>
                   </label>
@@ -1970,7 +2061,7 @@
               >
                 <h3 class="text-lg font-bold flex items-center gap-2">
                   <span class="w-1.5 h-6 bg-rose-500 rounded-full" />
-                  <span>项目预览图管理</span>
+                  <span>项目预览图管</span>
                   <el-icon 
                     class="text-on-surface-variant transition-transform duration-300 ml-1"
                     :class="{ 'rotate-180': !isPreviewInfoCollapsed }"
@@ -2011,7 +2102,7 @@
                         {{ uploadingPreview ? '正在上传...' : '点击上传方案预览图' }}
                       </p>
                       <p class="text-xs text-on-surface-variant mt-2 opacity-60">
-                        支持 JPG, PNG 格式，最多上传 4 张图片
+                        支持 JPG, PNG 格式，最多上�?4 张图�?
                       </p>
                     </div>
                   </label>
@@ -2078,7 +2169,7 @@
               </el-collapse-transition>
             </section>
 
-            <!-- 子项目管理 (长期项目专用) -->
+            <!-- 子项目管�?(长期项目专用) -->
             <section 
               v-if="form.type === 'long_term'" 
               class="bg-surface-container-low rounded-2xl p-6 md:p-8 border-t-2 border-emerald-500/20 shadow-2xl"
@@ -2087,13 +2178,13 @@
                 <div>
                   <h2 class="text-2xl font-bold text-on-surface flex items-center gap-3">
                     <span class="material-symbols-outlined text-emerald-500 text-3xl">account_tree</span>
-                    子项目管理
+                    子项目管�?
                   </h2>
-                  <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任务</p>
+                  <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任</p>
                 </div>
               </div>
 
-              <!-- 子项目折叠面板容器 -->
+              <!-- 子项目折叠面板容�?-->
               <div class="space-y-4 mb-8">
                 <div 
                   v-for="(sp, index) in form.subProjects" 
@@ -2124,7 +2215,7 @@
                         </div>
                       </div>
                       <div>
-                        <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">开始日期</div>
+                        <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">开始日</div>
                         <div class="text-sm font-medium text-on-surface">{{ sp.startDate || '-' }}</div>
                       </div>
                       <div>
@@ -2171,7 +2262,7 @@
                           </el-select>
                         </div>
                         <div class="space-y-2">
-                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
+                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日</label>
                           <el-date-picker
                             v-model="sp.startDate"
                             type="date"
@@ -2193,7 +2284,7 @@
                           />
                         </div>
                         <div class="space-y-2">
-                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭证</label>
+                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭</label>
                           <el-select 
                             v-model="sp.isHasVoucher" 
                             placeholder="请选择" 
@@ -2215,7 +2306,7 @@
                             :class="index % 2 === 0 ? 'text-emerald-400' : 'text-cyan-400'"
                           >
                             <span class="material-symbols-outlined text-sm">receipt_long</span>
-                            成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
+                            成本支出明细 (子项�?#{{ String(index + 1).padStart(2, '0') }})
                           </span>
                           <button 
                             v-if="!isViewMode && !isLongTermTerminated"
@@ -2231,7 +2322,7 @@
                             <thead class="text-on-surface-variant uppercase tracking-widest">
                               <tr>
                                 <th class="px-4 py-2 font-medium w-[25%]">类目</th>
-                                <th class="px-4 py-2 font-medium w-[25%]">供应商</th>
+                                <th class="px-4 py-2 font-medium w-[25%]">供应</th>
                                 <th class="px-4 py-2 font-medium w-[20%] text-center">支出金额 (¥)</th>
                                 <th class="px-4 py-2 font-medium w-[20%] text-center">是否结清</th>
                                 <th v-if="!isViewMode" class="px-4 py-2 font-medium text-right w-[10%]">操作</th>
@@ -2258,7 +2349,7 @@
                                 <td class="px-4 py-3">
                                   <el-select 
                                     v-model="cost.supplier" 
-                                    placeholder="供应商" 
+                                    placeholder="供应商"
                                     class="w-full custom-select-small"
                                     popper-class="custom-dropdown"
                                     :disabled="isViewMode || isLongTermTerminated"
@@ -2313,14 +2404,14 @@
                         </div>
                       </div>
 
-                      <!-- 子项目凭证上传区域 -->
+                      <!-- 子项目凭证上传区�?-->
                       <div 
                         v-if="sp.isHasVoucher === YES_NO_VALUE.YES"
                         class="mb-10 space-y-4"
                       >
                         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">发票凭证上传</label>
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                          <!-- 已上传凭证预览 -->
+                          <!-- 已上传凭证预�?-->
                           <div 
                             v-for="(v, vIdx) in sp.vouchers" 
                             :key="v.id || vIdx"
@@ -2362,7 +2453,7 @@
                             <el-icon v-if="!sp.uploading" class="text-2xl text-on-surface-variant group-hover:text-primary transition-colors"><Plus /></el-icon>
                             <el-icon v-else class="text-2xl text-primary animate-spin"><Refresh /></el-icon>
                             <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest group-hover:text-primary transition-colors">
-                              {{ sp.uploading ? '上传中...' : '上传凭证' }}
+                              {{ sp.uploading ? '上传�?..' : '上传凭证' }}
                             </span>
                             <input 
                               :ref="`subVoucherInput_${index}`"
@@ -2374,21 +2465,21 @@
                             >
                           </div>
                         </div>
-                        <p class="text-[10px] text-on-surface-variant/60 italic px-1">支持 JPG、PNG、GIF 格式，单张不超过 5MB，最多上传 10 张</p>
+                        <p class="text-[10px] text-on-surface-variant/60 italic px-1">支持 JPG、PNG、GIF 格式，单张不超过 5MB，最多上�?10 </p>
                       </div>
                     </div>
                   </el-collapse-transition>
                 </div>
               </div>
 
-              <!-- 添加子项目虚线按钮 -->
+              <!-- 添加子项目虚线按�?-->
               <button 
                 v-if="!isViewMode && !isLongTermTerminated"
                 class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
                 @click="addSubProject"
               >
                 <el-icon class="text-lg group-hover:scale-110 transition-transform"><Plus /></el-icon>
-                <span class="text-sm font-bold tracking-widest uppercase">添加子项目</span>
+                <span class="text-sm font-bold tracking-widest uppercase">添加子项</span>
               </button>
             </section>
           </div>
@@ -2455,7 +2546,7 @@
                   <div class="flex justify-between items-start mb-2">
                     <div>
                       <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                        未付账款 (总成本 - 已付)
+                        未付账款 (总成�?- 已付)
                       </p>
                       <p class="text-2xl font-mono font-black text-rose-500">
                         ¥ {{ formatNumber(unpaidAmount) }}
@@ -2476,15 +2567,15 @@
 
                 <div class="pt-6 border-t border-white/5 space-y-2 text-xs">
                   <div class="flex justify-between">
-                    <span class="text-on-surface-variant">总预算收入</span>
+                    <span class="text-on-surface-variant">总预算收</span>
                     <span class="text-on-surface font-mono">¥ {{ formatNumber(totalIncome) }}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-on-surface-variant">已核算成本</span>
+                    <span class="text-on-surface-variant">已核算成</span>
                     <span class="text-red-400/80 font-mono">- ¥ {{ formatNumber(totalCost) }}</span>
                   </div>
                   <div class="flex justify-between font-bold">
-                    <span class="text-on-surface-variant">预估净得</span>
+                    <span class="text-on-surface-variant">预估净</span>
                     <span class="text-primary font-mono">¥ {{ formatNumber(estimatedProfit) }}</span>
                   </div>
                 </div>
@@ -2566,7 +2657,7 @@
                   方案预览
                 </p>
                 <h4 class="text-sm font-bold text-on-surface-variant/60">
-                  等待上传设计图
+                  等待上传设计�?
                 </h4>
               </div>
             </div>
@@ -2634,6 +2725,29 @@
             @click="handleAbandonCreate"
           >
             放弃创建
+          </el-button>
+        </div>
+
+        <div
+          v-if="isEditMode"
+          class="flex justify-end gap-4 pt-4 pb-12"
+        >
+          <el-button
+            type="primary"
+            size="large"
+            class="!px-10 !font-bold !text-black shadow-xl hover:brightness-110"
+            :loading="savingProject"
+            @click="confirmSaveUpdate"
+          >
+            确认保存
+          </el-button>
+          <el-button
+            type="info"
+            size="large"
+            class="!px-10 !bg-neutral-800 !text-on-surface-variant !border-white/10 !font-bold shadow-xl hover:!bg-neutral-700 hover:!text-white"
+            @click="handleAbandonEdit"
+          >
+            放弃修改
           </el-button>
         </div>
         </template>
@@ -2711,15 +2825,14 @@
                     角色权限矩阵
                   </h3>
                   <div class="text-[10px] text-zinc-500 italic">
-                    自动保存已开启
-                  </div>
+                    自动保存已开�?                  </div>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full text-left border-separate border-spacing-y-2">
                     <thead>
                       <tr class="text-[10px] uppercase tracking-widest text-zinc-500 border-b border-zinc-800">
                         <th class="pb-4 font-medium pl-4">
-                          权限项 \ 角色
+                          权限�?\ 角色
                         </th>
                         <th
                           v-for="role in settingRoles"
@@ -2877,7 +2990,7 @@
     >
       <div class="space-y-5">
         <div class="space-y-2">
-          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">中文名</label>
+          <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">中文</label>
           <el-input
             v-model="configDialog.form.label"
             class="custom-input"
@@ -2960,7 +3073,7 @@
               上传头像
             </el-button>
             <p class="text-[10px] text-zinc-500">
-              支持 JPG、PNG、WebP，最大 2MB
+              支持 JPG、PNG、WebP，最�?2MB
             </p>
           </div>
         </div>
@@ -3007,7 +3120,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, createClient, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { getInfo, updateInfo, uploadAvatar } from '../api/user'
@@ -3062,7 +3175,7 @@ const isCostSettled = (value) => {
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
 const isLoadingProject = ref(false)
 
-// 基础项目信息折叠状态
+// 基础项目信息折叠状�?
 const avatarInputRef = ref(null)
 const currentUser = reactive({
   id: '',
@@ -3153,19 +3266,31 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
+const compressAvatarFile = (file) => new Promise((resolve, reject) => {
+  new Compressor(file, {
+    quality: 0.72,
+    maxWidth: 512,
+    maxHeight: 512,
+    mimeType: 'image/jpeg',
+    convertSize: 0,
+    success: resolve,
+    error: reject
+  })
+})
+
 const handleAvatarChange = async (event) => {
   const file = event.target.files?.[0]
   if (!file) return
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('头像仅支持 JPG、PNG、WebP')
+      ElMessage.warning('头像仅支�?JPG、PNG、WebP')
     })
     event.target.value = ''
     return
   }
-  if (file.size > 2 * 1024 * 1024) {
+  if (file.size > 8 * 1024 * 1024) {
     import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('头像大小不能超过 2MB')
+      ElMessage.warning('头像原图大小不能超过 8MB')
     })
     event.target.value = ''
     return
@@ -3173,11 +3298,15 @@ const handleAvatarChange = async (event) => {
 
   userDialog.uploading = true
   try {
-    const fileData = await readFileAsDataUrl(file)
+    const compressedFile = await compressAvatarFile(file)
+    if (compressedFile.size > 600 * 1024) {
+      throw new Error('头像压缩后仍过大，请选择更小的图片')
+    }
+    const fileData = await readFileAsDataUrl(compressedFile)
     const res = await uploadAvatar({
       file: fileData,
-      fileName: file.name,
-      fileType: file.type
+      fileName: 'avatar.jpg',
+      fileType: compressedFile.type || 'image/jpeg'
     })
     if (res.code !== 0) {
       throw new Error(res.message || '头像上传失败')
@@ -3228,13 +3357,13 @@ const handleUpdateUser = async () => {
 
 const isBasicInfoCollapsed = ref(false)
 
-// 成本支出管理折叠状态
+// 成本支出管理折叠状�?
 const isCostInfoCollapsed = ref(false)
 
-// 合同管理折叠状态
+// 合同管理折叠状�?
 const isContractInfoCollapsed = ref(false)
 
-// 预览图管理折叠状态
+// 预览图管理折叠状�?
 const isPreviewInfoCollapsed = ref(false)
 
 // 悬浮回到顶部按钮逻辑
@@ -3268,7 +3397,7 @@ const stopDrag = () => {
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
   
-  // 边界检查
+  // 边界检�?
   const margin = 20
   const btnSize = 48
   floatBtnPos.value.x = Math.max(margin, Math.min(window.innerWidth - btnSize - margin, floatBtnPos.value.x))
@@ -3276,11 +3405,11 @@ const stopDrag = () => {
 }
 
 const scrollToTop = () => {
-  if (hasMoved.value) return // 如果是拖拽则不触发点击
+  if (hasMoved.value) return // 如果是拖拽则不触发点�?
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 监听窗口大小变化，防止按钮跑出屏幕
+// 监听窗口大小变化，防止按钮跑出屏�?
 const handleResize = () => {
   const margin = 20
   const btnSize = 48
@@ -3297,24 +3426,27 @@ onUnmounted(() => {
 })
 
 const router = useRouter()
+const DEFAULT_SESSION_TIMEOUT_MINUTES = 30
+const MIN_SESSION_TIMEOUT_MINUTES = 1
+const sessionTimeoutMinutes = ref(DEFAULT_SESSION_TIMEOUT_MINUTES)
+let sessionLogoutTimer = null
+const sessionActivityEvents = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart']
 
-// 侧边栏菜单配置
-const activeMenu = ref('projects')
+// 侧边栏菜单配�?
+const activeMenu = ref('dashboard')
 const menuItems = ref([
-  { name: 'dashboard', label: '数据总览', icon: markRaw(DataBoard), active: false },
-  { name: 'projects', label: '项目管理', icon: markRaw(Management), active: true },
+  { name: 'dashboard', label: '数据总览', icon: markRaw(DataBoard), active: true },
+  { name: 'projects', label: '项目管理', icon: markRaw(Management), active: false },
   { name: 'clients', label: '客户管理', icon: markRaw(User), active: false },
-  { name: 'suppliers', label: '供应商管理', icon: markRaw(Briefcase), active: false },
+    { name: 'suppliers', label: '供应商管理', icon: markRaw(Briefcase), active: false },
   { name: 'materials', label: '材料管理', icon: markRaw(Box), active: false },
   { name: 'settings', label: '系统设置', icon: markRaw(Setting), active: false },
 ])
 
 /**
- * 切换侧边栏菜单
- * @param {string} menuName 菜单名称
+ * 切换侧边栏菜�? * @param {string} menuName 菜单名称
  * @returns {void}
- * @throws {Error} 无
- */
+ * @throws {Error} �? */
 menuItems.value.splice(2, 0, { name: 'logs', label: '操作日志', icon: markRaw(View), active: false })
 
 const handleMenuClick = (menuName) => {
@@ -3330,12 +3462,61 @@ const handleMenuClick = (menuName) => {
     })
     return
   }
-  if (!['dashboard', 'projects', 'logs', 'settings'].includes(menuName)) return;
+  if (!['dashboard', 'projects', 'logs', 'settings'].includes(menuName)) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.info('功能待开发，敬请期待')
+    })
+    return
+  }
   activeMenu.value = menuName;
   menuItems.value = menuItems.value.map(item => ({
     ...item,
     active: item.name === menuName
   }));
+}
+
+const getSessionTimeoutFromConfigs = (configs) => {
+  const systemSettings = Array.isArray(configs?.SYSTEM_SETTING) ? configs.SYSTEM_SETTING : []
+  const timeoutConfig = systemSettings.find(item => item.label === 'SESSION_TIMEOUT_MINUTES')
+  const timeoutValue = Number(timeoutConfig?.value)
+  return Number.isFinite(timeoutValue) && timeoutValue >= MIN_SESSION_TIMEOUT_MINUTES
+    ? timeoutValue
+    : DEFAULT_SESSION_TIMEOUT_MINUTES
+}
+
+const applySessionTimeoutConfig = (configs) => {
+  sessionTimeoutMinutes.value = getSessionTimeoutFromConfigs(configs)
+  resetSessionLogoutTimer()
+}
+
+const stopSessionActivityWatcher = () => {
+  if (sessionLogoutTimer) {
+    window.clearTimeout(sessionLogoutTimer)
+    sessionLogoutTimer = null
+  }
+  sessionActivityEvents.forEach(eventName => {
+    window.removeEventListener(eventName, resetSessionLogoutTimer)
+  })
+}
+
+const resetSessionLogoutTimer = () => {
+  if (sessionLogoutTimer) {
+    window.clearTimeout(sessionLogoutTimer)
+  }
+  sessionLogoutTimer = window.setTimeout(() => {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('登录已超时，请重新登录')
+    })
+    handleLogout()
+  }, sessionTimeoutMinutes.value * 60 * 1000)
+}
+
+const startSessionActivityWatcher = () => {
+  stopSessionActivityWatcher()
+  sessionActivityEvents.forEach(eventName => {
+    window.addEventListener(eventName, resetSessionLogoutTimer, { passive: true })
+  })
+  resetSessionLogoutTimer()
 }
 
 // 系统设置页面角色列表
@@ -3357,12 +3538,9 @@ const settingPermissions = reactive([
 ])
 
 /**
- * 功能：切换角色权限
- * @param {Object} permission 权限项
- * @param {string} roleValue 角色标识
+ * 功能：切换角色权�? * @param {Object} permission 权限�? * @param {string} roleValue 角色标识
  * @returns {void}
- * @throws {Error} 无
- */
+ * @throws {Error} �? */
 const togglePermissionRole = (permission, roleValue) => {
   const roleIndex = permission.enabledRoles.indexOf(roleValue)
   if (roleIndex > -1) {
@@ -3376,8 +3554,7 @@ const togglePermissionRole = (permission, roleValue) => {
 /**
  * 功能：读取本地保存的权限矩阵
  * @returns {void}
- * @throws {Error} 读取失败时保留默认权限矩阵
- */
+ * @throws {Error} 读取失败时保留默认权限矩�? */
 const loadSettingPermissions = () => {
   try {
     const savedPermissions = localStorage.getItem(PERMISSION_STORAGE_KEY)
@@ -3396,8 +3573,7 @@ const loadSettingPermissions = () => {
 /**
  * 功能：保存权限矩阵到本地
  * @returns {void}
- * @throws {Error} 保存失败时输出错误日志
- */
+ * @throws {Error} 保存失败时输出错误日�? */
 const saveSettingPermissions = () => {
   try {
     const permissionMap = settingPermissions.reduce((map, permission) => {
@@ -3493,21 +3669,15 @@ const configGroupMap = {
 }
 
 /**
- * 获取系统设置卡片配置项
- * @param {Object} card 配置卡片
- * @returns {Array} 配置项列表
- * @throws {Error} 无
- */
+ * 获取系统设置卡片配置�? * @param {Object} card 配置卡片
+ * @returns {Array} 配置项列�? * @throws {Error} �? */
 const getSettingConfigItems = (card) => {
   const group = configGroupMap[card.title]
   return settingConfigItems[group] || []
 }
 
 /**
- * 获取系统设置配置状态列表
- * @returns {Promise<void>} 无
- * @throws {Error} 查询异常时向上抛出
- */
+ * 获取系统设置配置状态列�? * @returns {Promise<void>} �? * @throws {Error} 查询异常时向上抛�? */
 const loadSettingConfigItems = async () => {
   const groups = ['CLIENT_SOURCE', 'COST_CATEGORY', 'CLIENT_ROLE', 'PROJECT_SCENE']
   const responses = await Promise.all(groups.map(group => queryConfig({
@@ -3538,8 +3708,7 @@ const configValuePreview = computed(() => {
  * 打开新增配置弹窗
  * @param {Object} card 配置卡片
  * @returns {void}
- * @throws {Error} 无
- */
+ * @throws {Error} �? */
 const openConfigDialog = (card) => {
   const group = configGroupMap[card.title]
   if (!group) return
@@ -3552,9 +3721,7 @@ const openConfigDialog = (card) => {
 
 /**
  * 创建系统配置
- * @returns {Promise<void>} 无
- * @throws {Error} 接口异常时提示错误
- */
+ * @returns {Promise<void>} �? * @throws {Error} 接口异常时提示错�? */
 const handleCreateConfig = async () => {
   const label = configDialog.form.label.trim()
   if (!label) {
@@ -3592,12 +3759,8 @@ const handleCreateConfig = async () => {
 }
 
 /**
- * 切换系统配置启用状态
- * @param {Object} card 配置卡片
- * @param {Object} tag 配置项
- * @returns {Promise<void>} 无
- * @throws {Error} 接口异常时提示错误
- */
+ * 切换系统配置启用状�? * @param {Object} card 配置卡片
+ * @param {Object} tag 配置�? * @returns {Promise<void>} �? * @throws {Error} 接口异常时提示错�? */
 const handleToggleConfigStatus = async (card, tag) => {
   const group = configGroupMap[card.title]
   const configId = tag?.id || tag?._id
@@ -3610,8 +3773,8 @@ const handleToggleConfigStatus = async (card, tag) => {
     const { ElMessageBox, ElMessage } = await import('element-plus')
     await ElMessageBox.confirm(
       nextActive
-        ? `确定要启用“${tag.label}”吗？启用后会重新出现在新增项目的下拉配置中。`
-        : `确定要停用“${tag.label}”吗？停用后不会再出现在新增项目的下拉配置中，历史数据不受影响。`,
+        ? `确定要启用�?{tag.label}”吗？启用后会重新出现在新增项目的下拉配置中。`
+        : `确定要停用�?{tag.label}”吗？停用后不会再出现在新增项目的下拉配置中，历史数据不受影响。`,
       `${actionText}配置`,
       {
         confirmButtonText: `确定${actionText}`,
@@ -3637,7 +3800,7 @@ const handleToggleConfigStatus = async (card, tag) => {
     localStorage.removeItem('APP_GLOBAL_CONFIGS')
     localStorage.removeItem('APP_CONFIG_TIMESTAMP')
     await initGlobalConfigs(true)
-    ElMessage.success(`配置已${actionText}`)
+    ElMessage.success(`配置�?{actionText}`)
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') {
       const { ElMessage } = await import('element-plus')
@@ -3650,7 +3813,7 @@ const handleToggleConfigStatus = async (card, tag) => {
 
 const projectStatuses = ref([])
 
-// 获取状态的排序值
+// 获取状态的排序�?
 const getStatusOrder = (statusValue) => {
   const status = projectStatuses.value.find(s => s.value === statusValue)
   return status ? status.sortOrder : 0
@@ -3668,7 +3831,7 @@ const originalProjectStatus = computed(() => {
   return null
 })
 const isViewMode = ref(false)
-// 是否为编辑模式（针对已存在的项目）
+// 是否为编辑模式（针对已存在的项目�?
 const isEditMode = ref(false)
 // 当前选中的项目ID
 const selectedProjectId = ref(null)
@@ -3681,12 +3844,12 @@ const disabledFutureDate = (time) => {
   return time.getTime() > Date.now()
 }
 
-// 补录单据：项目周期禁用规则
+// 补录单据：项目周期禁用规�?
 const disabledHistoricalProjectDate = (time) => {
   return time.getTime() > Date.now()
 }
 
-// 补录单据：施工周期禁用规则
+// 补录单据：施工周期禁用规�?
 const disabledHistoricalConstructionDate = (time) => {
   if (time.getTime() > Date.now()) return true
   if (form.period && form.period.length === 2) {
@@ -3699,7 +3862,7 @@ const disabledHistoricalConstructionDate = (time) => {
   return false
 }
 
-// 补录单据：回款周期禁用规则
+// 补录单据：回款周期禁用规�?
 const disabledHistoricalCollectionDate = (time) => {
   if (time.getTime() > Date.now()) return true
   if (form.constructionPeriod && form.constructionPeriod.length === 2) {
@@ -3727,44 +3890,121 @@ const originalProjectName = ref('')
 // 项目列表数据
 const projects = ref([])
 const loadingProjects = ref(false)
+const dashboardHoveredScene = ref('')
+const dashboardSceneTooltip = ref({
+  visible: false,
+  x: 0,
+  y: 0
+})
+const dashboardHoveredProfitPoint = ref(null)
+const dashboardHoveredBar = ref(null)
 
 const dashboardRange = ref('year')
 const dashboardRanges = [
-  { label: '年度', value: 'year' },
-  { label: '半年度', value: 'half' },
-  { label: '季度', value: 'quarter' },
-  { label: '月度', value: 'month' }
+  { label: '年度', value: 'year', months: 12 },
+  { label: '半年', value: 'half', months: 6 },
+  { label: '季度', value: 'quarter', months: 3 },
+  { label: '月度', value: 'month', months: 1 }
 ]
 
 const dashboardMoney = (amount) => {
   const value = Number(amount) || 0
-  if (Math.abs(value) >= 1000000) return `¥${(value / 1000000).toFixed(1)}M`
-  if (Math.abs(value) >= 10000) return `¥${(value / 10000).toFixed(1)}万`
-  return `¥${value.toLocaleString()}`
+  return `${(value / 10000).toFixed(1)}万元`
+}
+
+const toDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const getProjectDashboardDate = (project) => {
+  if (project.type === 'historical') {
+    return toDate(project.completedTime)
+      || toDate(project.completionTime)
+      || toDate(project.constructionPeriod?.[1])
+      || toDate(project.period?.[1])
+  }
+  return toDate(project.period?.[0])
+    || toDate(project.startDate)
+    || toDate(project.negotiatingTime)
+    || toDate(project.createTime)
+}
+
+const getDashboardRangeStart = () => {
+  const range = dashboardRanges.find(item => item.value === dashboardRange.value) || dashboardRanges[0]
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  start.setMonth(start.getMonth() - range.months)
+  return start
+}
+
+const getDashboardRangeEnd = () => {
+  const end = new Date()
+  end.setHours(23, 59, 59, 999)
+  return end
+}
+
+const filteredDashboardProjects = computed(() => {
+  const start = getDashboardRangeStart().getTime()
+  const end = getDashboardRangeEnd().getTime()
+  return projects.value.filter(item => {
+    const projectDate = getProjectDashboardDate(item)
+    if (!projectDate) return false
+    const time = projectDate.getTime()
+    return time >= start && time <= end
+  })
+})
+
+const getDashboardProjectAmount = (project) => Number(project.amount) || Number(project.totalAmount) || 0
+
+const getDashboardProjectCost = (project) => {
+  if (Number(project.payableAmount)) return Number(project.payableAmount)
+  const projectCost = Array.isArray(project.costs)
+    ? project.costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+    : 0
+  const subProjectCost = Array.isArray(project.subProjects)
+    ? project.subProjects.reduce((sum, subProject) => {
+      const costs = Array.isArray(subProject.costs) ? subProject.costs : []
+      return sum + costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0)
+    }, 0)
+    : 0
+  return projectCost + subProjectCost
+}
+
+const createDashboardBuckets = () => {
+  const range = dashboardRanges.find(item => item.value === dashboardRange.value) || dashboardRanges[0]
+  const start = getDashboardRangeStart()
+  const end = getDashboardRangeEnd()
+  const bucketCount = range.value === 'month' ? 4 : (range.value === 'year' ? 4 : range.months)
+  const bucketSize = (end.getTime() - start.getTime()) / bucketCount
+
+  return Array.from({ length: bucketCount }, (_, index) => {
+    const bucketStart = new Date(start.getTime() + bucketSize * index)
+    const bucketEnd = new Date(index === bucketCount - 1 ? end.getTime() : start.getTime() + bucketSize * (index + 1) - 1)
+    const label = range.value === 'month'
+      ? `�?{index + 1}周`
+      : `${bucketStart.getMonth() + 1}月`
+    return {
+      label,
+      start: bucketStart.getTime(),
+      end: bucketEnd.getTime()
+    }
+  })
 }
 
 const dashboardMetrics = computed(() => {
-  const totalAmount = projects.value.reduce((sum, item) => sum + (Number(item.amount) || Number(item.totalAmount) || 0), 0)
-  const receivedAmount = projects.value.reduce((sum, item) => sum + (Number(item.receivedAmount) || 0), 0)
+  const currentProjects = filteredDashboardProjects.value
+  const totalAmount = currentProjects.reduce((sum, item) => sum + getDashboardProjectAmount(item), 0)
+  const receivedAmount = currentProjects.reduce((sum, item) => sum + (Number(item.receivedAmount) || 0), 0)
   const unpaidAmount = Math.max(0, totalAmount - receivedAmount)
-  const totalCost = projects.value.reduce((sum, item) => {
-    if (Number(item.payableAmount)) return sum + Number(item.payableAmount)
-    const projectCost = Array.isArray(item.costs)
-      ? item.costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0)
-      : 0
-    const subProjectCost = Array.isArray(item.subProjects)
-      ? item.subProjects.reduce((spSum, sp) => {
-        return spSum + (Array.isArray(sp.costs) ? sp.costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0) : 0)
-      }, 0)
-      : 0
-    return sum + projectCost + subProjectCost
-  }, 0)
+  const totalCost = currentProjects.reduce((sum, item) => sum + getDashboardProjectCost(item), 0)
   const profit = totalAmount - totalCost
   const profitRate = totalAmount ? (profit / totalAmount) * 100 : 0
   const costRate = totalAmount ? (totalCost / totalAmount) * 100 : 0
 
   return {
-    orderCount: projects.value.length,
+    orderCount: currentProjects.length,
     totalAmount,
     receivedAmount,
     unpaidAmount,
@@ -3778,27 +4018,40 @@ const dashboardMetrics = computed(() => {
 const dashboardKpis = computed(() => {
   const metrics = dashboardMetrics.value
   return [
-    { label: '订单数量', value: metrics.orderCount.toLocaleString(), unit: '单', icon: 'shopping_cart', iconClass: 'text-primary bg-primary/10', trend: '+12% ↗', trendClass: 'text-primary' },
-    { label: '订单总金额', value: dashboardMoney(metrics.totalAmount), icon: 'payments', iconClass: 'text-secondary bg-secondary/10', trend: '+8.4% ↗', trendClass: 'text-secondary' },
+    { label: '订单数量', value: metrics.orderCount.toLocaleString(), unit: '单', icon: 'shopping_cart', iconClass: 'text-primary bg-primary/10', trend: '+12% 同比', trendClass: 'text-primary' },
+    { label: '订单总金额', value: dashboardMoney(metrics.totalAmount), icon: 'payments', iconClass: 'text-secondary bg-secondary/10', trend: '+8.4% 同比', trendClass: 'text-secondary' },
     { label: '应收账款', value: dashboardMoney(metrics.receivedAmount), icon: 'account_balance_wallet', iconClass: 'text-emerald-300 bg-emerald-300/10', trend: '稳定', trendClass: 'text-neutral-500' },
-    { label: '未收账款', value: dashboardMoney(metrics.unpaidAmount), icon: 'warning', iconClass: 'text-red-300 bg-red-300/10', valueClass: 'text-red-300', trend: '+2.1% ↗', trendClass: 'text-red-300', cardClass: 'border-red-300/20' },
+    { label: '未收账款', value: dashboardMoney(metrics.unpaidAmount), icon: 'warning', iconClass: 'text-red-300 bg-red-300/10', valueClass: 'text-red-300', trend: '+2.1% 同比', trendClass: 'text-red-300', cardClass: 'border-red-300/20' },
     { label: '总成本', value: dashboardMoney(metrics.totalCost), icon: 'inventory', iconClass: 'text-on-surface-variant bg-on-surface-variant/10' },
-    { label: '总利润', value: dashboardMoney(metrics.profit), icon: 'trending_up', iconClass: 'text-primary bg-primary/20', valueClass: 'text-primary', trend: '+15.2% ↗', trendClass: 'text-primary', cardClass: 'bg-primary/5' },
+    { label: '总利润', value: dashboardMoney(metrics.profit), icon: 'trending_up', iconClass: 'text-primary bg-primary/20', valueClass: 'text-primary', trend: '+15.2% 同比', trendClass: 'text-primary', cardClass: 'bg-primary/5' },
     { label: '总利润率', value: `${metrics.profitRate.toFixed(1)}%`, icon: 'percent', iconClass: 'text-secondary bg-secondary/10' },
     { label: '总成本率', value: `${metrics.costRate.toFixed(1)}%`, icon: 'calculate', iconClass: 'text-on-surface-variant bg-on-surface-variant/10' }
   ]
 })
 
 const dashboardQuarterBars = computed(() => {
-  const base = dashboardMetrics.value.totalAmount || 1
-  const ratios = [0.62, 0.84, 0.72, 1]
-  return ['第一季度', '第二季度', '第三季度', '第四季度'].map((label, index) => {
-    const amount = base * ratios[index] / 4
+  const buckets = createDashboardBuckets().map(bucket => {
+    let orderCount = 0
+    const amount = filteredDashboardProjects.value.reduce((sum, project) => {
+      const projectDate = getProjectDashboardDate(project)
+      if (!projectDate) return sum
+      const time = projectDate.getTime()
+      if (time < bucket.start || time > bucket.end) return sum
+      orderCount += 1
+      return sum + getDashboardProjectAmount(project)
+    }, 0)
+    return { ...bucket, amount, orderCount }
+  })
+  const maxAmount = Math.max(...buckets.map(item => item.amount), 1)
+
+  return buckets.map((bucket, index) => {
+    const height = bucket.amount ? Math.max(70, 220 * bucket.amount / maxAmount) : 24
     return {
-      label: index === 3 ? `${label}（当前）` : label,
-      height: Math.max(90, 220 * ratios[index]),
-      amountText: dashboardMoney(amount),
-      active: index === 3
+      label: index === buckets.length - 1 ? `${bucket.label}（当前）` : bucket.label,
+      height,
+      amountText: dashboardMoney(bucket.amount),
+      orderCount: bucket.orderCount,
+      active: index === buckets.length - 1
     }
   })
 })
@@ -3807,21 +4060,31 @@ const dashboardSceneSegments = computed(() => {
   const colors = ['#52ee8a', '#00daf3', '#ffb400', '#a56eff']
   const shadows = ['rgba(82,238,138,0.8)', 'rgba(0,218,243,0.8)', 'rgba(255,180,0,0.8)', 'rgba(165,110,255,0.8)']
   const sceneMap = new Map()
-  projects.value.forEach(item => {
+  filteredDashboardProjects.value.forEach(item => {
     const label = item.sceneLabel || projectScenes.value.find(scene => scene.value === item.scene)?.label || '未分类'
-    sceneMap.set(label, (sceneMap.get(label) || 0) + (Number(item.amount) || Number(item.totalAmount) || 0))
+    const sceneData = sceneMap.get(label) || { amount: 0, orderCount: 0 }
+    sceneMap.set(label, {
+      amount: sceneData.amount + getDashboardProjectAmount(item),
+      orderCount: sceneData.orderCount + 1
+    })
   })
 
-  const entries = sceneMap.size ? Array.from(sceneMap.entries()) : defaultProjectScenes.map(item => [item.label, 0])
-  const total = entries.reduce((sum, item) => sum + item[1], 0) || entries.length || 1
+  const entries = sceneMap.size
+    ? Array.from(sceneMap.entries())
+    : defaultProjectScenes.map(item => [item.label, { amount: 0, orderCount: 0 }])
+  const total = entries.reduce((sum, item) => sum + item[1].amount, 0) || entries.length || 1
   let offset = 0
 
-  return entries.slice(0, 4).map(([label, amount], index) => {
+  return entries.slice(0, 4).map(([label, sceneData], index) => {
+    const amount = sceneData.amount
     const percent = total ? Math.round((amount || (total / entries.length)) / total * 100) : 0
     const length = 263.8 * percent / 100
     const segment = {
       label,
       percent,
+      amount,
+      amountText: dashboardMoney(amount),
+      orderCount: sceneData.orderCount,
       length: Math.max(4, length).toFixed(1),
       offset: -offset,
       color: colors[index % colors.length],
@@ -3832,28 +4095,100 @@ const dashboardSceneSegments = computed(() => {
   })
 })
 
-const dashboardProfitLinePath = computed(() => {
-  const profit = Math.max(0, dashboardMetrics.value.profit)
-  const points = [80, 70, 54, 50, 36, 30, 18].map((base, index) => {
-    const lift = profit ? index * 2 : 0
-    return Math.max(8, base - lift)
-  })
-  const xStep = 100 / (points.length - 1)
-  return points.map((y, index) => `${index === 0 ? 'M' : 'L'} ${index * xStep} ${y}`).join(' ')
+const dashboardActiveScene = computed(() => {
+  return dashboardSceneSegments.value.find(item => item.label === dashboardHoveredScene.value)
+    || null
 })
 
-const dashboardProfitAreaPath = computed(() => `${dashboardProfitLinePath.value} L 100 100 L 0 100 Z`)
+// 更新订单金额分布饼图悬浮提示位置
+const updateDashboardSceneTooltip = (event) => {
+  const chartElement = event.currentTarget.closest('.dashboard-scene-chart')
+  if (!chartElement) return
+  const rect = chartElement.getBoundingClientRect()
+  dashboardSceneTooltip.value = {
+    visible: true,
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  }
+}
+
+// 鼠标进入订单金额分布饼图分段
+const handleDashboardSceneEnter = (event, segment) => {
+  dashboardHoveredScene.value = segment.label
+  updateDashboardSceneTooltip(event)
+}
+
+// 鼠标在订单金额分布饼图分段内移动
+const handleDashboardSceneMove = (event) => {
+  updateDashboardSceneTooltip(event)
+}
+
+// 鼠标离开订单金额分布饼图分段
+const handleDashboardSceneLeave = () => {
+  dashboardHoveredScene.value = ''
+  dashboardSceneTooltip.value.visible = false
+}
+
+const dashboardProfitPoints = computed(() => {
+  const buckets = createDashboardBuckets().map(bucket => {
+    let orderCount = 0
+    const profit = filteredDashboardProjects.value.reduce((sum, project) => {
+      const projectDate = getProjectDashboardDate(project)
+      if (!projectDate) return sum
+      const time = projectDate.getTime()
+      if (time < bucket.start || time > bucket.end) return sum
+      orderCount += 1
+      return sum + getDashboardProjectAmount(project) - getDashboardProjectCost(project)
+    }, 0)
+    return { ...bucket, profit, orderCount }
+  })
+  const values = buckets.map(item => item.profit)
+  const min = Math.min(...values, 0)
+  const max = Math.max(...values, 1)
+  const range = max - min || 1
+  const xPadding = 3
+  const xStep = buckets.length > 1 ? (100 - xPadding * 2) / (buckets.length - 1) : 100
+
+  return buckets.map((bucket, index) => {
+    const x = buckets.length === 1 ? 50 : xPadding + index * xStep
+    const y = 86 - ((bucket.profit - min) / range) * 72
+    return {
+      ...bucket,
+      x,
+      y,
+      amountText: dashboardMoney(bucket.profit)
+    }
+  })
+})
+
+const dashboardProfitLinePath = computed(() => {
+  if (!dashboardProfitPoints.value.length) return ''
+  return dashboardProfitPoints.value
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ')
+})
+
+const dashboardProfitAreaPath = computed(() => {
+  if (!dashboardProfitPoints.value.length) return ''
+  const first = dashboardProfitPoints.value[0]
+  const last = dashboardProfitPoints.value[dashboardProfitPoints.value.length - 1]
+  return `${dashboardProfitLinePath.value} L ${last.x} 100 L ${first.x} 100 Z`
+})
+
+const dashboardProfitLabels = computed(() => {
+  return dashboardProfitPoints.value.map(point => point.label)
+})
 
 const dashboardTopOrders = computed(() => {
-  return [...projects.value]
-    .sort((a, b) => (Number(b.amount) || Number(b.totalAmount) || 0) - (Number(a.amount) || Number(a.totalAmount) || 0))
+  return [...filteredDashboardProjects.value]
+    .sort((a, b) => getDashboardProjectAmount(b) - getDashboardProjectAmount(a))
     .slice(0, 4)
     .map(item => ({
       id: item.id || item._id || item.name,
       name: item.name || '-',
       client: item.client || '-',
-      date: item.negotiatingTime ? new Date(item.negotiatingTime).toISOString().split('T')[0] : (item.startDate || '-'),
-      amountText: dashboardMoney(Number(item.amount) || Number(item.totalAmount) || 0),
+      date: getProjectDashboardDate(item)?.toISOString().split('T')[0] || '-',
+      amountText: dashboardMoney(getDashboardProjectAmount(item)),
       statusLabel: item.statusLabel || projectStatuses.value.find(status => status.value === item.status)?.label || item.status || '-',
       statusClass: ['completed', 'closed'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
     }))
@@ -3873,7 +4208,7 @@ const operationLogs = ref([
     date: '2026-04-16',
     time: '14:22:05',
     user: '系统管理员',
-    initials: '管',
+    initials: '系',
     avatarClass: 'bg-primary/20 text-primary',
     module: '项目管理',
     content: '删除项目“西湖隐秀园林景观设计”',
@@ -3917,7 +4252,7 @@ const operationLogs = ref([
     date: '2026-04-14',
     time: '18:01:55',
     user: '系统管理员',
-    initials: '管',
+    initials: '系',
     avatarClass: 'bg-primary/20 text-primary',
     module: '系统配置',
     content: '停用客户来源配置“老客户推荐”',
@@ -3983,11 +4318,8 @@ const operationLogStats = computed(() => {
 })
 
 /**
- * 功能：返回日志状态文字样式
- * @param {string} status 状态
- * @returns {string} 样式类名
- * @throws {Error} 无
- */
+ * 功能：返回日志状态文字样�? * @param {string} status 状�? * @returns {string} 样式类名
+ * @throws {Error} �? */
 const operationLogStatusClass = (status) => {
   if (status === '失败') return 'text-red-300'
   if (status === '警告') return 'text-secondary'
@@ -3995,11 +4327,8 @@ const operationLogStatusClass = (status) => {
 }
 
 /**
- * 功能：返回日志状态圆点样式
- * @param {string} status 状态
- * @returns {string} 样式类名
- * @throws {Error} 无
- */
+ * 功能：返回日志状态圆点样�? * @param {string} status 状�? * @returns {string} 样式类名
+ * @throws {Error} �? */
 const operationLogDotClass = (status) => {
   if (status === '失败') return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
   if (status === '警告') return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
@@ -4007,10 +4336,8 @@ const operationLogDotClass = (status) => {
 }
 
 /**
- * 功能：导出当前筛选后的操作日志
- * @returns {void}
- * @throws {Error} 导出失败时提示用户
- */
+ * 功能：导出当前筛选后的操作日�? * @returns {void}
+ * @throws {Error} 导出失败时提示用�? */
 const exportOperationLogs = () => {
   try {
     const rows = filteredOperationLogs.value.map(item => [
@@ -4054,7 +4381,7 @@ const projectFilters = reactive({
   tab: 'all' // 'all', 'ongoing', 'completed'
 })
 
-// 自定义下拉框状态
+// 自定义下拉框状�?
 const openDropdown = ref(null)
 const toggleDropdown = (type) => {
   openDropdown.value = openDropdown.value === type ? null : type
@@ -4064,7 +4391,10 @@ const selectFilter = (type, value) => {
   openDropdown.value = null
 }
 
-// 点击外部关闭下拉框
+const ONGOING_PROJECT_STATUSES = ['negotiating', 'constructing', 'completed', 'settling', 'in_cooperation']
+const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'terminated']
+
+// 点击外部关闭下拉�?
 const closeDropdowns = (e) => {
   if (!e.target.closest('.custom-dropdown-trigger')) {
     openDropdown.value = null
@@ -4081,20 +4411,20 @@ const filteredProjects = computed(() => {
       if (completion > now) return false;
     }
 
-    // 1. Tab 标签过滤
+    // 1. Tab 状态归类过滤
     if (projectFilters.tab === 'ongoing') {
-      // 进行中：常规项目排除已交付和已结清；补录单始终显示（因为已通过上面的时间过滤）
-      if (p.type !== 'historical' && (p.status === 'completed' || p.status === 'closed')) {
+      // 进行中：洽谈中、交付中、已交付、结账中、合作中
+      if (!ONGOING_PROJECT_STATUSES.includes(p.status)) {
         return false;
       }
     } else if (projectFilters.tab === 'completed') {
-      // 已交付：常规项目包含已交付和已结清；补录单不显示在已交付（因为它们在活跃列表中）
-      if (p.type === 'historical' || (p.status !== 'completed' && p.status !== 'closed')) {
+      // 已交付：已交付、已结清、已终止
+      if (!DELIVERED_PROJECT_STATUSES.includes(p.status)) {
         return false;
       }
     }
     
-    // 2. 搜索词过滤 (项目名称或客户名称)
+    // 2. 搜索词过�?(项目名称或客户名�?
     if (projectFilters.search) {
       const search = projectFilters.search.toLowerCase()
       const nameMatch = p.name?.toLowerCase().includes(search)
@@ -4107,7 +4437,7 @@ const filteredProjects = computed(() => {
       return false
     }
     
-    // 4. 项目状态过滤
+    // 4. 项目状态过�?
     if (projectFilters.status && p.status !== projectFilters.status) {
       return false
     }
@@ -4177,41 +4507,39 @@ watch(filteredProjects, (newVal) => {
   }
 })
 
-// 项目录入表单响应式对象
+// 项目录入表单响应式对�?
 const form = reactive({
   name: '',           // 项目名称
   type: 'normal',     // 项目类型
   scene: '',          // 项目场景
   period: [null, null],       // 项目周期（日期范围数组）
-  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
+  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式�?
   constructionPeriod: [null, null], // 施工周期（历史模式）
   collectionPeriod: [null, null],   // 回款周期（历史模式）
-  completionTime: null, // 完结时间（补录单专用）
+  completionTime: null, // 完结时间（补录单专用�?
   client: '',         // 客户名称
   role: '',           // 客户角色
   clientSource: '',   // 客户来源（仅新客户可见）
-  status: '',         // 项目状态
+  status: '',         // 项目状�?
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
   receivedAmount: null,  // 已收账款
   desc: '',           // 项目描述
-  isHistorical: false, // 标识是否为历史补录项目
-  isHasContract: YES_NO_VALUE.NO, // 是否有合同
-  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
-  isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭证
-  amountEditCount: 0,   // 订单金额修改次数
-  subProjects: []      // 子项目列表
+  isHistorical: false, // 标识是否为历史补录项�?
+  isHasContract: YES_NO_VALUE.NO, // 是否有合�?  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
+  isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭�?  amountEditCount: 0,   // 订单金额修改次数
+  subProjects: []      // 子项目列�?
 })
 
 // 项目合同列表
 const contracts = ref([])
-// 项目预览图列表
+// 项目预览图列�?
 const previews = ref([])
 
 // 是否为新客户标识：用于控制“客户来源”显示及“客户角色”是否可编辑
 const isNewClient = ref(true)
 
-// 加载状态控制
+// 加载状态控�?
 const clientLoading = ref(false)
 const configSyncing = ref(false)
 const savingProject = ref(false)
@@ -4231,12 +4559,13 @@ const getLongTermPeriodEnd = (project, fallbackNow = today.value.toISOString()) 
 onMounted(() => {
   todayTimer = window.setInterval(() => {
     today.value = new Date()
-  }, 60000) // 每分钟更新一次
+  }, 60000) // 每分钟更新一�?
 })
 
 onUnmounted(() => {
   if (todayTimer) window.clearInterval(todayTimer)
   window.removeEventListener('click', closeDropdowns)
+  stopSessionActivityWatcher()
 })
 
 // 监听时间变化，实时更新活跃项目的周期显示
@@ -4268,7 +4597,7 @@ watch(today, () => {
     }
   });
 
-  // 如果当前正在查看活跃项目，同步更新表单中的周期显示
+  // 如果当前正在查看活跃项目，同步更新表单中的周期显�?
   if (isViewMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value)
     if (p && !p.isHistorical) {
@@ -4286,13 +4615,13 @@ watch(today, () => {
   }
 });
 
-// 现有客户列表（由接口获取）
+// 现有客户列表（由接口获取�?
 const existingClients = ref([])
 
-// 客户角色列表（由接口获取）
+// 客户角色列表（由接口获取�?
 const clientRoles = ref([])
 
-// 客户来源列表（由接口获取）
+// 客户来源列表（由接口获取�?
 const clientSources = ref([])
 
 // 子项目内容选项
@@ -4303,7 +4632,7 @@ const subProjectContents = [
   { label: '环境治理', value: '环境治理' }
 ]
 
-// 添加子项目
+// 添加子项�?
 const addSubProject = () => {
   form.subProjects.push({
     id: Date.now(),
@@ -4317,7 +4646,7 @@ const addSubProject = () => {
   })
 }
 
-// 移除子项目
+// 移除子项�?
 const removeSubProject = (index) => {
   form.subProjects.splice(index, 1)
 }
@@ -4328,7 +4657,7 @@ const addSubProjectCost = (subProject) => {
   subProject.costs.push({
     id: Date.now() + Math.random(),
     category: '',
-    supplier: '无',
+    supplier: '',
     amount: 0,
     isSettled: true
   })
@@ -4339,7 +4668,7 @@ const removeSubProjectCost = (subProject, costIndex) => {
   subProject.costs.splice(costIndex, 1)
 }
 
-// 项目类型列表（由接口获取）
+// 项目类型列表（由接口获取�?
 const projectTypes = ref([])
 const projectScenes = ref([])
 
@@ -4355,12 +4684,12 @@ const costCategories = ref([])
 
 // 供应商列表（目前默认只有一个“无”）
 const suppliers = ref([
-  { id: 'none', label: '无', value: '无' }
+  { id: 'none', label: '无', value: 'none' }
 ])
 
 /**
- * 初始化全局配置（带 12 小时本地缓存逻辑）
- * @param {Boolean} forceRefresh - 是否强制从云端同步
+ * 初始化全局配置（带 12 小时本地缓存逻辑�?
+ * @param {Boolean} forceRefresh - 是否强制从云端同�?
  */
 const initGlobalConfigs = async (forceRefresh = false) => {
   const CACHE_KEY = 'APP_GLOBAL_CONFIGS'
@@ -4377,12 +4706,12 @@ const initGlobalConfigs = async (forceRefresh = false) => {
     const lastFetchTime = localStorage.getItem(TIME_KEY)
     const now = Date.now()
 
-    // 1. 检查本地缓存是否有效 (如果不强制刷新)
+    // 1. 检查本地缓存是否有�?(如果不强制刷�?
     if (!forceRefresh && cachedData && lastFetchTime && (now - parseInt(lastFetchTime) < EXPIRE_TIME)) {
       const configs = JSON.parse(cachedData)
       console.log('📦 [Local Cache Hit] 从本地存储加载配置数据')
       
-      // 统一去重处理，防止数据库脏数据导致前端显示重复
+      // 统一去重处理，防止数据库脏数据导致前端显示重�?
       const deduplicate = (arr) => {
         if (!Array.isArray(arr)) return []
         const seen = new Set()
@@ -4402,11 +4731,12 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
         if (label === '谈判中') label = '洽谈中';
-        if (label === '已完账' || label === '已完帐') label = '已结清';
+        if (label === '已完成' || label === '已完工') label = '已结清';
         if (label === '施工中') label = '交付中';
         if (label === '已竣工') label = '已交付';
         return { ...s, label };
       })
+      applySessionTimeoutConfig(configs)
       await loadSettingConfigItems()
       return
     }
@@ -4436,13 +4766,14 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
         let label = s.label;
         if (label === '谈判中') label = '洽谈中';
-        if (label === '已完账' || label === '已完帐') label = '已结清';
+        if (label === '已完成' || label === '已完工') label = '已结清';
         if (label === '施工中') label = '交付中';
         if (label === '已竣工') label = '已交付';
         return { ...s, label };
       })
       
       // 3. 更新本地缓存
+      applySessionTimeoutConfig(configs)
       localStorage.setItem(CACHE_KEY, JSON.stringify(configs))
       localStorage.setItem(TIME_KEY, now.toString())
       console.log('✅ [Sync Success] 配置数据已同步并存入本地缓存')
@@ -4457,7 +4788,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       throw new Error(res?.message || '获取配置失败')
     }
   } catch (error) {
-    console.error('初始化配置失败:', error.message || error)
+    console.error('初始化配置失败', error.message || error)
     if (forceRefresh) {
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.error('同步失败，请检查网络')
@@ -4470,18 +4801,19 @@ const initGlobalConfigs = async (forceRefresh = false) => {
 
 onMounted(() => {
   loadCurrentUser()
+  startSessionActivityWatcher()
   initGlobalConfigs()
   window.addEventListener('click', closeDropdowns)
 })
 
-// 计算属性：根据选择的日期范围自动计算项目总天数
+// 计算属性：根据选择的日期范围自动计算项目总天�?
 const projectDays = computed(() => {
-  // 如果有表单数据（编辑/历史模式）
+  // 如果有表单数据（编辑/历史模式�?
   if (form.period && Array.isArray(form.period) && form.period[0] && form.period[1]) {
     return calculateDiffDays(form.period[0], form.period[1]) || 0
   }
   
-  // 查看模式下的非历史数据，从时间节点计算
+  // 查看模式下的非历史数据，从时间节点计�?
   if (isViewMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value)
     if (p && !p.isHistorical) {
@@ -4528,7 +4860,7 @@ const collectionDays = computed(() => {
   return 0
 })
 
-// 监听是否有合同切换
+// 监听是否有合同切�?
 watch(() => form.isHasContract, async (newVal, oldVal) => {
   if (isLoadingProject.value) return // 加载中不触发清理逻辑
   if (newVal === YES_NO_VALUE.NO && oldVal === YES_NO_VALUE.YES) {
@@ -4552,7 +4884,7 @@ watch(() => form.isHasContract, async (newVal, oldVal) => {
             contracts.value = []
             ElMessage.success('合同文件已清理')
           } catch {
-            // 用户取消，恢复为“是”
+            // 用户取消，恢复为“是�?
             form.isHasContract = YES_NO_VALUE.YES
           }
         })
@@ -4587,18 +4919,18 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
             previews.value = []
             ElMessage.success('预览图已清理')
           } catch {
-            // 用户取消，恢复为“是”
+            // 用户取消，恢复为“是�?
             form.isHasPreview = YES_NO_VALUE.YES
           }
         })
       } catch (err) {
-        console.error('清理预览图失败:', err)
+        console.error('清理预览图失�?', err)
       }
     }
   }
 })
 
-// 过滤后的项目状态列表
+// 过滤后的项目状态列�?
 const filteredProjectStatuses = computed(() => {
   const isHistorical = form.type === 'historical' || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
   if (isHistorical) {
@@ -4612,7 +4944,7 @@ const filteredProjectStatuses = computed(() => {
     return projectStatuses.value.filter(s => s.value === 'in_cooperation' || s.value === 'terminated')
   }
   
-  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状态
+  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状�?
   if (isCreating.value && form.type !== 'historical') {
     return projectStatuses.value.filter(s => s.value !== 'closed' && s.value !== 'in_cooperation' && s.value !== 'terminated')
   }
@@ -4621,7 +4953,7 @@ const filteredProjectStatuses = computed(() => {
 })
 
 /**
- * 获取特定行的可选状态列表
+ * 获取特定行的可选状态列�?
  */
 const getRowProjectStatuses = (row) => {
   if (row.isHistorical) {
@@ -4633,17 +4965,17 @@ const getRowProjectStatuses = (row) => {
   return projectStatuses.value.filter(s => s.value !== 'in_cooperation' && s.value !== 'terminated')
 }
 
-// 施工周期变更处理：联动回款周期开始日期
+// 施工周期变更处理：联动回款周期开始日�?
 const handleConstructionPeriodChange = (val) => {
   if (val && val[1] && (!form.collectionPeriod || !form.collectionPeriod[0])) {
-    // 回款周期的开始日期默认是施工周期的结束日期
+    // 回款周期的开始日期默认是施工周期的结束日�?
     form.collectionPeriod = [val[1], val[1]]
   }
 }
 
 // 回款周期变更处理
 const handleCollectionPeriodChange = () => {
-  // 可以在这里做一些校验
+  // 可以在这里做一些校�?
 }
 
 // 监听项目类型变更
@@ -4669,21 +5001,21 @@ watch(() => form.type, (newVal) => {
 });
 
 /**
- * 接口：查询客户名称列表
+ * 接口：查询客户名称列�?
  */
 const handleClientVisibleChange = async (visible) => {
   // 仅在下拉框展开且列表为空时触发查询
   if (visible && existingClients.value.length === 0) {
     clientLoading.value = true
     try {
-      // 调用云函数 queryClients
+      // 调用云函�?queryClients
       const res = await queryClients({ keyword: '' })
       // 更新现有客户列表数据
       if (res.data && Array.isArray(res.data)) {
         existingClients.value = res.data.map(item => ({
           id: item._id || item.id,
           name: item.name,
-          role: item.role,
+          role: item.roleCode || item.role,
           source: item.source
         }))
       }
@@ -4698,17 +5030,17 @@ const handleClientVisibleChange = async (visible) => {
 
 /**
  * 处理客户名称变更逻辑
- * @param {string} val - 输入或选择的客户名称
+ * @param {string} val - 输入或选择的客户名�?
  */
 const handleClientChange = (val) => {
   if (!val) {
     isNewClient.value = true
     return
   }
-  // 在现有客户库中查找（忽略首尾空格）
+  // 在现有客户库中查找（忽略首尾空格�?
   const client = existingClients.value.find(c => c.name.trim() === val.trim())
   if (client) {
-    // 匹配到已有客户：自动带出角色和来源，标记为非新客户
+    // 匹配到已有客户：自动带出角色和来源，标记为非新客�?
     form.role = client.role
     form.clientSource = client.source
     isNewClient.value = false
@@ -4717,6 +5049,45 @@ const handleClientChange = (val) => {
     form.role = ''
     form.clientSource = ''
     isNewClient.value = true
+  }
+}
+
+/**
+ * 获取客户角色显示名称
+ * @param {string} roleCode - 客户角色标识
+ * @returns {string} 客户角色显示名称
+ */
+const getClientRoleLabel = (roleCode) => {
+  return clientRoles.value.find(item => item.value === roleCode)?.label || roleCode || ''
+}
+
+/**
+ * 新建项目后同步保存新客户
+ * @returns {Promise<void>} 无返�? * @throws {Error} 客户保存失败时抛出异�? */
+const syncNewClientAfterProjectCreate = async () => {
+  try {
+    const clientName = form.client.trim()
+    const existedClient = existingClients.value.find(item => item.name.trim() === clientName)
+    if (existedClient) return
+
+    const res = await createClient({
+      name: clientName,
+      role: getClientRoleLabel(form.role),
+      roleCode: form.role,
+      source: form.clientSource
+    })
+
+    const clientId = res.data?.id || res.data?._id
+    existingClients.value.unshift({
+      id: clientId,
+      name: clientName,
+      role: form.role,
+      source: form.clientSource
+    })
+    isNewClient.value = false
+  } catch (error) {
+    console.error('同步新客户失�?', error.message || error)
+    throw error
   }
 }
 
@@ -4770,7 +5141,7 @@ const unpaidAmount = computed(() => {
   return Math.max(0, payable - paid).toFixed(2);
 });
 
-// 计算属性：未收账款百分比
+// 计算属性：未收账款百分�?
 const unreceivedPercent = computed(() => {
   const total = parseFloat(form.amount) || 0;
   if (total === 0) return 0;
@@ -4778,7 +5149,7 @@ const unreceivedPercent = computed(() => {
   return Math.max(0, Math.min(100, (unreceived / total) * 100)).toFixed(1);
 });
 
-// 计算属性：未付账款百分比
+// 计算属性：未付账款百分�?
 const unpaidPercent = computed(() => {
   const total = parseFloat(totalCost.value) || 0;
   if (total === 0) return 0;
@@ -4786,7 +5157,7 @@ const unpaidPercent = computed(() => {
   return Math.max(0, Math.min(100, (unpaid / total) * 100)).toFixed(1);
 });
 
-// 计算属性：项目类型右上角丝带标签配置
+// 计算属性：项目类型右上角丝带标签配�?
 const projectTypeRibbon = computed(() => {
   const type = form.type || 'normal';
   const config = {
@@ -4797,7 +5168,7 @@ const projectTypeRibbon = computed(() => {
   return config[type] || config['normal'];
 });
 
-// 计算属性：判断当前项目是否为已结清状态
+// 计算属性：判断当前项目是否为已结清状�?
 const isProjectClosed = computed(() => {
   if (isEditMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value);
@@ -4825,7 +5196,7 @@ const isFieldReadOnly = (fieldName) => {
     return false;
   }
 
-  // 补录单特殊逻辑：项目类型和项目状态始终只读
+  // 补录单特殊逻辑：项目类型和项目状态始终只�?
   if (form.type === 'historical') {
     if (fieldName === 'type' || fieldName === 'status') {
       return true;
@@ -4836,13 +5207,13 @@ const isFieldReadOnly = (fieldName) => {
 
   // 常规项目逻辑
   if (!isCreating.value) {
-    // 创建成功后，项目类型和三大周期禁止编辑
+    // 创建成功后，项目类型和三大周期禁止编�?
     const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
     if (lockedFields.includes(fieldName)) {
       return true;
     }
 
-    // 订单金额修改限制：创建成功后最多允许修改一次
+    // 订单金额修改限制：创建成功后最多允许修改一�?
     if (fieldName === 'amount' && form.amountEditCount >= 1) {
       return true;
     }
@@ -4855,13 +5226,13 @@ const isFieldReadOnly = (fieldName) => {
 
   if (!isProjectClosed.value) return false;
   
-  // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账款
+  // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账�?
   const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'isHasVoucher', 'receivedAmount'];
   return !allowedFields.includes(fieldName);
 };
 
 /**
- * 添加成本项
+ * 添加成本�?
  */
 const addCost = () => {
   if (costs.value.length >= costCategories.value.length) {
@@ -4873,9 +5244,9 @@ const addCost = () => {
   costs.value.push({
     id: Date.now() + Math.random(), 
     category: '',
-    supplier: '无',
+    supplier: '',
     amount: 0,
-    isSettled: true // 默认设为已结清
+    isSettled: true // 默认设为已结�?
   })
 }
 
@@ -4895,7 +5266,7 @@ const fileInputRef = ref(null)
 const contractInputRef = ref(null)
 const previewInputRef = ref(null)
 
-// 图片预览状态
+// 图片预览状�?
 const previewVisible = ref(false)
 const initialIndex = ref(0)
 const previewList = ref([])
@@ -4911,14 +5282,14 @@ const handlePreview = (index) => {
 }
 
 /**
- * 轮播图切换回调
+ * 轮播图切换回�?
  */
 const handleCarouselChange = (index) => {
   currentCarouselIndex.value = index
 }
 
 /**
- * 使用 compressorjs 三方库实现图片压缩
+ * 使用 compressorjs 三方库实现图片压�?
  */
 const compressImage = (file) => {
   return new Promise((resolve) => {
@@ -4928,7 +5299,7 @@ const compressImage = (file) => {
       return;
     }
 
-    // 仅处理图片类型
+    // 仅处理图片类�?
     if (!file.type || !file.type.startsWith('image/')) {
       resolve(file);
       return;
@@ -4936,16 +5307,16 @@ const compressImage = (file) => {
 
     new Compressor(file, {
       maxWidth: 1920, // 提高最大宽度到 Full HD
-      maxHeight: 1920, // 提高最大高度
-      quality: 0.8, // 提高压缩质量到 0.8
+      maxHeight: 1920, // 提高最大高�?
+      quality: 0.8, // 提高压缩质量�?0.8
       mimeType: file.type || 'image/jpeg', // 确保有有效的 mimeType
       checkOrientation: true, // 自动修正图片方向
       success: (compressedBlob) => {
-        // 压缩成功，返回压缩后的 Blob
+        // 压缩成功，返回压缩后�?Blob
         resolve(compressedBlob)
       },
       error: (err) => {
-        // 压缩失败（如 HEIC 格式或损坏的图片），返回原文件
+        // 压缩失败（如 HEIC 格式或损坏的图片），返回原文�?
         // 避免输出过于频繁的错误日志，改为警告
         console.warn('图片压缩跳过 (可能格式不支持或文件损坏):', err.message || err)
         resolve(file)
@@ -4955,7 +5326,7 @@ const compressImage = (file) => {
 }
 
 /**
- * 列表内直接修改状态
+ * 列表内直接修改状�?
  */
 const handleInlineStatusChange = async (row, newVal) => {
   // 状态回溯保护逻辑
@@ -4997,7 +5368,7 @@ const handleInlineStatusChange = async (row, newVal) => {
         }
       }
 
-      // 补录单据特殊逻辑：当状态从“结账中”改为“已结清”时，自动计算回款周期
+      // 补录单据特殊逻辑：当状态从“结账中”改为“已结清”时，自动计算回款周�?
       if (row.isHistorical && row.status === 'settling' && newVal === 'closed') {
         const conEnd = row.constructionPeriod?.[1] ? new Date(row.constructionPeriod[1]) : null;
         if (conEnd && !isNaN(conEnd.getTime())) {
@@ -5008,7 +5379,7 @@ const handleInlineStatusChange = async (row, newVal) => {
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
           };
-          // 规则：当前时间 - 施工周期的竣工时间，不满一天算一天
+          // 规则：当前时�?- 施工周期的竣工时间，不满一天算一�?
           // 自动计算的回款周期：[竣工时间, 当前时间]
           updateData.collectionPeriod = [formatDateLocal(conEnd) + 'T00:00:00.000Z', formatDateLocal(now) + 'T00:00:00.000Z'];
         }
@@ -5022,16 +5393,15 @@ const handleInlineStatusChange = async (row, newVal) => {
       
       if (res.code === 0) {
         import('element-plus').then(({ ElMessage }) => {
-          ElMessage.success(`项目“${row.name}”状态已更新`)
+          ElMessage.success(`项目�?{row.name}”状态已更新`)
         })
         
-        // 更新本地行数据中的 statusText 和 statusColor 以同步显示
+        // 更新本地行数据中�?statusText �?statusColor 以同步显�?
         const statusConfig = projectStatuses.value.find(s => s.value === newVal)
         row.statusText = statusConfig ? statusConfig.label : '未知状态'
         row.statusColor = newVal === 'constructing' ? 'bg-primary' : 'bg-secondary'
         
-        // 更新状态以供回溯校验
-        row.status = newVal
+        // 更新状态以供回溯校�?        row.status = newVal
 
         if (row.type === 'long_term' && row.period && row.period[0]) {
           const periodEnd = newVal === 'terminated'
@@ -5062,7 +5432,7 @@ const handleInlineStatusChange = async (row, newVal) => {
             if (!row.completedTime) row.completedTime = now
           }
           
-          // 重新计算活跃项目的周期天数
+          // 重新计算活跃项目的周期天�?
           const pStart = row.negotiatingTime || (row.period && row.period[0]) || row.createTime
           const pEnd = row.type === 'long_term' ? getLongTermPeriodEnd(row, now) : (row.settledTime || now)
           const pDays = calculateDiffDays(pStart, pEnd)
@@ -5099,7 +5469,7 @@ const handleInlineStatusChange = async (row, newVal) => {
           row.collectionDaysText = '-'
         }
 
-        // 如果当前正在查看该项目，同步更新表单状态
+        // 如果当前正在查看该项目，同步更新表单状�?
         if (selectedProjectId.value === row.id) {
           form.status = newVal
           if (row.isHistorical) {
@@ -5122,11 +5492,11 @@ const handleInlineStatusChange = async (row, newVal) => {
         throw new Error(res.message)
       }
     } catch (err) {
-      console.error('更新项目状态失败:', err)
+      console.error('更新项目状态失�?', err)
       import('element-plus').then(({ ElMessage }) => {
-        ElMessage.error(`状态更新失败: ${err.message || '未知错误'}`)
+        ElMessage.error(`状态更新失�? ${err.message || '未知错误'}`)
       })
-      // 失败时回滚本地状态
+      // 失败时回滚本地状�?
       loadProjects()
     }
   }
@@ -5155,7 +5525,7 @@ const handleInlineStatusChange = async (row, newVal) => {
 }
 
 /**
- * 表单内修改状态
+ * 表单内修改状�?
  */
 const handleFormStatusChange = (newVal) => {
   if (isEditMode.value && originalProjectStatus.value && newVal !== originalProjectStatus.value) {
@@ -5175,8 +5545,8 @@ const handleFormStatusChange = (newVal) => {
           customClass: 'custom-message-box'
         }
       ).then(() => {
-        // 确认修改，无需额外操作，v-model已更新
-        // 补录单子编辑时状态从“结账中”改为“已结清”
+        // 确认修改，无需额外操作，v-model已更�?
+        // 补录单子编辑时状态从“结账中”改为“已结清�?
         if (form.isHistorical && originalProjectStatus.value === 'settling' && newVal === 'closed') {
           const conEnd = form.constructionPeriod?.[1] ? new Date(form.constructionPeriod[1]) : null;
           if (conEnd && !isNaN(conEnd.getTime())) {
@@ -5191,7 +5561,7 @@ const handleFormStatusChange = (newVal) => {
           }
         }
       }).catch(() => {
-        // 取消修改，回退表单状态
+        // 取消修改，回退表单状�?
         form.status = originalProjectStatus.value
       })
     })
@@ -5231,10 +5601,10 @@ const handleDeleteProject = (project) => {
       })
       
       try {
-        // 1. 删除项目关联的所有凭证（云存储文件 + 数据库记录）
+        // 1. 删除项目关联的所有凭证（云存储文�?+ 数据库记录）
         await deleteVouchersByProject({ projectId: project.id })
         
-        // 2. 删除项目关联的所有合同文件
+        // 2. 删除项目关联的所有合同文�?
         await axios.post(`${apiDomain}/contractPreviewService`, {
           action: 'deleteAllByProject',
           data: { projectId: project.id, type: 'contract' }
@@ -5252,7 +5622,7 @@ const handleDeleteProject = (project) => {
         if (res.code === 0) {
           ElMessage.success('项目已成功删除')
           
-          // 如果删除的是当前选中的项目，重置状态
+          // 如果删除的是当前选中的项目，重置状�?
           if (selectedProjectId.value === project.id) {
             selectedProjectId.value = null
             isViewMode.value = false
@@ -5328,7 +5698,7 @@ const handleViewProject = async (project) => {
   // 标记为非新客户，隐藏提示文案
   isNewClient.value = false
   
-  // 回显成本项
+  // 回显成本�?
   costs.value = project.costs ? project.costs.map(c => ({
     id: Date.now() + Math.random(),
     category: c.category,
@@ -5337,7 +5707,7 @@ const handleViewProject = async (project) => {
     isSettled: c.isSettled !== undefined ? isCostSettled(c.isSettled) : true // 历史数据默认为已结清
   })) : []
   
-  // 回显凭证：先清空，再从接口获取最新凭证
+  // 回显凭证：先清空，再从接口获取最新凭�?
   vouchers.value = []
   try {
     const res = await getVouchers({ projectId: project.id })
@@ -5372,7 +5742,7 @@ const handleViewProject = async (project) => {
     }
   }
 
-  // 回显预览图
+  // 回显预览�?
   previews.value = []
   if (form.isHasPreview === YES_NO_VALUE.YES) {
     try {
@@ -5385,11 +5755,11 @@ const handleViewProject = async (project) => {
         }))
       }
     } catch (err) {
-      console.error('获取预览图列表失败:', err)
+      console.error('获取预览图列表失�?', err)
     }
   }
 
-  // 数据加载完成后，重置加载状态
+  // 数据加载完成后，重置加载状�?
   setTimeout(() => {
     isLoadingProject.value = false
   }, 100)
@@ -5407,13 +5777,38 @@ const enterEditMode = () => {
 /**
  * 放弃修改
  */
-const cancelEdit = () => {
+const restoreEditProject = () => {
   const project = projects.value.find(p => p.id === selectedProjectId.value)
   if (project) {
     handleViewProject(project)
   } else {
     enterCreateMode()
   }
+}
+
+/**
+ * 放弃修改前二次确�? */
+const handleAbandonEdit = () => {
+  import('element-plus').then(({ ElMessageBox, ElMessage }) => {
+    ElMessageBox.confirm(
+      '确定要放弃本次修改吗？放弃后，之前修改的数据将被还原？',
+      '放弃修改提示',
+      {
+        confirmButtonText: '确认放弃',
+        cancelButtonText: '返回继续',
+        type: 'warning',
+        confirmButtonClass: '!bg-red-500 !border-red-500 !text-white',
+        cancelButtonClass: '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white',
+        customClass: 'danger-message-box',
+        center: true,
+      }
+    ).then(() => {
+      restoreEditProject()
+      ElMessage.info('已放弃修改，数据已还原')
+    }).catch(() => {
+      // 继续编辑
+    })
+  })
 }
 
 /**
@@ -5430,12 +5825,12 @@ const enterCreateMode = () => {
 }
 
 /**
- * 放弃创建新项目
+ * 放弃创建新项�?
  */
 const handleAbandonCreate = () => {
   import('element-plus').then(({ ElMessageBox, ElMessage, ElLoading }) => {
     ElMessageBox.confirm(
-      '确定要放弃创建新项目吗？如果已上传凭证、合同或预览图，这些文件将被永久删除。',
+      '确定要放弃创建新项目吗？如果已上传凭证、合同或预览图，这些文件将被永久删除？',
       '放弃创建提示',
       {
         confirmButtonText: '确认放弃',
@@ -5447,7 +5842,7 @@ const handleAbandonCreate = () => {
         center: true,
       }
     ).then(async () => {
-      // 如果有已上传的凭证、合同或预览图，需要清理
+      // 如果有已上传的凭证、合同或预览图，需要清�?
       if (vouchers.value.length > 0 || contracts.value.length > 0 || previews.value.length > 0) {
         const loading = ElLoading.service({
           lock: true,
@@ -5464,7 +5859,7 @@ const handleAbandonCreate = () => {
           for (const contract of contracts.value) {
             await deleteContract({ id: contract.id, fileId: contract.fileId })
           }
-          // 循环删除预览图
+          // 循环删除预览�?
           for (const preview of previews.value) {
             await deletePreview({ id: preview.id, fileId: preview.fileId })
           }
@@ -5477,13 +5872,13 @@ const handleAbandonCreate = () => {
         }
       }
       
-      // 重置状态
+      // 重置状�?
       isViewMode.value = false
       isEditMode.value = false
       selectedProjectId.value = null
       resetForm()
       
-      // 如果列表有数据，默认选中第一项
+      // 如果列表有数据，默认选中第一�?
       if (projects.value.length > 0) {
         handleViewProject(projects.value[0])
       }
@@ -5496,7 +5891,7 @@ const handleAbandonCreate = () => {
 }
 
 /**
- * 计算两个日期之间的天数
+ * 计算两个日期之间的天�?
  */
 const calculateDiffDays = (start, end) => {
   if (!start || !end) return null;
@@ -5517,7 +5912,7 @@ const calculateDiffDays = (start, end) => {
   
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
   
-  // 抹除时间影响，只计算日期差
+  // 抹除时间影响，只计算日期�?
   const sCopy = new Date(s);
   const eCopy = new Date(e);
   sCopy.setHours(0, 0, 0, 0);
@@ -5551,7 +5946,7 @@ const loadProjects = async () => {
         const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
 
         if (p.type === 'historical') {
-          // 补录单周期固定展示 -
+          // 补录单周期固定展�?-
           pDays = null;
           conDays = null;
           colDays = null;
@@ -5559,7 +5954,7 @@ const loadProjects = async () => {
           conRange = '-';
           colRange = '-';
         } else if (isHistorical) {
-          // 历史补录数据直接使用保存的周期
+          // 历史补录数据直接使用保存的周�?
           pDays = calculateDiffDays(p.period?.[0], p.period?.[1]);
           conDays = calculateDiffDays(p.constructionPeriod?.[0], p.constructionPeriod?.[1]);
           colDays = calculateDiffDays(p.collectionPeriod?.[0], p.collectionPeriod?.[1]);
@@ -5620,13 +6015,13 @@ const loadProjects = async () => {
         }
       })
       
-      // 如果有数据，默认选中最新的一条
+      // 如果有数据，默认选中最新的一�?
       if (projects.value.length > 0) {
         if (!selectedProjectId.value) {
           handleViewProject(projects.value[0])
         }
       } else {
-        // 如果项目列表为空，默认进入新建项目模式
+        // 如果项目列表为空，默认进入新建项目模�?
         enterCreateMode()
       }
     }
@@ -5654,7 +6049,7 @@ const resetForm = () => {
     client: '',
     role: '',
     clientSource: '',
-    status: 'negotiating', // 默认洽谈中
+    status: 'negotiating', // 默认洽谈�?
     staffCount: null,
     amount: '',
     receivedAmount: null,
@@ -5679,15 +6074,15 @@ const resetForm = () => {
   }, 100)
 }
 
-// 安全校验：拦截特殊字符
+// 安全校验：拦截特殊字�?
 const isSafeInput = (str) => {
   if (!str) return true;
-  // 拦截常见的 XSS 和 SQL 注入字符
+  // 拦截常见�?XSS �?SQL 注入字符
   const unsafePattern = /[<>{}[\]\\^%`|]/;
   return !unsafePattern.test(str);
 };
 
-// 格式化数字
+// 格式化数�?
 const formatNumber = (num) => {
   return Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
@@ -5730,7 +6125,7 @@ const costAnalysisData = computed(() => {
 
   if (allCosts.length === 0 || totalCost.value === 0) return [];
   
-  // 按类别汇总
+  // 按类别汇�?
   const summary = {};
   allCosts.forEach(item => {
     if (item.category && item.amount) {
@@ -5738,7 +6133,7 @@ const costAnalysisData = computed(() => {
     }
   });
 
-  // 定义颜色映射 (使用英文 Value 作为 Key 以确保匹配)
+  // 定义颜色映射 (使用英文 Value 作为 Key 以确保匹�?
   const colorMap = {
     'real_plant': { color: 'bg-emerald-500/30', hover: 'hover:bg-emerald-500/50' },
     'artificial_plant': { color: 'bg-cyan-500/30', hover: 'hover:bg-cyan-500/50' },
@@ -5764,11 +6159,11 @@ const costAnalysisData = computed(() => {
       percentage: parseFloat(percentage),
       ...(colorMap[key] || { color: 'bg-neutral-500/20', hover: 'hover:bg-neutral-500/40' })
     };
-  }).sort((a, b) => b.percentage - a.percentage); // 按比例降序排列
+  }).sort((a, b) => b.percentage - a.percentage); // 按比例降序排�?
 });
 
 /**
- * 校验表单完整性
+ * 校验表单完整�?
  */
 const validateProjectForm = (checkVouchers = true) => {
   if (!form.name) return '请输入项目名称';
@@ -5778,7 +6173,7 @@ const validateProjectForm = (checkVouchers = true) => {
     if (!form.completionTime) return '请选择交付日期';
     if (new Date(form.completionTime) > new Date()) return '交付日期不能晚于当前时间';
   } else {
-    // 常规项目新建时，禁止选择「已结清」状态
+    // 常规项目新建时，禁止选择「已结清」状�?
     if (isCreating.value && form.status === 'closed') {
       return '常规项目新建时，禁止选择「已结清」状态';
     }
@@ -5850,18 +6245,18 @@ const validateProjectForm = (checkVouchers = true) => {
 }
 
 /**
- * 确认保存修改（带弹窗提醒）
+ * 确认保存修改（带弹窗提醒�?
  */
 const confirmSaveUpdate = () => {
   const currentProject = projects.value.find(p => p.id === selectedProjectId.value);
   const isAmountChanged = currentProject && Number(form.amount) !== Number(currentProject.amount);
   
-  // 如果金额发生变化且尚未修改过（次数为0），则显示特殊提醒
+  // 如果金额发生变化且尚未修改过（次数为0），则显示特殊提�?
   const showAmountWarning = isAmountChanged && (form.amountEditCount || 0) === 0;
   
-  const message = showAmountWarning 
-    ? '检测到您修改了“订单金额”。注意：订单金额只能修改一次，是否确认修改！'
-    : '确认保存对该项目的修改吗？';
+    const message = showAmountWarning 
+      ? '检测到您修改了“订单金额”。注意：订单金额只能修改一次，是否确认修改？'
+      : '确认保存对该项目的修改吗？';
 
   import('element-plus').then(({ ElMessageBox }) => {
     ElMessageBox.confirm(
@@ -5869,7 +6264,7 @@ const confirmSaveUpdate = () => {
       showAmountWarning ? '温馨提示' : '保存确认',
       {
         confirmButtonText: showAmountWarning ? '确认修改' : '确认保存',
-        cancelButtonText: showAmountWarning ? '取消返回' : '取消',
+        cancelButtonText: '取消返回',
         type: 'warning',
         confirmButtonClass: showAmountWarning ? '!bg-red-500 !border-red-500 !text-white' : '',
         cancelButtonClass: showAmountWarning ? '!bg-neutral-800 !border-white/10 !text-white/60 hover:!text-white' : '',
@@ -5898,6 +6293,7 @@ const handleSaveProject = async () => {
 
   savingProject.value = true
   try {
+    const shouldSyncNewClient = !isEditMode.value && isNewClient.value && !!form.client?.trim()
     // 1. 手动构建提交数据，彻底避免循环引用
     const projectData = {
       name: form.name,
@@ -5953,7 +6349,7 @@ const handleSaveProject = async () => {
       const today = startDateStr;
       const systemToday = new Date().toISOString().split('T')[0];
       projectData.period = [today, systemToday];
-      projectData.negotiatingTime = date; // 记录项目周期开始时间
+      projectData.negotiatingTime = date; // 记录项目周期开始时�?
       projectData.createTime = new Date().toISOString();
       
       // 根据初始状态初始化其他周期
@@ -5972,7 +6368,7 @@ const handleSaveProject = async () => {
         projectData.collectionPeriod = [today, today];
       }
     } else {
-      // 历史模式或编辑模式
+      // 历史模式或编辑模�?
       // 常规项目编辑模式下，不发送项目类型及三大周期，由后端逻辑自动处理
       // 注意：长期项目需要保留类型，避免被误判为常规项目
       if (form.type !== 'historical' && form.type !== 'long_term' && isEditMode.value) {
@@ -5993,7 +6389,7 @@ const handleSaveProject = async () => {
         }
       }
       
-      // 如果是编辑活跃项目，确保保留或更新开始时间
+      // 如果是编辑活跃项目，确保保留或更新开始时�?
       if (form.startDate) {
         projectData.negotiatingTime = new Date(form.startDate).toISOString();
       }
@@ -6024,9 +6420,9 @@ const handleSaveProject = async () => {
     if (res.success || res.code === 0) {
       const projectId = isEditMode.value ? selectedProjectId.value : res.data.id
       
-      // 2. 如果项目名称修改了，同步修改云存储中的路径
+      // 2. 如果项目名称修改了，同步修改云存储中的路�?
       if (isEditMode.value && originalProjectName.value && originalProjectName.value !== form.name) {
-        console.log(`项目名称已修改: ${originalProjectName.value} -> ${form.name}，同步云存储路径...`)
+        console.log(`项目名称已修�? ${originalProjectName.value} -> ${form.name}，同步云存储路径...`)
         try {
           // 同步凭证路径
           await renameProjectVouchers({
@@ -6041,7 +6437,7 @@ const handleSaveProject = async () => {
             newName: form.name
           })
         } catch (err) {
-          console.error('同步云存储路径失败:', err)
+          console.error('同步云存储路径失�?', err)
           // 路径同步失败不应阻断项目保存，但记录错误
         }
       }
@@ -6064,7 +6460,7 @@ const handleSaveProject = async () => {
         })
       }
 
-      // 5. 关联预览图
+      // 5. 关联预览�?
       if (previews.value.length > 0) {
         const fileIds = previews.value.map(p => p.id)
         await updatePreviewsProject({
@@ -6073,11 +6469,21 @@ const handleSaveProject = async () => {
         })
       }
 
+      if (shouldSyncNewClient) {
+        try {
+          await syncNewClientAfterProjectCreate()
+        } catch (error) {
+          import('element-plus').then(({ ElMessage }) => {
+            ElMessage.warning('项目已保存，但新客户同步失败，请稍后在客户管理中补充')
+          })
+        }
+      }
+
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(isEditMode.value ? '项目更新成功' : '项目创建成功')
       })
       
-      // 立即更新本地列表数据，确保 UI 实时响应
+      // 立即更新本地列表数据，确�?UI 实时响应
       const statusConfig = projectStatuses.value.find(s => s.value === form.status)
       
       // 如果金额发生了变化且是编辑模式，本地模拟增加修改次数
@@ -6098,17 +6504,17 @@ const handleSaveProject = async () => {
       
       const index = projects.value.findIndex(p => p.id === projectId)
       if (index !== -1) {
-        // 使用 splice 确保响应式更新
+        // 使用 splice 确保响应式更�?
         projects.value.splice(index, 1, updatedItem)
       } else {
         projects.value.unshift(updatedItem)
       }
 
-      // 强制重置编辑状态
+      // 强制重置编辑状�?
       isEditMode.value = false
       isViewMode.value = true
       
-      // 异步加载最新列表，不阻塞 UI 响应
+      // 异步加载最新列表，不阻�?UI 响应
       loadProjects()
       
       // 保持当前选中项并回显
@@ -6216,7 +6622,7 @@ const handleContractUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       contracts.value.push(...successfulUploads)
-      // 自动切换状态为“是”
+      // 自动切换状态为“是�?
       form.isHasContract = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 个合同文件`)
@@ -6231,7 +6637,7 @@ const handleContractUpload = async (event) => {
 }
 
 /**
- * 处理预览图上传
+ * 处理预览图上�?
  */
 const handlePreviewUpload = async (event) => {
   const error = validateProjectForm(false);
@@ -6306,14 +6712,14 @@ const handlePreviewUpload = async (event) => {
     const successfulUploads = results.filter(Boolean)
     if (successfulUploads.length > 0) {
       previews.value.push(...successfulUploads)
-      // 自动切换状态为“是”
+      // 自动切换状态为“是�?
       form.isHasPreview = YES_NO_VALUE.YES
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(`成功上传 ${successfulUploads.length} 张预览图`)
       })
     }
   } catch (error) {
-    console.error('上传预览图失败:', error)
+    console.error('上传预览图失败', error)
   } finally {
     uploadingPreview.value = false
     event.target.value = ''
@@ -6339,7 +6745,7 @@ const removeContract = async (index) => {
 }
 
 /**
- * 删除预览图
+ * 删除预览�?
  */
 const removePreview = async (index) => {
   const item = previews.value[index]
@@ -6351,7 +6757,7 @@ const removePreview = async (index) => {
       ElMessage.success('预览图已删除')
     })
   } catch (err) {
-    console.error('删除预览图失败:', err)
+    console.error('删除预览图失败', err)
     item.deleting = false
   }
 }
@@ -6372,7 +6778,7 @@ const handleContractPreview = (index) => {
 }
 
 /**
- * 预览预览图
+ * 预览预览�?
  */
 const handlePreviewImagePreview = (index) => {
   previewList.value = previews.value.map(p => p.url)
@@ -6380,7 +6786,7 @@ const handlePreviewImagePreview = (index) => {
   previewVisible.value = true
 }
 /**
- * 上传子项目凭证
+ * 上传子项目凭�?
  */
 const handleSubProjectVoucherUpload = async (event, subProject) => {
   const files = Array.from(event.target.files)
@@ -6428,7 +6834,7 @@ const handleSubProjectVoucherUpload = async (event, subProject) => {
         })
         
         if (response.data.code === 0) {
-          // 子项目凭证直接记录在子项目对象中，不单独调用 addVoucher 记录到 vouchers 集合
+          // 子项目凭证直接记录在子项目对象中，不单独调用 addVoucher 记录�?vouchers 集合
           // 这样可以简化长期项目的复杂嵌套数据管理
           return {
             id: `SUB_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -6439,7 +6845,7 @@ const handleSubProjectVoucherUpload = async (event, subProject) => {
         }
         return null
       } catch (err) {
-        console.error('子项目凭证上传失败:', err)
+        console.error('子项目凭证上传失败', err)
         return null
       }
     })
@@ -6463,7 +6869,7 @@ const handleSubProjectVoucherUpload = async (event, subProject) => {
 }
 
 /**
- * 预览子项目凭证
+ * 预览子项目凭�?
  */
 const handleSubProjectVoucherPreview = (subProject, index) => {
   previewList.value = subProject.vouchers.map(v => v.url)
@@ -6472,7 +6878,7 @@ const handleSubProjectVoucherPreview = (subProject, index) => {
 }
 
 /**
- * 移除子项目凭证
+ * 移除子项目凭�?
  */
 const removeSubProjectVoucher = async (subProject, index) => {
   if (isViewMode.value) return
@@ -6540,7 +6946,7 @@ const handleVoucherUpload = async (event) => {
       console.log(`📤 开始上传文件 ${index + 1}/${files.length}:`, file.name)
       
       try {
-        // 检查文件类型
+        // 检查文件类�?
         const validTypes = ['image/jpeg', 'image/png', 'image/gif']
         if (!validTypes.includes(file.type)) {
           import('element-plus').then(({ ElMessage }) => {
@@ -6549,7 +6955,7 @@ const handleVoucherUpload = async (event) => {
           return null
         }
         
-        // 检查原始文件大小（限制为5MB）
+        // 检查原始文件大小（限制�?MB�?
         if (file.size > 5 * 1024 * 1024) {
           import('element-plus').then(({ ElMessage }) => {
             ElMessage.error('图片过大，请选择小于 5MB 的图片')
@@ -6557,7 +6963,7 @@ const handleVoucherUpload = async (event) => {
           return null
         }
         
-        // 压缩图片（使用 Compressor 三方库）
+        // 压缩图片（使�?Compressor 三方库）
         console.log(`🔄 压缩图片...`)
         const compressedFile = await compressImage(file)
         
@@ -6577,10 +6983,10 @@ const handleVoucherUpload = async (event) => {
         formData.append('fileType', file.type)
         formData.append('projectName', form.name) // 传递项目名称用于文件夹分类
         
-        // 发送请求到云函数
+        // 发送请求到云函�?
         console.log(`📡 上传到云函数...`)
         const response = await axios.post(`${apiDomain}/voucherService`, formData, {
-          timeout: 60000, // 60秒超时
+          timeout: 60000, // 60秒超�?
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -6589,7 +6995,7 @@ const handleVoucherUpload = async (event) => {
         if (response.data.code === 0) {
           console.log(`✅ 上传成功，URL: ${response.data.data.url}`)
           
-          // 调用云函数记录到数据库 (初始 projectId 为空或临时值)
+          // 调用云函数记录到数据�?(初始 projectId 为空或临时�?
           console.log(`📝 记录到数据库...`)
           const dbRes = await addVoucher({
             projectId: currentTempId.value, 
@@ -6690,15 +7096,16 @@ const tableRowClassName = ({ row }) => {
 }
 
 const handleLogout = () => {
+  stopSessionActivityWatcher()
   localStorage.removeItem('isLoggedIn')
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')
-  router.push('/login')
+  router.push('/loginService')
 }
 </script>
 
 <style>
-/* 统一禁用状态下的鼠标样式 */
+/* 统一禁用状态下的鼠标样�?*/
 .is-disabled, 
 .is-disabled *,
 [disabled],
@@ -6973,7 +7380,7 @@ const handleLogout = () => {
   color: #52ee8a !important;
 }
 
-/* 优化日期选择器禁用状态样式 */
+/* 优化日期选择器禁用状态样�?*/
 .el-date-table td.disabled {
   background-color: transparent !important;
 }
@@ -7009,7 +7416,7 @@ const handleLogout = () => {
   color: #131314 !important;
 }
 
-/* 科技感弹窗样式 */
+/* 科技感弹窗样�?*/
 .custom-message-box {
   background-color: #2a2a2b !important; /* 使用 surface-container-high 颜色，增加对比度 */
   backdrop-filter: blur(20px) !important;
@@ -7097,7 +7504,7 @@ const handleLogout = () => {
   transition: all 0.2s !important;
 }
 
-/* 列表内状态选择器样式优化 */
+/* 列表内状态选择器样式优�?*/
 .status-badge-trigger {
   display: inline-flex;
   align-items: center;
@@ -7124,7 +7531,7 @@ const handleLogout = () => {
   background-color: #9ca3af; /* 默认灰色 */
 }
 
-/* 洽谈中 - 蓝色 */
+/* 洽谈�?- 蓝色 */
 .is-negotiating .status-dot {
   background-color: #3b82f6;
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
@@ -7133,7 +7540,7 @@ const handleLogout = () => {
   border-color: rgba(59, 130, 246, 0.3);
 }
 
-/* 交付中 - 绿色 */
+/* 交付�?- 绿色 */
 .is-constructing .status-dot {
   background-color: #52ee8a;
   box-shadow: 0 0 8px rgba(82, 238, 138, 0.4);
@@ -7142,7 +7549,7 @@ const handleLogout = () => {
   border-color: rgba(82, 238, 138, 0.3);
 }
 
-/* 结账中 - 橙色 */
+/* 结账�?- 橙色 */
 .is-settling .status-dot {
   background-color: #f59e0b;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
@@ -7151,7 +7558,7 @@ const handleLogout = () => {
   border-color: rgba(245, 158, 11, 0.3);
 }
 
-/* 已结清 - 灰色 */
+/* 已结�?- 灰色 */
 .is-closed .status-dot {
   background-color: #9ca3af;
   box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
@@ -7179,7 +7586,7 @@ const handleLogout = () => {
   transform: rotate(180deg);
 }
 
-/* 下拉菜单高级感样式 - 完美复刻截图效果 */
+/* 下拉菜单高级感样�?- 完美复刻截图效果 */
 .status-dropdown-popper {
   background: transparent !important;
   border: none !important;
@@ -7213,14 +7620,14 @@ const handleLogout = () => {
   margin-bottom: 0 !important;
 }
 
-/* 悬浮状态 */
+/* 悬浮状�?*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item:hover) {
   background-color: rgba(82, 238, 138, 0.1) !important;
   color: #52ee8a !important;
   padding-left: 28px !important;
 }
 
-/* 选中状态 */
+/* 选中状�?*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected) {
   background-color: rgba(82, 238, 138, 0.15) !important;
   color: #52ee8a !important;
@@ -7228,7 +7635,7 @@ const handleLogout = () => {
   padding-left: 28px !important;
 }
 
-/* 侧边指示条 - 完美复刻基础信息下拉框效果 */
+/* 侧边指示�?- 完美复刻基础信息下拉框效�?*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item:hover::before),
 .status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected::before) {
   content: '';
@@ -7248,7 +7655,7 @@ const handleLogout = () => {
   display: none !important;
 }
 
-/* 高级筛选栏自定义样式 */
+/* 高级筛选栏自定义样�?*/
 .custom-date-picker-styled {
   width: 100% !important;
   height: 36px !important;
@@ -7437,10 +7844,188 @@ const handleLogout = () => {
   perspective: 1000px;
 }
 
+.dashboard-scene-svg {
+  position: relative;
+  z-index: 2;
+}
+
+.dashboard-scene-segment {
+  cursor: pointer !important;
+  opacity: 0.9;
+  pointer-events: stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: stroke-width 0.2s ease, opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+}
+
+.dashboard-scene-segment.is-active {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.dashboard-scene-legend {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.dashboard-scene-legend.is-active {
+  background: rgba(82, 238, 138, 0.08);
+  transform: translateY(-1px);
+}
+
+.dashboard-scene-tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  transform: translate(14px, calc(-100% - 12px));
+  background: rgba(12, 15, 13, 0.94);
+  border: 1px solid rgba(82, 238, 138, 0.28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-scene-tooltip-title {
+  margin-bottom: 4px;
+  color: var(--color-on-surface-variant);
+  font-size: 10px;
+}
+
+.dashboard-scene-tooltip-amount {
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dashboard-scene-tooltip-meta {
+  margin-top: 4px;
+  color: rgb(115, 115, 115);
+  font-size: 10px;
+}
+
+.dashboard-profit-chart {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(82, 238, 138, 0.04), rgba(82, 238, 138, 0)),
+    rgba(8, 10, 9, 0.18);
+}
+
+.dashboard-profit-grid line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.4;
+}
+
+.dashboard-profit-guide {
+  stroke: rgba(82, 238, 138, 0.36);
+  stroke-dasharray: 2 2;
+  stroke-width: 0.6;
+}
+
+.dashboard-profit-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dashboard-profit-line-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes dashboard-profit-line-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.dashboard-profit-hit {
+  cursor: pointer;
+  fill: transparent;
+}
+
+.dashboard-profit-point {
+  cursor: pointer;
+  fill: #111311;
+  stroke: #52ee8a;
+  stroke-width: 0.8;
+  transition: r 0.18s ease, fill 0.18s ease, filter 0.18s ease, stroke-width 0.18s ease;
+}
+
+.dashboard-profit-point.is-active {
+  fill: #52ee8a;
+  r: 1.9;
+  stroke: #d9ffe5;
+  stroke-width: 0.6;
+  filter: drop-shadow(0 0 4px rgba(82, 238, 138, 0.7));
+}
+
+.dashboard-profit-tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+  background: rgba(12, 15, 13, 0.92);
+  border: 1px solid rgba(82, 238, 138, 0.26);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-profit-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(12, 15, 13, 0.92);
+  border-right: 1px solid rgba(82, 238, 138, 0.26);
+  border-bottom: 1px solid rgba(82, 238, 138, 0.26);
+}
+
 .dashboard-bar-3d {
   position: relative;
+  cursor: pointer;
   transform-style: preserve-3d;
   transform: rotateX(-15deg) rotateY(20deg);
+  transform-origin: bottom center;
+  animation: dashboard-bar-grow 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dashboard-bar-grow {
+  from {
+    height: 0;
+  }
+}
+
+.dashboard-bar-tooltip {
+  position: absolute;
+  top: -86px;
+  left: 50%;
+  z-index: 4;
+  min-width: 112px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  background: rgba(12, 15, 13, 0.92);
+  border: 1px solid rgba(82, 238, 138, 0.26);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-bar-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(12, 15, 13, 0.92);
+  border-right: 1px solid rgba(82, 238, 138, 0.26);
+  border-bottom: 1px solid rgba(82, 238, 138, 0.26);
 }
 
 .dashboard-bar-face {

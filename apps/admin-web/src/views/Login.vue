@@ -180,7 +180,7 @@ import { useRouter } from 'vue-router'
 import { User, Lock, Management, Right, Location, QuestionFilled } from '@element-plus/icons-vue'
 import LoginInput from '../components/LoginInput.vue'
 import { ElMessage } from 'element-plus'
-import { login } from '../api/user'
+import { loginService } from '../api/user'
 import CryptoJS from 'crypto-js'
 
 const router = useRouter()
@@ -204,7 +204,7 @@ const handleLogin = async () => {
     // 使用 MD5 加密密码
     const md5Password = CryptoJS.MD5(loginForm.password).toString()
     
-    const res = await login({
+    const res = await loginService({
       username: loginForm.username,
       password: md5Password
     })

@@ -31,5 +31,7 @@
 
   { "group": "PROJECT_TYPE", "label": "补录", "value": "historical", "sortOrder": 1, "isActive": true, "description": "历史数据录入" },
   { "group": "PROJECT_TYPE", "label": "常规", "value": "normal", "sortOrder": 2, "isActive": true, "description": "常规项目" },
-  { "group": "PROJECT_TYPE", "label": "长期", "value": "long_term", "sortOrder": 3, "isActive": true, "description": "长期项目" }
+  { "group": "PROJECT_TYPE", "label": "长期", "value": "long_term", "sortOrder": 3, "isActive": true, "description": "长期项目" },
+
+  { "group": "SYSTEM_SETTING", "label": "SESSION_TIMEOUT_MINUTES", "value": "30", "sortOrder": 1, "isActive": true, "description": "用户无操作自动退出登录时间，单位：分钟" }
 ]

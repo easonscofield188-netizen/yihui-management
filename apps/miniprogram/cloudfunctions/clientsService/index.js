@@ -15,6 +15,76 @@ cloud.init({
 const db = cloud.database();
 const _ = db.command;
 
+const isSafeInput = (str) => {
+  if (!str) return true;
+  const unsafePattern = /[<>{}[\]\\^%`|]/;
+  return !unsafePattern.test(str);
+};
+
+async function createClient(params = {}) {
+  const { name, role, roleCode, source, paymentCycle = '', description = '' } = params;
+  const clientName = typeof name === 'string' ? name.trim() : '';
+
+  if (!clientName) {
+    return { code: 400, message: '请输入客户名称' };
+  }
+  if (!roleCode && !role) {
+    return { code: 400, message: '请选择客户角色' };
+  }
+  if (!source) {
+    return { code: 400, message: '请选择客户来源' };
+  }
+  if (!isSafeInput(clientName) || !isSafeInput(role) || !isSafeInput(roleCode) || !isSafeInput(source) || !isSafeInput(description)) {
+    return { code: 400, message: '输入包含非法字符，请检查后重试' };
+  }
+
+  try {
+    const existed = await db.collection('clients').where({
+      name: clientName
+    }).limit(1).get();
+
+    if (existed.data && existed.data.length > 0) {
+      return {
+        code: 0,
+        message: '客户已存在',
+        data: {
+          id: existed.data[0]._id,
+          existed: true
+        }
+      };
+    }
+
+    const res = await db.collection('clients').add({
+      data: {
+        name: clientName,
+        role: role || roleCode,
+        roleCode: roleCode || role,
+        source,
+        paymentCycle,
+        description,
+        createdAt: db.serverDate(),
+        updateTime: db.serverDate()
+      }
+    });
+
+    return {
+      code: 0,
+      message: '创建成功',
+      data: {
+        id: res._id,
+        existed: false
+      }
+    };
+  } catch (err) {
+    console.error('创建客户数据库错误:', err);
+    return {
+      code: 500,
+      message: '服务端内部错误',
+      error: err.message
+    };
+  }
+}
+
 /**
  * 云函数入口
  * @param {Object} event - 包含请求参数。如果是 HTTP 触发，参数在 event.body 中。
@@ -35,6 +105,13 @@ exports.main = async (event, context) => {
     return { code: 400, message: '请求格式错误' };
   }
   
+  const action = body.action;
+  const data = body.data || {};
+
+  if (action === 'createClient') {
+    return await createClient(data);
+  }
+
   const { keyword } = body;
 
   try {

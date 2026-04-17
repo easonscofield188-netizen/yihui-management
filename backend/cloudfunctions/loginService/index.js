@@ -1,5 +1,5 @@
 /**
- * 腾讯云函数: login
+ * 腾讯云函数: loginService
  * 运行环境: Node.js 16+
  * 适配: 微信云开发环境 + Web端 Axios 请求
  */

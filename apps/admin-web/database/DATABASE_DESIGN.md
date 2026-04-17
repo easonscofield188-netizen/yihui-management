@@ -18,6 +18,7 @@
 - `updateTime` (timestamp): 最后更新时间
 
 ### 1.2 系统通用配置表 (`system_configs`)
+> `SYSTEM_SETTING` 分组用于系统运行参数。当前支持 `SESSION_TIMEOUT_MINUTES`，`value` 为用户无操作自动退出登录时间，单位：分钟，默认 30。
 统一管理所有下拉选项（客户角色、项目状态、成本类目、客户来源、项目场景等）。
 - `group` (string): 配置分组 (CLIENT_ROLE, PROJECT_STATUS, COST_CATEGORY, CLIENT_SOURCE, PROJECT_SCENE)
 - `label` (string): 显示名称 (如：项目经理)
@@ -26,6 +27,7 @@
 - `isActive` (boolean): 是否启用
 - `description` (string): 备注说明
 - `createdAt` (timestamp): 创建时间
+
 
 ### 1.3 客户表 (`clients`)
 存储客户的基础信息，支持项目关联。
@@ -36,6 +38,7 @@
 - `paymentCycle` (string): 回款周期
 - `description` (string): 客户描述
 - `createdAt` (timestamp): 创建时间
+
 
 ### 1.4 项目表 (`projects`)
 存储园林景观项目的核心业务数据。
@@ -76,6 +79,7 @@
 - `isHasVoucher` (string): 是否有发票凭证 (yes/no，常规项目用于控制成本支出凭证上传是否必填)
 - `amountEditCount` (number): 订单金额修改次数 (创建成功后最多允许修改一次)
 - `createdAt` (timestamp): 创建时间
+
 - `updatedAt` (timestamp): 更新时间
 - `negotiatingTime` (timestamp): 洽谈时间
 - `constructingTime` (timestamp): 施工时间
@@ -91,6 +95,7 @@
 - `supplier` (string): 供应商名称
 - `amount` (number): 支出金额
 - `createdAt` (timestamp): 记录时间
+
 
 ### 1.6 项目凭证表 (`project_vouchers`)
 存储项目相关的单据或图片凭证。
@@ -113,12 +118,14 @@
 - `type` (string): 文件类型 (image/pdf)
 - `createdAt` (timestamp): 上传时间
 
+
 ### 1.8 项目预览图表 (`project_previews`)
 存储项目效果预览图。
 - `projectId` (string): 关联的项目 ID (外键)
 - `fileId` (string): 腾讯云存储中的 FileID
 - `url` (string): 图片的访问 URL
 - `createdAt` (timestamp): 上传时间
+
 
 ---
 
