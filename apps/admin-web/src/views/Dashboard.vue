@@ -224,7 +224,8 @@
                       <div class="dashboard-scene-tooltip-title">{{ dashboardActiveScene.label }}</div>
                       <div class="dashboard-scene-tooltip-amount">{{ dashboardActiveScene.amountText }}</div>
                       <div class="dashboard-scene-tooltip-meta">
-                        占比 {{ dashboardActiveScene.percent }}% / 订单 {{ dashboardActiveScene.orderCount }} �?                      </div>
+                        占比 {{ dashboardActiveScene.percent }}% / 订单 {{ dashboardActiveScene.orderCount }} 单
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -384,7 +385,8 @@
                   操作日志
                 </h2>
                 <p class="text-on-surface-variant/80 max-w-3xl text-sm leading-6">
-                  监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更�?                </p>
+                  监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更。
+                </p>
               </div>
               <div class="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit">
                 <span class="material-symbols-outlined text-sm">verified_user</span>
@@ -505,7 +507,8 @@
                         colspan="5"
                         class="px-6 py-12 text-center text-sm text-on-surface-variant"
                       >
-                        暂无符合条件的操作日�?                      </td>
+                        暂无符合条件的操作日志
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -513,7 +516,8 @@
 
               <div class="bg-surface-container-high/30 px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-t border-white/5">
                 <span class="text-xs text-on-surface-variant/60">
-                  显示 {{ operationLogPageStart }} �?{{ operationLogPageEnd }} 项，�?{{ filteredOperationLogs.length }} �?                </span>
+                  显示 {{ operationLogPageStart }} - {{ operationLogPageEnd }} 项，共 {{ filteredOperationLogs.length }} 项
+                </span>
                 <div class="flex items-center gap-2">
                   <button
                     class="operation-log-page-btn"
@@ -635,14 +639,14 @@
                 :class="projectFilters.tab === 'ongoing' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
                 @click="projectFilters.tab = 'ongoing'; currentPage = 1"
               >
-                进行�?
+                进行中
               </button>
               <button 
                 class="px-3 py-1.5 text-[10px] rounded-md transition-all uppercase tracking-wider"
                 :class="projectFilters.tab === 'completed' ? 'bg-primary/10 text-primary font-bold border border-primary/20' : 'text-on-surface-variant hover:text-primary'"
                 @click="projectFilters.tab = 'completed'; currentPage = 1"
               >
-                已交�?
+                已交付
               </button>
             </div>
           </div>
@@ -662,7 +666,7 @@
                 >
               </div>
               
-              <!-- 类别筛�?-->
+              <!-- 类别筛选 -->
               <div class="col-span-2 relative custom-dropdown-trigger">
                 <div
                   class="relative cursor-pointer"
@@ -714,7 +718,7 @@
                 </div>
               </div>
 
-              <!-- 状态筛�?-->
+              <!-- 状态筛选 -->
               <div class="col-span-2 relative custom-dropdown-trigger">
                 <div
                   class="relative cursor-pointer"
@@ -740,13 +744,13 @@
                   >
                     <div class="py-1">
                       <div class="px-3 py-2 text-xs text-on-surface-variant/60 font-bold border-b border-white/5 mb-1">
-                        项目状�?
+                        项目状态
                       </div>
                       <div 
                         class="px-3 py-2 text-xs text-on-surface-variant hover:bg-white/5 cursor-pointer flex justify-between items-center"
                         @click.stop="selectFilter('status', '')"
                       >
-                        <span>全部状</span>
+                        <span>全部状态</span>
                       </div>
                       <div 
                         v-for="item in projectStatuses" 
@@ -996,7 +1000,7 @@
                     <span
                       v-else
                       class="text-[10px] text-on-surface-variant/40 italic"
-                    >新建�?..</span>
+                    >新建中...</span>
                   </div>
                 </template>
               </el-table-column>
@@ -1019,7 +1023,7 @@
               class="px-6 py-4 border-t border-white/5 flex items-center justify-between"
             >
               <div class="text-xs text-on-surface-variant">
-                显示�?<span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> �?<span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, totalProjectsCount) }}</span> 条，�?<span class="font-bold text-on-surface">{{ totalProjectsCount }}</span> 条记�?
+                显示 <span class="font-bold text-on-surface">{{ (currentPage - 1) * pageSize + 1 }}</span> - <span class="font-bold text-on-surface">{{ Math.min(currentPage * pageSize, totalProjectsCount) }}</span> 条，共 <span class="font-bold text-on-surface">{{ totalProjectsCount }}</span> 条记录
               </div>
               <nav
                 aria-label="Pagination"
@@ -1033,7 +1037,7 @@
                   <el-icon class="text-sm mr-1">
                     <ArrowLeft />
                   </el-icon>
-                  上一�?
+                  上一页
                 </button>
                 
                 <template
@@ -1065,7 +1069,7 @@
                   class="relative inline-flex items-center rounded-r-md px-3 py-2 text-xs font-medium text-on-surface-variant ring-1 ring-inset ring-white/5 hover:bg-white/5 focus:z-20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   @click="currentPage < totalPages && currentPage++"
                 >
-                  下一�?
+                  下一页
                   <el-icon class="text-sm ml-1">
                     <ArrowRight />
                   </el-icon>
@@ -1284,7 +1288,7 @@
                       <span
                         v-if="projectDays > 0"
                         class="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20"
-                      >�?{{ projectDays }} </span>
+                      >共 {{ projectDays }} 天</span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
@@ -1321,7 +1325,7 @@
                       <span
                         v-if="constructionDays > 0"
                         class="text-[10px] font-bold text-secondary px-2 py-0.5 bg-secondary/10 rounded-full border border-secondary/20"
-                      >�?{{ constructionDays }} </span>
+                      >共 {{ constructionDays }} 天</span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
@@ -1359,7 +1363,7 @@
                       <span
                         v-if="collectionDays > 0"
                         class="text-[10px] font-bold text-orange-400 px-2 py-0.5 bg-orange-400/10 rounded-full border border-orange-400/20"
-                      >�?{{ collectionDays }} </span>
+                      >共 {{ collectionDays }} 天</span>
                     </div>
                     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       <el-date-picker
@@ -1510,7 +1514,7 @@
 
                   <!-- Has Contract -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有合同</label>
                     <el-select 
                       v-model="form.isHasContract" 
                       placeholder="请选择" 
@@ -1555,7 +1559,7 @@
                     v-if="form.type !== 'long_term'"
                     class="space-y-2"
                   >
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭证</label>
                     <el-select 
                       v-model="form.isHasVoucher" 
                       placeholder="请选择" 
@@ -1581,7 +1585,7 @@
                       v-model="form.desc" 
                       type="textarea" 
                       :rows="4" 
-                      placeholder="在此详细说明园林项目的设计要求与技术难�?.."
+                      placeholder="在此详细说明园林项目的设计要求与技术难点..."
                       class="custom-textarea"
                       :disabled="isViewMode || isFieldReadOnly('desc')"
                     />
@@ -1625,7 +1629,7 @@
 
                 <!-- Payable Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付总账�?(¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">应付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-on-surface cursor-not-allowed">
                     {{ Number(payableAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1633,7 +1637,7 @@
 
                 <!-- Paid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付总账�?(¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">已付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-success/80 cursor-not-allowed">
                     {{ Number(paidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1641,7 +1645,7 @@
 
                 <!-- Unpaid Amount -->
                 <div class="space-y-2">
-                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付总账�?(¥)</label>
+                  <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">未付总账款 (¥)</label>
                   <div class="!bg-[#0e0e0f] px-4 h-[48px] flex items-center rounded-lg !shadow-[inset_0_0_0_1px_rgba(60,74,62,0.3)] text-sm font-mono text-red-400/80 cursor-not-allowed">
                     {{ Number(unpaidAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
                   </div>
@@ -1699,7 +1703,7 @@
                             类目
                           </th>
                           <th class="px-4 py-2 font-medium w-[25%]">
-                            供应�?
+                            供应商
                           </th>
                           <th class="px-4 py-2 font-medium w-[20%] text-center">
                             成本金额 (¥)
@@ -1804,7 +1808,7 @@
                   >
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-                        单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多�?
+                        单据凭证列表 (支持 JPG, PNG, WEBP 格式，支持多选)
                       </h4>
                       <label 
                         v-if="!isViewMode && !isFieldReadOnly('vouchers')"
@@ -1837,7 +1841,7 @@
                     >
 
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <!-- 已上传图片展�?-->
+                      <!-- 已上传图片展示 -->
                       <div 
                         v-for="(v, idx) in vouchers" 
                         :key="v.fileId || v.id || idx"
@@ -1969,7 +1973,7 @@
                         {{ uploadingContract ? '正在上传...' : '点击上传项目合同' }}
                       </p>
                       <p class="text-xs text-on-surface-variant mt-2 opacity-60">
-                        支持 JPG, PNG, PDF 格式，请上传清晰的扫描件或照�?
+                        支持 JPG, PNG, PDF 格式，请上传清晰的扫描件或照片
                       </p>
                     </div>
                   </label>
@@ -2102,7 +2106,7 @@
                         {{ uploadingPreview ? '正在上传...' : '点击上传方案预览图' }}
                       </p>
                       <p class="text-xs text-on-surface-variant mt-2 opacity-60">
-                        支持 JPG, PNG 格式，最多上�?4 张图�?
+                        支持 JPG, PNG 格式，最多上传 4 张图片
                       </p>
                     </div>
                   </label>
@@ -2169,7 +2173,7 @@
               </el-collapse-transition>
             </section>
 
-            <!-- 子项目管�?(长期项目专用) -->
+            <!-- 子项目管理（长期项目专用） -->
             <section 
               v-if="form.type === 'long_term'" 
               class="bg-surface-container-low rounded-2xl p-6 md:p-8 border-t-2 border-emerald-500/20 shadow-2xl"
@@ -2178,13 +2182,13 @@
                 <div>
                   <h2 class="text-2xl font-bold text-on-surface flex items-center gap-3">
                     <span class="material-symbols-outlined text-emerald-500 text-3xl">account_tree</span>
-                    子项目管�?
+                    子项目管理
                   </h2>
-                  <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任</p>
+                  <p class="text-on-surface-variant text-sm mt-1">处理项目的周期性养护与植物更新子任务</p>
                 </div>
               </div>
 
-              <!-- 子项目折叠面板容�?-->
+              <!-- 子项目折叠面板容器 -->
               <div class="space-y-4 mb-8">
                 <div 
                   v-for="(sp, index) in form.subProjects" 
@@ -2284,7 +2288,7 @@
                           />
                         </div>
                         <div class="space-y-2">
-                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭</label>
+                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">是否有发票凭证</label>
                           <el-select 
                             v-model="sp.isHasVoucher" 
                             placeholder="请选择" 
@@ -2306,7 +2310,7 @@
                             :class="index % 2 === 0 ? 'text-emerald-400' : 'text-cyan-400'"
                           >
                             <span class="material-symbols-outlined text-sm">receipt_long</span>
-                            成本支出明细 (子项�?#{{ String(index + 1).padStart(2, '0') }})
+                            成本支出明细 (子项目 #{{ String(index + 1).padStart(2, '0') }})
                           </span>
                           <button 
                             v-if="!isViewMode && !isLongTermTerminated"
@@ -2322,7 +2326,7 @@
                             <thead class="text-on-surface-variant uppercase tracking-widest">
                               <tr>
                                 <th class="px-4 py-2 font-medium w-[25%]">类目</th>
-                                <th class="px-4 py-2 font-medium w-[25%]">供应</th>
+                                <th class="px-4 py-2 font-medium w-[25%]">供应商</th>
                                 <th class="px-4 py-2 font-medium w-[20%] text-center">支出金额 (¥)</th>
                                 <th class="px-4 py-2 font-medium w-[20%] text-center">是否结清</th>
                                 <th v-if="!isViewMode" class="px-4 py-2 font-medium text-right w-[10%]">操作</th>
@@ -2404,14 +2408,14 @@
                         </div>
                       </div>
 
-                      <!-- 子项目凭证上传区�?-->
+                      <!-- 子项目凭证上传区 -->
                       <div 
                         v-if="sp.isHasVoucher === YES_NO_VALUE.YES"
                         class="mb-10 space-y-4"
                       >
                         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">发票凭证上传</label>
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                          <!-- 已上传凭证预�?-->
+                          <!-- 已上传凭证预览 -->
                           <div 
                             v-for="(v, vIdx) in sp.vouchers" 
                             :key="v.id || vIdx"
@@ -2453,7 +2457,7 @@
                             <el-icon v-if="!sp.uploading" class="text-2xl text-on-surface-variant group-hover:text-primary transition-colors"><Plus /></el-icon>
                             <el-icon v-else class="text-2xl text-primary animate-spin"><Refresh /></el-icon>
                             <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest group-hover:text-primary transition-colors">
-                              {{ sp.uploading ? '上传�?..' : '上传凭证' }}
+                              {{ sp.uploading ? '上传中...' : '上传凭证' }}
                             </span>
                             <input 
                               :ref="`subVoucherInput_${index}`"
@@ -2465,14 +2469,14 @@
                             >
                           </div>
                         </div>
-                        <p class="text-[10px] text-on-surface-variant/60 italic px-1">支持 JPG、PNG、GIF 格式，单张不超过 5MB，最多上�?10 </p>
+                        <p class="text-[10px] text-on-surface-variant/60 italic px-1">支持 JPG、PNG、GIF 格式，单张不超过 5MB，最多上传 10 张</p>
                       </div>
                     </div>
                   </el-collapse-transition>
                 </div>
               </div>
 
-              <!-- 添加子项目虚线按�?-->
+              <!-- 添加子项目虚线按钮 -->
               <button 
                 v-if="!isViewMode && !isLongTermTerminated"
                 class="w-full py-5 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/5 transition-all duration-300 group"
@@ -2546,7 +2550,7 @@
                   <div class="flex justify-between items-start mb-2">
                     <div>
                       <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                        未付账款 (总成�?- 已付)
+                        未付账款 (总成本 - 已付)
                       </p>
                       <p class="text-2xl font-mono font-black text-rose-500">
                         ¥ {{ formatNumber(unpaidAmount) }}
@@ -2567,15 +2571,15 @@
 
                 <div class="pt-6 border-t border-white/5 space-y-2 text-xs">
                   <div class="flex justify-between">
-                    <span class="text-on-surface-variant">总预算收</span>
+                    <span class="text-on-surface-variant">总预算收入</span>
                     <span class="text-on-surface font-mono">¥ {{ formatNumber(totalIncome) }}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-on-surface-variant">已核算成</span>
+                    <span class="text-on-surface-variant">已核算成本</span>
                     <span class="text-red-400/80 font-mono">- ¥ {{ formatNumber(totalCost) }}</span>
                   </div>
                   <div class="flex justify-between font-bold">
-                    <span class="text-on-surface-variant">预估净</span>
+                    <span class="text-on-surface-variant">预估净利润</span>
                     <span class="text-primary font-mono">¥ {{ formatNumber(estimatedProfit) }}</span>
                   </div>
                 </div>
@@ -2657,7 +2661,7 @@
                   方案预览
                 </p>
                 <h4 class="text-sm font-bold text-on-surface-variant/60">
-                  等待上传设计�?
+                  等待上传设计图
                 </h4>
               </div>
             </div>
@@ -2825,14 +2829,15 @@
                     角色权限矩阵
                   </h3>
                   <div class="text-[10px] text-zinc-500 italic">
-                    自动保存已开�?                  </div>
+                    自动保存已开启
+                  </div>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full text-left border-separate border-spacing-y-2">
                     <thead>
                       <tr class="text-[10px] uppercase tracking-widest text-zinc-500 border-b border-zinc-800">
                         <th class="pb-4 font-medium pl-4">
-                          权限�?\ 角色
+                          权限 \ 角色
                         </th>
                         <th
                           v-for="role in settingRoles"
@@ -3073,7 +3078,7 @@
               上传头像
             </el-button>
             <p class="text-[10px] text-zinc-500">
-              支持 JPG、PNG、WebP，最�?2MB
+              支持 JPG、PNG、WebP，最大 2MB
             </p>
           </div>
         </div>
@@ -7100,7 +7105,7 @@ const handleLogout = () => {
   localStorage.removeItem('isLoggedIn')
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')
-  router.push('/loginService')
+  router.push('/login')
 }
 </script>
 
