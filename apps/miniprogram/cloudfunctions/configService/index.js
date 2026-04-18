@@ -5,8 +5,6 @@
  */
 'use strict';
 
-const crypto = require('crypto');
-const https = require('https');
 const cloud = require("wx-server-sdk");
 
 // 初始化云开发环境
@@ -56,8 +54,6 @@ exports.main = async (event, context) => {
         return await queryConfig(data);
       case 'createConfig':
         return await createConfig(data);
-      case 'updateConfigStatus':
-        return await updateConfigStatus(data);
       default:
         // 处理未知操作
         return {
@@ -156,107 +152,6 @@ function isSafeInput(str) {
   return !unsafePattern.test(str);
 }
 
-/**
- * 生成 MD5 签名
- * @param {string} text - 待签名文本
- * @returns {string} MD5 签名
- * @throws {Error} 无
- */
-function md5(text) {
-  return crypto.createHash('md5').update(text, 'utf8').digest('hex');
-}
-
-/**
- * 规范化翻译结果为数据库 value
- * @param {string} text - 英文翻译文本
- * @returns {string} 英文唯一标识基础值
- * @throws {Error} 无
- */
-function normalizeTranslatedValue(text) {
-  return String(text || '')
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .replace(/_{2,}/g, '_')
-    .slice(0, 40);
-}
-
-/**
- * 调用百度翻译将中文配置名翻译为英文
- * @param {string} label - 中文配置名
- * @returns {Promise<string>} 英文翻译文本
- * @throws {Error} 百度翻译接口异常
- */
-function translateByBaidu(label) {
-  return new Promise((resolve, reject) => {
-    const appId = process.env.BAIDU_TRANSLATE_APP_ID;
-    const appKey = process.env.BAIDU_TRANSLATE_APP_KEY;
-    const q = String(label || '').trim();
-
-    if (!q) {
-      resolve('');
-      return;
-    }
-    if (!appId || !appKey) {
-      reject(new Error('百度翻译环境变量未配置'));
-      return;
-    }
-
-    const salt = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
-    const sign = md5(`${appId}${q}${salt}${appKey}`);
-    const params = new URLSearchParams({
-      q,
-      from: 'zh',
-      to: 'en',
-      appid: appId,
-      salt,
-      sign
-    });
-    const body = params.toString();
-
-    const req = https.request({
-      hostname: 'fanyi-api.baidu.com',
-      path: '/api/trans/vip/translate',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(body)
-      },
-      timeout: 5000
-    }, (res) => {
-      let responseBody = '';
-
-      res.on('data', chunk => {
-        responseBody += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          const result = JSON.parse(responseBody);
-          if (result.error_code) {
-            reject(new Error(result.error_msg || `百度翻译失败：${result.error_code}`));
-            return;
-          }
-
-          resolve(result.trans_result?.[0]?.dst || '');
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.on('timeout', () => {
-      req.destroy(new Error('百度翻译请求超时'));
-    });
-    req.write(body);
-    req.end();
-  });
-}
-
 function normalizeEnglishValue(label) {
   const raw = String(label || '').trim().toLowerCase();
   const asciiValue = raw
@@ -322,7 +217,7 @@ function normalizeEnglishValue(label) {
 }
 
 async function ensureUniqueValue(group, baseValue) {
-  let value = baseValue || 'config';
+  let value = baseValue;
   let index = 1;
 
   while (true) {
@@ -333,7 +228,7 @@ async function ensureUniqueValue(group, baseValue) {
 
     if (!res.data || res.data.length === 0) return value;
     index += 1;
-    value = `${baseValue || 'config'}_${index}`;
+    value = `${baseValue}_${index}`;
   }
 }
 
@@ -344,23 +239,25 @@ async function queryConfig(params) {
   const { group, isActive } = params || {};
 
   try {
+    // 构建查询条件
     let query = db.collection('system_configs');
-    const whereCondition = {};
     
     // 按分组筛选
     if (group) {
-      whereCondition.group = group;
+      query = query.where({
+        group: group
+      });
     }
 
     // 状态筛选：默认只查询已启用的配置 (isActive == true)
-    if (isActive !== undefined && isActive !== 'all') {
-      whereCondition.isActive = isActive === 'true' || isActive === true;
-    } else if (isActive === undefined) {
-      whereCondition.isActive = true;
-    }
-
-    if (Object.keys(whereCondition).length > 0) {
-      query = query.where(whereCondition);
+    if (isActive !== undefined) {
+      query = query.where({
+        isActive: isActive === 'true' || isActive === true
+      });
+    } else {
+      query = query.where({
+        isActive: true
+      });
     }
 
     // 排序逻辑：按 sortOrder 字段升序排列，确保前端展示顺序可控
@@ -386,7 +283,7 @@ async function queryConfig(params) {
  */
 async function createConfig(params) {
   const { group, label, description = '' } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
+  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE'];
 
   if (!group || !allowedGroups.includes(group)) {
     return { code: 400, message: '配置分组不支持新增' };
@@ -422,19 +319,7 @@ async function createConfig(params) {
     const nextSortOrder = lastRes.data && lastRes.data.length > 0
       ? (Number(lastRes.data[0].sortOrder) || 0) + 1
       : 1;
-
-    let baseValue = '';
-    try {
-      const translatedText = await translateByBaidu(normalizedLabel);
-      baseValue = normalizeTranslatedValue(translatedText);
-    } catch (error) {
-      console.error('百度翻译生成配置标识失败，使用本地规则兜底:', error);
-    }
-
-    if (!baseValue) {
-      baseValue = normalizeEnglishValue(normalizedLabel);
-    }
-
+    const baseValue = normalizeEnglishValue(normalizedLabel);
     const value = await ensureUniqueValue(group, baseValue);
     const now = db.serverDate();
     const configData = {
@@ -468,65 +353,5 @@ async function createConfig(params) {
   } catch (err) {
     console.error('创建配置项失败:', err);
     return { code: 500, message: '创建失败', error: err.message };
-  }
-}
-
-/**
- * 更新配置项启用状态
- */
-async function updateConfigStatus(params) {
-  const { id, group, isActive } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
-
-  if (!id || !String(id).trim()) {
-    return { code: 400, message: '缺少配置 ID' };
-  }
-  if (typeof isActive !== 'boolean') {
-    return { code: 400, message: '缺少启用状态' };
-  }
-  if (!group || !allowedGroups.includes(group)) {
-    return { code: 400, message: '配置分组不支持修改状态' };
-  }
-
-  try {
-    const configRes = await db.collection('system_configs')
-      .doc(id)
-      .get();
-    const config = configRes.data;
-
-    if (!config) {
-      return { code: 404, message: '配置不存在' };
-    }
-    if (config.group !== group) {
-      return { code: 400, message: '配置分组不匹配' };
-    }
-    if (config.isActive === isActive) {
-      return {
-        code: 0,
-        message: isActive ? '配置已启用' : '配置已停用',
-        data: { id, isActive }
-      };
-    }
-
-    await db.collection('system_configs')
-      .doc(id)
-      .update({
-        data: {
-          isActive,
-          updateTime: db.serverDate()
-        }
-      });
-
-    configCache = null;
-    lastUpdateTime = 0;
-
-    return {
-      code: 0,
-      message: isActive ? '启用成功' : '停用成功',
-      data: { id, isActive }
-    };
-  } catch (err) {
-    console.error('更新配置状态失败:', err);
-    return { code: 500, message: '状态更新失败', error: err.message };
   }
 }

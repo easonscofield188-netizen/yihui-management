@@ -126,6 +126,22 @@
 - `url` (string): 图片的访问 URL
 - `createdAt` (timestamp): 上传时间
 
+### 1.9 操作日志表 (`operation_logs`)
+记录后台管理端关键操作，用于审计、筛选、统计和导出。
+- `user_id` (string): 操作用户 ID
+- `username` (string): 登录账号
+- `nickname` (string): 用户昵称
+- `user_role` (string): 用户角色标识
+- `module` (string): 操作所属模块（如 项目管理、系统配置、操作日志）
+- `action` (string): 操作动作（create/update/delete/view/export）
+- `content` (string): 操作内容描述
+- `status` (string): 操作状态（成功、警告、失败）
+- `ip` (string): 客户端 IP
+- `user_agent` (string): 客户端 User-Agent
+- `create_time` (string): 操作时间 ISO 字符串
+- `create_timestamp` (number): 操作时间戳，用于范围筛选和排序
+- `createdAt` (timestamp): 记录创建时间
+
 
 ---
 

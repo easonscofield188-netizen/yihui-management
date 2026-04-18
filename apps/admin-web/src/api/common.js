@@ -378,3 +378,37 @@ export function renameProjectFiles(params) {
     }
   });
 }
+
+/**
+ * 查询操作日志
+ * 对应腾讯云函数名: operationLogService
+ * HTTP 访问路径: /operationLogService
+ * @param {Object} data - { user, module, status, startDate, endDate, page, pageSize }
+ */
+export function listOperationLogs(data) {
+  return request({
+    url: '/operationLogService',
+    method: 'post',
+    data: {
+      action: 'list',
+      data
+    }
+  });
+}
+
+/**
+ * 记录操作日志
+ * 对应腾讯云函数名: operationLogService
+ * HTTP 访问路径: /operationLogService
+ * @param {Object} data - { module, action, content, status }
+ */
+export function recordOperationLog(data) {
+  return request({
+    url: '/operationLogService',
+    method: 'post',
+    data: {
+      action: 'create',
+      data
+    }
+  });
+}

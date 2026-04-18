@@ -80,8 +80,6 @@ exports.main = async (event, context) => {
             id: user._id,
             username: user.username,
             role: user.role || 'user',
-            roleName: user.roleName || user.role || '系统管理员',
-            employeeNo: user.employeeNo || '',
             nickname: user.nickname || user.username,
             avatarUrl: user.avatarUrl || '',
             avatarFileId: user.avatarFileId || '',
@@ -139,8 +137,6 @@ function formatUser(user, userId) {
     id: userId || user._id || user.id,
     username: user.username,
     role: user.role || 'user',
-    roleName: user.roleName || user.role || '系统管理员',
-    employeeNo: user.employeeNo || '',
     nickname: user.nickname || user.username,
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',
@@ -163,8 +159,8 @@ async function updateUserInfo(data, event) {
   const result = await getCurrentUserDoc(data, event);
   if (result.error) return result.error;
 
-  const { nickname, avatarUrl, avatarFileId } = data;
-  if (!isSafeInput(nickname) || !isSafeInput(avatarUrl)) {
+  const { nickname, role, avatarUrl, avatarFileId } = data;
+  if (!isSafeInput(nickname) || !isSafeInput(role) || !isSafeInput(avatarUrl)) {
     return { code: 400, message: '输入包含非法字符' };
   }
 
@@ -173,6 +169,7 @@ async function updateUserInfo(data, event) {
   };
 
   if (nickname !== undefined) updateData.nickname = String(nickname).trim();
+  if (role !== undefined) updateData.role = String(role).trim() || 'user';
   if (avatarUrl !== undefined) updateData.avatarUrl = String(avatarUrl).trim();
   if (avatarFileId !== undefined) updateData.avatarFileId = String(avatarFileId).trim();
 
