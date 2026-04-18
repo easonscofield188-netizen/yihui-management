@@ -140,6 +140,27 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "上传时间" }
       },
       "required": ["projectId", "url", "fileId"]
+    },
+    "OperationLog": {
+      "title": "操作日志",
+      "description": "后台管理端关键操作审计记录",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string", "description": "操作用户 ID" },
+        "username": { "type": "string", "description": "登录账号" },
+        "nickname": { "type": "string", "description": "用户昵称" },
+        "user_role": { "type": "string", "description": "用户角色标识" },
+        "module": { "type": "string", "description": "操作所属模块" },
+        "action": { "type": "string", "description": "操作动作，如 create/update/delete/view/export" },
+        "content": { "type": "string", "description": "操作内容描述" },
+        "status": { "type": "string", "description": "操作状态", "enum": ["成功", "警告", "失败"] },
+        "ip": { "type": "string", "description": "客户端 IP" },
+        "user_agent": { "type": "string", "description": "客户端 User-Agent" },
+        "create_time": { "type": "string", "format": "date-time", "description": "操作时间 ISO 字符串" },
+        "create_timestamp": { "type": "number", "description": "操作时间戳" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "记录创建时间" }
+      },
+      "required": ["user_id", "module", "content", "status", "create_timestamp"]
     }
   },
   "firestore": {
@@ -174,6 +195,10 @@
     "project_previews": {
       "schema": { "$ref": "PreviewImage" },
       "description": "项目预览图集合"
+    },
+    "operation_logs": {
+      "schema": { "$ref": "OperationLog" },
+      "description": "操作日志集合"
     }
   }
 }

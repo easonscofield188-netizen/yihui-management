@@ -402,13 +402,28 @@
                   监控与审计系统活动，记录项目、客户、配置与权限相关操作，辅助追踪数据变更。
                 </p>
               </div>
-              <div class="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit">
-                <span class="material-symbols-outlined text-sm">verified_user</span>
-                <span class="text-xs">实时监控已开</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs font-bold border border-white/5 hover:border-primary/30"
+                  @click="resetOperationLogFilters"
+                >
+                  重置筛选
+                </button>
+                <button
+                  class="px-4 py-2 rounded-lg bg-primary text-black text-xs font-bold hover:brightness-110 disabled:opacity-60"
+                  :disabled="operationLogLoading"
+                  @click="loadOperationLogs"
+                >
+                  刷新日志
+                </button>
+                <div class="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit">
+                  <span class="material-symbols-outlined text-sm">verified_user</span>
+                  <span class="text-xs">实时监控已开</span>
+                </div>
               </div>
             </header>
 
-            <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
                 <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">选择用户</label>
                 <select
@@ -459,9 +474,25 @@
                   </option>
                 </select>
               </div>
+
+              <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">状态</label>
+                <select
+                  v-model="operationLogFilters.status"
+                  class="operation-log-control"
+                >
+                  <option value="">全部状态</option>
+                  <option value="成功">成功</option>
+                  <option value="警告">警告</option>
+                  <option value="失败">失败</option>
+                </select>
+              </div>
             </section>
 
-            <section class="bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <section
+              v-loading="operationLogLoading"
+              class="bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-white/5"
+            >
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                   <thead>
@@ -3151,7 +3182,7 @@
 <script setup>
 import { ref, reactive, markRaw, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryClients, createClient, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject } from '../api/common'
+import { queryClients, createClient, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject, listOperationLogs, recordOperationLog } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
 import { getInfo, updateInfo, uploadAvatar } from '../api/user'
@@ -3504,6 +3535,14 @@ const handleMenuClick = (menuName) => {
     ...item,
     active: item.name === menuName
   }));
+  if (menuName === 'logs') {
+    loadOperationLogs()
+    writeOperationLog({
+      module: '操作日志',
+      action: 'view',
+      content: '查看操作日志页面'
+    })
+  }
 }
 
 const getSessionTimeoutFromConfigs = (configs) => {
@@ -3598,6 +3637,11 @@ const togglePermissionRole = (permission, roleValue) => {
     permission.enabledRoles.push(roleValue)
   }
   saveSettingPermissions()
+  writeOperationLog({
+    module: '系统权限设置',
+    action: 'update',
+    content: `调整“${permission.name}”权限角色：${roleValue}`
+  })
 }
 
 /**
@@ -3803,6 +3847,11 @@ const handleCreateConfig = async () => {
     localStorage.removeItem('APP_CONFIG_TIMESTAMP')
     await initGlobalConfigs(true)
     configDialog.visible = false
+    writeOperationLog({
+      module: '系统配置',
+      action: 'create',
+      content: `新增${configDialog.title}配置“${label}”`
+    })
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.success('配置创建成功')
     })
@@ -3861,6 +3910,11 @@ const handleToggleConfigStatus = async (card, tag) => {
     localStorage.removeItem('APP_GLOBAL_CONFIGS')
     localStorage.removeItem('APP_CONFIG_TIMESTAMP')
     await initGlobalConfigs(true)
+    writeOperationLog({
+      module: '系统配置',
+      action: 'update',
+      content: `${actionText}${card.title}配置“${tag.label}”`
+    })
     ElMessage.success(`配置${actionText}`)
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') {
@@ -4316,96 +4370,43 @@ const dashboardTopOrders = computed(() => {
 
 const operationLogPageSize = 5
 const operationLogPage = ref(1)
+const operationLogLoading = ref(false)
+const operationLogRemoteStats = ref({
+  todayCount: 0,
+  abnormalCount: 0,
+  activeModule: '-'
+})
+const operationLogOptions = reactive({
+  users: [],
+  modules: []
+})
 const operationLogFilters = reactive({
   user: '',
   module: '',
+  status: '',
   startDate: '',
   endDate: ''
 })
-const operationLogs = ref([
-  {
-    id: 'LOG-001',
-    date: '2026-04-16',
-    time: '14:22:05',
-    user: '系统管理员',
-    initials: '系',
-    avatarClass: 'bg-primary/20 text-primary',
-    module: '项目管理',
-    content: '删除项目“西湖隐秀园林景观设计”',
-    status: '成功'
-  },
-  {
-    id: 'LOG-002',
-    date: '2026-04-16',
-    time: '11:05:48',
-    user: '项目经理',
-    initials: '项',
-    avatarClass: 'bg-secondary/20 text-secondary',
-    module: '数据总览',
-    content: '查看经营数据总览',
-    status: '成功'
-  },
-  {
-    id: 'LOG-003',
-    date: '2026-04-15',
-    time: '16:45:12',
-    user: '普通访客',
-    initials: '访',
-    avatarClass: 'bg-red-500/20 text-red-300',
-    module: '系统权限设置',
-    content: '尝试访问未授权的操作日志页面',
-    status: '失败'
-  },
-  {
-    id: 'LOG-004',
-    date: '2026-04-15',
-    time: '09:12:33',
-    user: '财务主管',
-    initials: '财',
-    avatarClass: 'bg-amber-500/20 text-amber-300',
-    module: '成本项目',
-    content: '调整仿真植物材料成本配置',
-    status: '警告'
-  },
-  {
-    id: 'LOG-005',
-    date: '2026-04-14',
-    time: '18:01:55',
-    user: '系统管理员',
-    initials: '系',
-    avatarClass: 'bg-primary/20 text-primary',
-    module: '系统配置',
-    content: '停用客户来源配置“老客户推荐”',
-    status: '成功'
-  },
-  {
-    id: 'LOG-006',
-    date: '2026-04-14',
-    time: '10:36:21',
-    user: '超级系统管理员',
-    initials: '超',
-    avatarClass: 'bg-emerald-500/20 text-emerald-300',
-    module: '系统权限设置',
-    content: '为系统管理员配置“查看操作记录日志”权限',
-    status: '成功'
-  }
-])
+const operationLogs = ref([])
 
 const operationLogUsers = computed(() => {
-  return [...new Set(operationLogs.value.map(item => item.user))]
+  const localUsers = operationLogs.value.map(item => item.user).filter(Boolean)
+  return [...new Set([...operationLogOptions.users, ...localUsers])]
 })
 
 const operationLogModules = computed(() => {
-  return [...new Set(operationLogs.value.map(item => item.module))]
+  const localModules = operationLogs.value.map(item => item.module).filter(Boolean)
+  return [...new Set([...operationLogOptions.modules, ...localModules])]
 })
 
 const filteredOperationLogs = computed(() => {
   return operationLogs.value.filter(item => {
     const matchUser = !operationLogFilters.user || item.user === operationLogFilters.user
     const matchModule = !operationLogFilters.module || item.module === operationLogFilters.module
+    const matchStatus = !operationLogFilters.status || item.status === operationLogFilters.status
     const matchStartDate = !operationLogFilters.startDate || item.date >= operationLogFilters.startDate
     const matchEndDate = !operationLogFilters.endDate || item.date <= operationLogFilters.endDate
-    return matchUser && matchModule && matchStartDate && matchEndDate
+    return matchUser && matchModule && matchStatus && matchStartDate && matchEndDate
   })
 })
 
@@ -4428,14 +4429,92 @@ const operationLogPageEnd = computed(() => {
 })
 
 const operationLogStats = computed(() => {
-  const failedCount = operationLogs.value.filter(item => item.status === '失败').length
-  const warningCount = operationLogs.value.filter(item => item.status === '警告').length
+  const moduleCountMap = operationLogs.value.reduce((map, item) => {
+    const moduleName = item.module || '系统'
+    map[moduleName] = (map[moduleName] || 0) + 1
+    return map
+  }, {})
+  const activeModule = Object.entries(moduleCountMap).sort((a, b) => b[1] - a[1])[0]?.[0]
   return [
-    { label: '今日操作总数', value: operationLogs.value.filter(item => item.date === '2026-04-16').length, trend: '12%', icon: 'trending_up', colorClass: 'text-primary' },
-    { label: '异常状态警告', value: failedCount + warningCount, trend: '关键', icon: 'priority_high', colorClass: 'text-red-300' },
-    { label: '最活跃模块', value: '项目管理', trend: '高频', icon: 'analytics', colorClass: 'text-secondary' }
+    { label: '今日操作总数', value: operationLogRemoteStats.value.todayCount, trend: '实时', icon: 'trending_up', colorClass: 'text-primary' },
+    { label: '异常状态警告', value: operationLogRemoteStats.value.abnormalCount, trend: '关键', icon: 'priority_high', colorClass: 'text-red-300' },
+    { label: '最活跃模块', value: operationLogRemoteStats.value.activeModule || activeModule || '-', trend: '高频', icon: 'analytics', colorClass: 'text-secondary' }
   ]
 })
+
+/**
+ * 功能：记录后台管理操作日志
+ * @param {Object} logData 日志内容
+ * @returns {Promise<void>} 无返回值
+ * @throws {Error} 接口异常时仅输出错误日志
+ */
+const writeOperationLog = async (logData) => {
+  try {
+    await recordOperationLog({
+      status: '成功',
+      ...logData
+    })
+  } catch (error) {
+    console.warn('记录操作日志失败', error.message || error)
+  }
+}
+
+/**
+ * 功能：加载操作日志列表
+ * @returns {Promise<void>} 无返回值
+ * @throws {Error} 接口异常时提示用户
+ */
+const loadOperationLogs = async () => {
+  if (!hasPermission('VIEW_OPERATION_LOGS')) return
+  if (operationLogFilters.startDate && operationLogFilters.endDate && operationLogFilters.startDate > operationLogFilters.endDate) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('开始日期不能晚于结束日期')
+    })
+    return
+  }
+
+  operationLogLoading.value = true
+  try {
+    const res = await listOperationLogs({
+      startDate: operationLogFilters.startDate,
+      endDate: operationLogFilters.endDate,
+      page: 1,
+      pageSize: 1000
+    })
+    const data = res.data || {}
+    operationLogs.value = Array.isArray(data.list) ? data.list : []
+    operationLogOptions.users = Array.isArray(data.users) ? data.users : []
+    operationLogOptions.modules = Array.isArray(data.modules) ? data.modules : []
+    operationLogRemoteStats.value = {
+      todayCount: data.stats?.todayCount || 0,
+      abnormalCount: data.stats?.abnormalCount || 0,
+      activeModule: data.stats?.activeModule || '-'
+    }
+    operationLogPage.value = 1
+  } catch (error) {
+    console.error('加载操作日志失败', error.message || error)
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(error.message || '加载操作日志失败')
+    })
+  } finally {
+    operationLogLoading.value = false
+  }
+}
+
+/**
+ * 功能：重置操作日志筛选条件
+ * @returns {void} 无返回值
+ * @throws {Error} 无
+ */
+const resetOperationLogFilters = () => {
+  operationLogFilters.user = ''
+  operationLogFilters.module = ''
+  operationLogFilters.status = ''
+  operationLogFilters.startDate = ''
+  operationLogFilters.endDate = ''
+  operationLogPage.value = 1
+  loadOperationLogs()
+}
 
 /**
  * 功能：返回日志状态文字样式 * @param {string} status 状态 * @returns {string} 样式类名
@@ -4460,6 +4539,12 @@ const operationLogDotClass = (status) => {
  * @throws {Error} 导出失败时提示用户 */
 const exportOperationLogs = () => {
   try {
+    if (!filteredOperationLogs.value.length) {
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.warning('暂无可导出的操作日志')
+      })
+      return
+    }
     const rows = filteredOperationLogs.value.map(item => [
       `${item.date} ${item.time}`,
       item.user,
@@ -4477,6 +4562,11 @@ const exportOperationLogs = () => {
     link.download = 'operation-logs.csv'
     link.click()
     URL.revokeObjectURL(url)
+    writeOperationLog({
+      module: '操作日志',
+      action: 'export',
+      content: `导出操作日志 ${filteredOperationLogs.value.length} 条`
+    })
   } catch (error) {
     console.error('导出操作日志失败', error)
     import('element-plus').then(({ ElMessage }) => {
@@ -4489,6 +4579,7 @@ watch(
   () => ({ ...operationLogFilters }),
   () => {
     operationLogPage.value = 1
+    loadOperationLogs()
   }
 )
 
@@ -5782,6 +5873,12 @@ const handleFormStatusChange = (newVal) => {
 const handleDeleteProject = (project) => {
   if (!project) return
   if (!hasPermission('DELETE_PROJECT')) {
+    writeOperationLog({
+      module: '项目管理',
+      action: 'delete',
+      status: '失败',
+      content: `尝试删除项目“${project.name}”，但没有删除权限`
+    })
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.warning('暂无删除项目权限')
     })
@@ -5828,6 +5925,11 @@ const handleDeleteProject = (project) => {
         const res = await deleteProject({ id: project.id })
         
         if (res.code === 0) {
+          writeOperationLog({
+            module: '项目管理',
+            action: 'delete',
+            content: `删除项目“${project.name}”`
+          })
           ElMessage.success('项目已成功删除')
           
           // 如果删除的是当前选中的项目，重置状态
@@ -5845,6 +5947,12 @@ const handleDeleteProject = (project) => {
         }
       } catch (err) {
         if (err !== 'cancel') {
+          writeOperationLog({
+            module: '项目管理',
+            action: 'delete',
+            status: '失败',
+            content: `删除项目“${project.name}”失败：${err.message || '未知错误'}`
+          })
           console.error('删除项目失败:', err)
           ElMessage.error(`删除失败: ${err.message || '未知错误'}`)
         }
@@ -6690,6 +6798,11 @@ const handleSaveProject = async () => {
 
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(isEditMode.value ? '项目更新成功' : '项目创建成功')
+      })
+      writeOperationLog({
+        module: '项目管理',
+        action: isEditMode.value ? 'update' : 'create',
+        content: `${isEditMode.value ? '更新' : '创建'}项目“${form.name}”`
       })
       
       // 立即更新本地列表数据，确�?UI 实时响应
