@@ -364,10 +364,10 @@
                     <thead class="text-xs text-on-surface-variant border-b border-white/5">
                       <tr>
                         <th class="pb-3 font-medium">项目名称</th>
-                        <th class="pb-3 font-medium">所属客</th>
+                        <th class="pb-3 font-medium">所属客户</th>
                         <th class="pb-3 font-medium">签订日期</th>
                         <th class="pb-3 font-medium text-right">订单金额</th>
-                        <th class="pb-3 font-medium text-center">状</th>
+                        <th class="pb-3 font-medium text-center">状态</th>
                       </tr>
                     </thead>
                     <tbody class="text-sm">
@@ -415,7 +415,7 @@
                   v-model="operationLogFilters.user"
                   class="operation-log-control"
                 >
-                  <option value="">所有用</option>
+                  <option value="">所有用户</option>
                   <option
                     v-for="user in operationLogUsers"
                     :key="user"
@@ -444,7 +444,7 @@
               </div>
 
               <div class="md:col-span-1 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
-                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">所属模</label>
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">所属模块</label>
                 <select
                   v-model="operationLogFilters.module"
                   class="operation-log-control"
@@ -467,10 +467,10 @@
                   <thead>
                     <tr class="bg-surface-container-high/50 border-b border-white/5">
                       <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作时间</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">所属模</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作人</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">所属模块</th>
                       <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">操作内容</th>
-                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">状</th>
+                      <th class="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">状态</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-white/5">
@@ -1231,7 +1231,7 @@
 
                   <!-- Project Status -->
                   <div class="space-y-2">
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
                     <el-select 
                       v-model="form.status" 
                       placeholder="请选择项目状态"
@@ -3874,7 +3874,7 @@ const handleToggleConfigStatus = async (card, tag) => {
 
 const projectStatuses = ref([])
 
-// 获取状态的排序�?
+// 获取状态的排序
 const getStatusOrder = (statusValue) => {
   const status = projectStatuses.value.find(s => s.value === statusValue)
   return status ? status.sortOrder : 0
@@ -4508,7 +4508,7 @@ const sortInfo = reactive({
 })
 const projectTableRef = ref(null)
 
-// 自定义下拉框状�?
+// 自定义下拉框状态
 const openDropdown = ref(null)
 const toggleDropdown = (type) => {
   openDropdown.value = openDropdown.value === type ? null : type
@@ -4609,7 +4609,7 @@ const filteredProjects = computed(() => {
       return false
     }
     
-    // 4. 项目状态过�?
+    // 4. 项目状态过滤
     if (projectFilters.status && p.status !== projectFilters.status) {
       return false
     }
@@ -5401,7 +5401,7 @@ const isFieldReadOnly = (fieldName) => {
     return false;
   }
 
-  // 补录单特殊逻辑：项目类型和项目状态始终只�?
+  // 补录单特殊逻辑：项目类型和项目状态始终只读
   if (form.type === 'historical') {
     if (fieldName === 'type' || fieldName === 'status') {
       return true;
@@ -5700,11 +5700,11 @@ const handleInlineStatusChange = async (row, newVal) => {
         throw new Error(res.message)
       }
     } catch (err) {
-      console.error('更新项目状态失�?', err)
+      console.error('更新项目状态失败', err)
       import('element-plus').then(({ ElMessage }) => {
-        ElMessage.error(`状态更新失�? ${err.message || '未知错误'}`)
+        ElMessage.error(`状态更新失败 ${err.message || '未知错误'}`)
       })
-      // 失败时回滚本地状�?
+      // 失败时回滚本地状态
       loadProjects()
     }
   }
@@ -6080,7 +6080,7 @@ const handleAbandonCreate = () => {
         }
       }
       
-      // 重置状�?
+      // 重置状态
       isViewMode.value = false
       isEditMode.value = false
       selectedProjectId.value = null
@@ -7314,7 +7314,7 @@ const handleLogout = () => {
 </script>
 
 <style>
-/* 统一禁用状态下的鼠标样�?*/
+/* 统一禁用状态下的鼠标样式*/
 .is-disabled, 
 .is-disabled *,
 [disabled],
@@ -7589,7 +7589,7 @@ const handleLogout = () => {
   color: #52ee8a !important;
 }
 
-/* 优化日期选择器禁用状态样�?*/
+/* 优化日期选择器禁用状态样式*/
 .el-date-table td.disabled {
   background-color: transparent !important;
 }
@@ -7713,7 +7713,7 @@ const handleLogout = () => {
   transition: all 0.2s !important;
 }
 
-/* 列表内状态选择器样式优�?*/
+/* 列表内状态选择器样式优化*/
 .status-badge-trigger {
   display: inline-flex;
   align-items: center;
@@ -7829,14 +7829,14 @@ const handleLogout = () => {
   margin-bottom: 0 !important;
 }
 
-/* 悬浮状�?*/
+/* 悬浮状态*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item:hover) {
   background-color: rgba(82, 238, 138, 0.1) !important;
   color: #52ee8a !important;
   padding-left: 28px !important;
 }
 
-/* 选中状�?*/
+/* 选中状态*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected) {
   background-color: rgba(82, 238, 138, 0.15) !important;
   color: #52ee8a !important;
@@ -7844,7 +7844,7 @@ const handleLogout = () => {
   padding-left: 28px !important;
 }
 
-/* 侧边指示�?- 完美复刻基础信息下拉框效�?*/
+/* 侧边指示- 完美复刻基础信息下拉框效果*/
 .status-dropdown-menu :deep(.el-dropdown-menu__item:hover::before),
 .status-dropdown-menu :deep(.el-dropdown-menu__item.is-selected::before) {
   content: '';
