@@ -483,9 +483,7 @@ async function listOperationLogs(data, event) {
   } = data || {};
   const today = formatLocalDateTime(Date.now()).date;
 
-  if (endDate && endDate < today) {
-    return { code: 400, message: '结束日期不能早于今天' };
-  }
+
   if (startDate && endDate && startDate > endDate) {
     return { code: 400, message: '开始日期不能晚于结束日期' };
   }

@@ -444,20 +444,27 @@
               <div class="md:col-span-2 bg-surface-container-high p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors">
                 <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">日期范围</label>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <input
+                  <el-date-picker
                     v-model="operationLogFilters.startDate"
-                    class="operation-log-control"
                     type="date"
+                    placeholder="开始日期"
+                    value-format="YYYY-MM-DD"
+                    format="YYYY-MM-DD"
+                    class="operation-log-date-picker custom-date-picker-styled"
+                    :disabled-date="disabledOperationLogStartDate"
                     @change="handleOperationLogDateChange"
-                  >
+                  />
                   <span class="text-on-surface-variant/40 text-xs text-center"></span>
-                  <input
+                  <el-date-picker
                     v-model="operationLogFilters.endDate"
-                    class="operation-log-control"
                     type="date"
-                    :min="operationLogTodayDate"
+                    placeholder="结束日期"
+                    value-format="YYYY-MM-DD"
+                    format="YYYY-MM-DD"
+                    class="operation-log-date-picker custom-date-picker-styled"
+                    :disabled-date="disabledOperationLogEndDate"
                     @change="handleOperationLogDateChange"
-                  >
+                  />
                 </div>
               </div>
 
@@ -4413,6 +4420,35 @@ const operationLogTodayDate = computed(() => {
   return `${year}-${month}-${day}`
 })
 
+/**
+ * 功能：禁用早于今天的操作日志结束日期
+ * @param {Date} date 日期对象
+ * @returns {boolean} 是否禁用
+ * @throws {Error} 无
+ */
+const disabledOperationLogEndDate = (date) => {
+  const todayStart = new Date(operationLogTodayDate.value).getTime()
+  return date.getTime() > todayStart
+}
+
+/**
+ * 功能：禁用晚于结束日期或大于今天的操作日志开始日期
+ * @param {Date} date 日期对象
+ * @returns {boolean} 是否禁用
+ * @throws {Error} 无
+ */
+const disabledOperationLogStartDate = (date) => {
+  const todayStart = new Date(operationLogTodayDate.value).getTime()
+  if (date.getTime() > todayStart) {
+    return true
+  }
+  if (operationLogFilters.endDate) {
+    const endDateStart = new Date(operationLogFilters.endDate).getTime()
+    return date.getTime() > endDateStart
+  }
+  return false
+}
+
 const operationLogUsers = computed(() => {
   const localUsers = operationLogs.value.map(item => item.user).filter(Boolean)
   return [...new Set([...operationLogOptions.users, ...localUsers])]
@@ -4489,13 +4525,6 @@ const writeOperationLog = async (logData) => {
  * @throws {Error} 无
  */
 const validateOperationLogDateRange = () => {
-  if (operationLogFilters.endDate && operationLogFilters.endDate < operationLogTodayDate.value) {
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('结束日期不能早于今天')
-    })
-    return false
-  }
-
   if (operationLogFilters.startDate && operationLogFilters.endDate && operationLogFilters.startDate > operationLogFilters.endDate) {
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.warning('开始日期不能晚于结束日期')
@@ -4512,8 +4541,8 @@ const validateOperationLogDateRange = () => {
  * @throws {Error} 无
  */
 const handleOperationLogDateChange = () => {
-  if (operationLogFilters.endDate && operationLogFilters.endDate < operationLogTodayDate.value) {
-    operationLogFilters.endDate = operationLogTodayDate.value
+  if (operationLogFilters.startDate && operationLogFilters.endDate && operationLogFilters.startDate > operationLogFilters.endDate) {
+    operationLogFilters.endDate = operationLogFilters.startDate
   }
   validateOperationLogDateRange()
 }
@@ -8173,6 +8202,11 @@ const handleLogout = () => {
     border-color: rgba(82, 238, 138, 0.7);
     box-shadow: 0 0 0 1px rgba(82, 238, 138, 0.35);
   }
+}
+
+.operation-log-date-picker {
+  width: 100% !important;
+  min-width: 0;
 }
 
 .operation-log-page-btn,
