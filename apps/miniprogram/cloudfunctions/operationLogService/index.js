@@ -24,7 +24,7 @@ const ACTION_ALIAS_MAP = {
   modify: 'update',
   remove: 'delete'
 };
-const MAX_CONTENT_LENGTH = 80;
+const MAX_CONTENT_LENGTH = 240;
 const MAX_BATCH_SIZE = 20;
 const FLUSH_DELAY_MS = 120;
 const LOG_RETENTION_DAYS = 180;

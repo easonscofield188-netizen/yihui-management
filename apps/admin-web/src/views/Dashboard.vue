@@ -543,7 +543,10 @@
                         </span>
                       </td>
                       <td class="px-6 py-5">
-                        <p class="text-sm text-on-surface-variant max-w-xl line-clamp-1">
+                        <p
+                          class="text-sm text-on-surface-variant max-w-3xl whitespace-normal break-words leading-6"
+                          :title="log.content"
+                        >
                           {{ log.content }}
                         </p>
                       </td>
@@ -4526,6 +4529,72 @@ const writeOperationLog = async (logData, originalData = null, newData = null) =
   }
 }
 
+const formatOperationLogMoney = (value) => {
+  return `¥${Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+const formatOperationLogText = (value) => {
+  if (value === undefined || value === null || value === '') return '空'
+  return String(value)
+}
+
+const getOperationLogOptionLabel = (options, value) => {
+  return options.value.find(item => item.value === value)?.label || value || '空'
+}
+
+const getOperationLogYesNoLabel = (value) => {
+  return normalizeYesNo(value, YES_NO_VALUE.NO) === YES_NO_VALUE.YES ? '是' : '否'
+}
+
+const getOperationLogCostTotal = (items) => {
+  return Array.isArray(items)
+    ? items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+    : 0
+}
+
+const pushOperationLogChange = (changes, label, oldValue, newValue, formatter = formatOperationLogText) => {
+  if (String(oldValue ?? '') === String(newValue ?? '')) return
+  changes.push(`${label}: ${formatter(oldValue)} → ${formatter(newValue)}`)
+}
+
+const pushOperationLogNumberChange = (changes, label, oldValue, newValue, formatter = formatOperationLogMoney) => {
+  const oldNumber = Number(oldValue || 0)
+  const newNumber = Number(newValue || 0)
+  if (oldNumber === newNumber) return
+  changes.push(`${label}: ${formatter(oldNumber)} → ${formatter(newNumber)}`)
+}
+
+/**
+ * 功能：生成项目更新操作日志的字段变更摘要
+ * @param {Object} originalData 原始项目数据
+ * @param {Object} nextData 新项目数据
+ * @returns {string} 变更摘要
+ * @throws {Error} 无
+ */
+const buildProjectChangeLogContent = (originalData, nextData) => {
+  if (!originalData || !nextData) return ''
+  const changes = []
+
+  pushOperationLogChange(changes, '项目名称', originalData.name, nextData.name)
+  pushOperationLogChange(changes, '客户名称', originalData.client, nextData.client)
+  pushOperationLogChange(changes, '客户角色', originalData.role, nextData.role, value => getClientRoleLabel(value) || '空')
+  pushOperationLogChange(changes, '客户来源', originalData.clientSource, nextData.clientSource, value => getOperationLogOptionLabel(clientSources, value))
+  pushOperationLogChange(changes, '项目场景', originalData.scene, nextData.scene, value => getOperationLogOptionLabel(projectScenes, value))
+  pushOperationLogChange(changes, '项目状态', originalData.status, nextData.status, value => getOperationLogOptionLabel(projectStatuses, value))
+  pushOperationLogNumberChange(changes, '人员数量', originalData.staffCount, nextData.staffCount, value => `${Number(value || 0)}人`)
+  pushOperationLogNumberChange(changes, '订单金额', originalData.amount, nextData.amount)
+  pushOperationLogNumberChange(changes, '已收账款', originalData.receivedAmount, nextData.receivedAmount)
+  pushOperationLogChange(changes, '项目描述', originalData.desc, nextData.desc)
+  pushOperationLogChange(changes, '是否有合同', originalData.isHasContract, nextData.isHasContract, getOperationLogYesNoLabel)
+  pushOperationLogChange(changes, '是否有预览图', originalData.isHasPreview, nextData.isHasPreview, getOperationLogYesNoLabel)
+  pushOperationLogChange(changes, '是否有发票凭证', originalData.isHasVoucher, nextData.isHasVoucher, getOperationLogYesNoLabel)
+  pushOperationLogNumberChange(changes, '成本总额', getOperationLogCostTotal(originalData.costs), getOperationLogCostTotal(nextData.costs))
+  pushOperationLogNumberChange(changes, '成本项数量', originalData.costs?.length || 0, nextData.costs?.length || 0, value => `${Number(value || 0)}项`)
+  pushOperationLogNumberChange(changes, '子项目数量', originalData.subProjects?.length || 0, nextData.subProjects?.length || 0, value => `${Number(value || 0)}项`)
+
+  return changes.slice(0, 8).join('；')
+}
+
 /**
  * 功能：校验操作日志日期范围
  * @returns {boolean} 是否通过校验
@@ -6908,17 +6977,17 @@ const handleSaveProject = async () => {
       // 生成操作日志内容
       let logContent = `${isEditMode.value ? '更新' : '创建'}项目“${form.name}”`
       if (isEditMode.value && originalProjectData.value) {
-        const changeDetails = '无变更'
-        if (changeDetails !== '未修改任何内容') {
+        const changeDetails = buildProjectChangeLogContent(originalProjectData.value, projectData)
+        if (changeDetails) {
           logContent = `更新项目“${form.name}”：${changeDetails}`
         }
       }
       
       writeOperationLog({
         module: '项目管理',
-        action: 'update',
-        content: `更新项目"${form.name}"`
-      }, originalProjectData.value, form)
+        action: isEditMode.value ? 'update' : 'create',
+        content: logContent
+      })
       
       // 立即更新本地列表数据，确�?UI 实时响应
       const statusConfig = projectStatuses.value.find(s => s.value === form.status)
