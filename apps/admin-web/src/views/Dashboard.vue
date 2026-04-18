@@ -793,6 +793,7 @@
                   end-placeholder="结束日期"
                   class="custom-date-picker-styled h-9"
                   value-format="YYYY-MM-DD"
+                  :disabled-date="disabledDate"
                 />
               </div>
 
@@ -829,6 +830,7 @@
               :row-class-name="tableRowClassName"
               header-align="left"
               @row-click="(row) => !isCreating && handleViewProject(row)"
+              @sort-change="handleSortChange"
             >
               <el-table-column
                 label="项目名称"
@@ -882,6 +884,7 @@
                 prop="createDateText"
                 label="创单日期"
                 min-width="100"
+                sortable="custom"
               >
                 <template #default="{ row }">
                   <span 
@@ -894,6 +897,7 @@
                 prop="deliveryDateText"
                 label="交付日期"
                 min-width="100"
+                sortable="custom"
               >
                 <template #default="{ row }">
                   <span 
@@ -936,8 +940,10 @@
                 </template>
               </el-table-column>
               <el-table-column
+                prop="amount"
                 label="订单金额 (¥)"
                 min-width="120"
+                sortable="custom"
               >
                 <template #default="{ row }">
                   <span 
@@ -3957,18 +3963,23 @@ const toDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-const getProjectDashboardDate = (project) => {
-  if (project.type === 'historical') {
-    return toDate(project.completedTime)
-      || toDate(project.completionTime)
-      || toDate(project.constructionPeriod?.[1])
-      || toDate(project.period?.[1])
-  }
+const isHistoricalProject = (project) => project?.type === 'historical' || !!project?.isHistorical
+
+const getProjectPeriodStartDate = (project) => {
   return toDate(project.period?.[0])
     || toDate(project.startDate)
     || toDate(project.negotiatingTime)
     || toDate(project.createTime)
 }
+
+const getProjectRangeFilterDate = (project) => {
+  if (isHistoricalProject(project)) {
+    return toDate(project.completionTime)
+  }
+  return getProjectPeriodStartDate(project)
+}
+
+const getProjectDashboardDate = (project) => getProjectRangeFilterDate(project)
 
 const getDashboardRangeStart = () => {
   if (dashboardDateRange.value?.length === 2 && dashboardDateRange.value[0]) {
@@ -4443,6 +4454,12 @@ const projectFilters = reactive({
   tab: 'all' // 'all', 'ongoing', 'completed'
 })
 
+// 排序相关
+const sortInfo = reactive({
+  prop: null,
+  order: null
+})
+
 // 自定义下拉框状�?
 const openDropdown = ref(null)
 const toggleDropdown = (type) => {
@@ -4465,9 +4482,9 @@ const closeDropdowns = (e) => {
 
 // 过滤后的项目列表
 const filteredProjects = computed(() => {
-  return projects.value.filter(p => {
+  let filtered = projects.value.filter(p => {
     // 0. 补录单完结时间限制：完结时间 <= 当前系统时间时才展示
-    if (p.type === 'historical' && p.completionTime) {
+    if (isHistoricalProject(p) && p.completionTime) {
       const completion = new Date(p.completionTime).getTime();
       const now = new Date().getTime();
       if (completion > now) return false;
@@ -4508,12 +4525,43 @@ const filteredProjects = computed(() => {
     if (projectFilters.dateRange && projectFilters.dateRange.length === 2) {
       const start = new Date(projectFilters.dateRange[0]).setHours(0,0,0,0)
       const end = new Date(projectFilters.dateRange[1]).setHours(23,59,59,999)
-      const pDate = new Date(p.period?.[0] || p.negotiatingTime || p.createTime).getTime()
+      const filterDate = getProjectRangeFilterDate(p)
+      if (!filterDate) return false
+      const pDate = filterDate.getTime()
       if (pDate < start || pDate > end) return false
     }
     
     return true
   })
+
+  // 排序处理
+  if (sortInfo.prop) {
+    filtered = [...filtered].sort((a, b) => {
+      let valueA, valueB
+      
+      if (sortInfo.prop === 'createDateText') {
+        valueA = a.createDate ? new Date(a.createDate).getTime() : 0
+        valueB = b.createDate ? new Date(b.createDate).getTime() : 0
+      } else if (sortInfo.prop === 'deliveryDateText') {
+        valueA = a.endDate ? new Date(a.endDate).getTime() : 0
+        valueB = b.endDate ? new Date(b.endDate).getTime() : 0
+      } else if (sortInfo.prop === 'amount') {
+        valueA = Number(a.amount) || 0
+        valueB = Number(b.amount) || 0
+      } else {
+        valueA = a[sortInfo.prop] || ''
+        valueB = b[sortInfo.prop] || ''
+      }
+      
+      if (sortInfo.order === 'ascending') {
+        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
+      } else {
+        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
+      }
+    })
+  }
+  
+  return filtered
 })
 
 // 分页相关
@@ -4540,6 +4588,15 @@ const handleResetFilters = () => {
   projectFilters.type = ''
   projectFilters.status = ''
   projectFilters.dateRange = []
+  sortInfo.prop = null
+  sortInfo.order = null
+  currentPage.value = 1
+}
+
+// 处理表格排序
+const handleSortChange = (column) => {
+  sortInfo.prop = column.prop
+  sortInfo.order = column.order
   currentPage.value = 1
 }
 
