@@ -80,6 +80,8 @@ exports.main = async (event, context) => {
             id: user._id,
             username: user.username,
             role: user.role || 'user',
+            roleName: user.roleName || getRoleName(user.role),
+            employeeNo: user.employeeNo || '',
             nickname: user.nickname || user.username,
             avatarUrl: user.avatarUrl || '',
             avatarFileId: user.avatarFileId || '',
@@ -118,6 +120,19 @@ function isSafeInput(str) {
   return !unsafePattern.test(str);
 }
 
+function getRoleName(role) {
+  const roleMap = {
+    ADMIN_SUPER: '超级系统管理员',
+    ADMIN_COM: '系统管理员',
+    ADMIN: '系统管理员',
+    PROJECT_MANAGER: '项目经理',
+    FINANCE_MANAGER: '财务主管',
+    VISITOR: '普通访客',
+    user: '普通用户'
+  };
+  return roleMap[role] || role || '系统管理员';
+}
+
 async function getCurrentUserDoc(data, event) {
   const userId = data.userId || getTokenUserId(event);
   if (!userId) {
@@ -137,6 +152,8 @@ function formatUser(user, userId) {
     id: userId || user._id || user.id,
     username: user.username,
     role: user.role || 'user',
+    roleName: user.roleName || getRoleName(user.role),
+    employeeNo: user.employeeNo || '',
     nickname: user.nickname || user.username,
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',

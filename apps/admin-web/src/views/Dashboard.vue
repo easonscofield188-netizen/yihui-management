@@ -3267,8 +3267,18 @@ const userDialog = reactive({
   }
 })
 
+const roleNameMap = {
+  ADMIN_SUPER: '超级系统管理员',
+  ADMIN_COM: '系统管理员',
+  ADMIN: '系统管理员',
+  PROJECT_MANAGER: '项目经理',
+  FINANCE_MANAGER: '财务主管',
+  VISITOR: '普通访客',
+  user: '普通用户'
+}
+
 const currentUserRoleText = computed(() => {
-  return currentUser.roleName || currentUser.role || '系统管理员'
+  return currentUser.roleName || roleNameMap[currentUser.role] || currentUser.role || '系统管理员'
 })
 
 const isSuperAdmin = computed(() => currentUser.role === 'ADMIN_SUPER')
@@ -3287,7 +3297,7 @@ const applyUserInfo = (user) => {
     username: user.username || '',
     nickname: user.nickname || user.username || '',
     role: user.role || 'user',
-    roleName: user.roleName || user.role || '系统管理员',
+    roleName: user.roleName || roleNameMap[user.role] || '系统管理员',
     employeeNo: user.employeeNo || '',
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',
