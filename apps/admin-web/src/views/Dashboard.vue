@@ -4025,6 +4025,9 @@ const isHistoricalPeriodDisabled = computed(() => {
 // 记录编辑前的项目名称，用于同步修改云存储路径
 const originalProjectName = ref('')
 
+// 记录编辑前的项目完整数据，用于生成变更详情
+const originalProjectData = ref(null)
+
 // 项目列表数据
 const projects = ref([])
 const loadingProjects = ref(false)
@@ -4505,14 +4508,18 @@ const operationLogStats = computed(() => {
 /**
  * 功能：记录后台管理操作日志
  * @param {Object} logData 日志内容
+ * @param {Object} originalData 原始数据（用于后端生成变更详情）
+ * @param {Object} newData 新数据（用于后端生成变更详情）
  * @returns {Promise<void>} 无返回值
  * @throws {Error} 接口异常时仅输出错误日志
  */
-const writeOperationLog = async (logData) => {
+const writeOperationLog = async (logData, originalData = null, newData = null) => {
   try {
     await recordOperationLog({
       status: '成功',
-      ...logData
+      ...logData,
+      originalData,
+      newData
     })
   } catch (error) {
     console.warn('记录操作日志失败', error.message || error)
@@ -5778,6 +5785,15 @@ const handleInlineStatusChange = async (row, newVal) => {
           ElMessage.success(`项目"${row.name}"状态已更新`)
         })
         
+        // 记录状态变更日志
+        const originalStatusConfig = projectStatuses.value.find(s => s.value === originalProjectStatus.value)
+        const newStatusConfig = projectStatuses.value.find(s => s.value === newVal)
+        writeOperationLog({
+          module: '项目管理',
+          action: 'status_change',
+          content: `项目"${row.name}"状态变更：${originalStatusConfig?.label || originalProjectStatus.value} → ${newStatusConfig?.label || newVal}`
+        })
+        
         // 更新本地行数据中的 statusText 和 statusColor 以同步显示
         const statusConfig = projectStatuses.value.find(s => s.value === newVal)
         row.statusText = statusConfig ? statusConfig.label : '未知状态'
@@ -6014,7 +6030,7 @@ const handleDeleteProject = (project) => {
           writeOperationLog({
             module: '项目管理',
             action: 'delete',
-            content: `删除项目“${project.name}”`
+            content: `删除项目"${project.name}"（客户：${project.client || '空'}，金额：${project.amount || 0}元）`
           })
           ElMessage.success('项目已成功删除')
           
@@ -6061,6 +6077,9 @@ const handleViewProject = async (project) => {
   isViewMode.value = true
   isEditMode.value = false
   selectedProjectId.value = project.id
+  
+  // 保存原始项目数据，用于生成变更详情
+  originalProjectData.value = { ...project }
   
   // 回显数据
   const now = today.value.toISOString()
@@ -6885,11 +6904,21 @@ const handleSaveProject = async () => {
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.success(isEditMode.value ? '项目更新成功' : '项目创建成功')
       })
+      
+      // 生成操作日志内容
+      let logContent = `${isEditMode.value ? '更新' : '创建'}项目“${form.name}”`
+      if (isEditMode.value && originalProjectData.value) {
+        const changeDetails = '无变更'
+        if (changeDetails !== '未修改任何内容') {
+          logContent = `更新项目“${form.name}”：${changeDetails}`
+        }
+      }
+      
       writeOperationLog({
         module: '项目管理',
-        action: isEditMode.value ? 'update' : 'create',
-        content: `${isEditMode.value ? '更新' : '创建'}项目“${form.name}”`
-      })
+        action: 'update',
+        content: `更新项目"${form.name}"`
+      }, originalProjectData.value, form)
       
       // 立即更新本地列表数据，确�?UI 实时响应
       const statusConfig = projectStatuses.value.find(s => s.value === form.status)

@@ -32,6 +32,79 @@ const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const LOCAL_TIMEZONE_OFFSET_HOURS = 8;
 const LOCAL_TIMEZONE_OFFSET_MS = LOCAL_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000;
 
+/**
+ * 功能：生成项目变更详情描述
+ * @param {Object} originalData 原始项目数据
+ * @param {Object} newData 新的项目数据
+ * @param {Array} projectStatuses 项目状态列表
+ * @returns {string} 变更详情描述
+ */
+function generateProjectChangeDetails(originalData, newData, projectStatuses) {
+  const changes = []
+  const fieldLabels = {
+    name: '项目名称',
+    client: '客户名称',
+    type: '项目类型',
+    status: '项目状态',
+    amount: '订单金额',
+    receivedAmount: '已收账款',
+    startDate: '开始日期',
+    endDate: '交付日期',
+    desc: '项目描述',
+    negotiatingTime: '洽谈时间',
+    constructingTime: '开工时间',
+    completedTime: '完工时间',
+    settlingTime: '结算时间',
+    settledTime: '结清时间'
+  }
+  
+  for (const [key, label] of Object.entries(fieldLabels)) {
+    const original = originalData?.[key]
+    const newVal = newData?.[key]
+    
+    let hasChanged = false
+    if (key === 'amount' || key === 'receivedAmount') {
+      // 对金额字段使用数值比较
+      const originalNum = Number(original || 0)
+      const newNum = Number(newVal || 0)
+      hasChanged = originalNum !== newNum
+    } else if (Array.isArray(original) && Array.isArray(newVal)) {
+      // 对数组字段进行特殊比较
+      hasChanged = original.length !== newVal.length || original.some((val, index) => val !== newVal[index])
+    } else {
+      // 其他字段使用严格相等比较
+      hasChanged = original !== newVal
+    }
+    
+    if (hasChanged) {
+      if (key.includes('Time') || key === 'startDate' || key === 'endDate') {
+        const formatDisplayDate = (date) => {
+          if (!date) return '空'
+          if (typeof date === 'string' && date.includes('T')) {
+            const d = new Date(date)
+            return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+          }
+          return date
+        }
+        changes.push(`${label}: ${formatDisplayDate(original)} → ${formatDisplayDate(newVal)}`)
+      } else if (key === 'amount' || key === 'receivedAmount') {
+        changes.push(`${label}: ${original || 0} → ${newVal || 0}`)
+      } else if (key === 'type') {
+        const typeLabels = { normal: '常规', historical: '补录', long_term: '长期' }
+        changes.push(`${label}: ${typeLabels[original] || original} → ${typeLabels[newVal] || newVal}`)
+      } else if (key === 'status') {
+        const statusConfig = projectStatuses?.find(s => s.value === newVal)
+        const originalStatusConfig = projectStatuses?.find(s => s.value === original)
+        changes.push(`${label}: ${originalStatusConfig?.label || original} → ${statusConfig?.label || newVal}`)
+      } else {
+        changes.push(`${label}: ${original || '空'} → ${newVal || '空'}`)
+      }
+    }
+  }
+  
+  return changes.length > 0 ? changes.join('、') : ''
+}
+
 let logQueue = [];
 let flushTimer = null;
 let flushing = false;
@@ -417,6 +490,11 @@ async function createOperationLog(data, event) {
   try {
     const current = await getCurrentUser(event);
     if (current.error) return current.error;
+
+    // 如果有原始数据和新数据，生成详细的变更内容
+    if (data.originalData && data.newData) {
+      data.content = `更新项目"${data.newData.name || '未知'}"中的"${generateProjectChangeDetails(data.originalData, data.newData)}"`
+    }
 
     const log = buildSlimLog(data || {}, current);
     if (!log) {
