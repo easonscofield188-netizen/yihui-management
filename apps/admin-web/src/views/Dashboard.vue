@@ -104,16 +104,28 @@
                 <h2 class="text-3xl font-bold tracking-tight mb-2">数据总览</h2>
                 <p class="text-on-surface-variant text-sm">欢迎回来。这是今日的园林项目经营概况。</p>
               </div>
-              <div class="bg-surface-container-low p-1 rounded-lg flex items-center gap-1 border border-white/5">
-                <button
-                  v-for="range in dashboardRanges"
-                  :key="range.value"
-                  class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
-                  :class="dashboardRange === range.value ? 'bg-primary text-black' : 'text-on-surface-variant hover:text-on-surface'"
-                  @click="dashboardRange = range.value"
-                >
-                  {{ range.label }}
-                </button>
+              <div class="dashboard-date-filter flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div class="bg-surface-container-low p-1 rounded-lg flex items-center gap-1 border border-white/5">
+                  <button
+                    v-for="range in dashboardRanges"
+                    :key="range.value"
+                    class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
+                    :class="!dashboardDateRange?.length && dashboardRange === range.value ? 'bg-primary text-black' : 'text-on-surface-variant hover:text-on-surface'"
+                    @click="handleDashboardRangeSelect(range.value)"
+                  >
+                    {{ range.label }}
+                  </button>
+                </div>
+                <el-date-picker
+                  v-model="dashboardDateRange"
+                  type="daterange"
+                  range-separator="-"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  class="dashboard-range-picker custom-date-picker-styled h-9"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                />
               </div>
             </div>
 
@@ -3916,12 +3928,18 @@ const dashboardHoveredProfitPoint = ref(null)
 const dashboardHoveredBar = ref(null)
 
 const dashboardRange = ref('year')
+const dashboardDateRange = ref([])
 const dashboardRanges = [
   { label: '年度', value: 'year', months: 12 },
   { label: '半年', value: 'half', months: 6 },
   { label: '季度', value: 'quarter', months: 3 },
   { label: '月度', value: 'month', months: 1 }
 ]
+
+const handleDashboardRangeSelect = (rangeValue) => {
+  dashboardRange.value = rangeValue;
+  dashboardDateRange.value = [];
+}
 
 const dashboardMoney = (amount) => {
   const value = Number(amount) || 0
@@ -3948,6 +3966,13 @@ const getProjectDashboardDate = (project) => {
 }
 
 const getDashboardRangeStart = () => {
+  if (dashboardDateRange.value?.length === 2 && dashboardDateRange.value[0]) {
+    const customStart = toDate(dashboardDateRange.value[0])
+    if (customStart) {
+      customStart.setHours(0, 0, 0, 0)
+      return customStart
+    }
+  }
   const range = dashboardRanges.find(item => item.value === dashboardRange.value) || dashboardRanges[0]
   const start = new Date()
   start.setHours(0, 0, 0, 0)
@@ -3956,6 +3981,13 @@ const getDashboardRangeStart = () => {
 }
 
 const getDashboardRangeEnd = () => {
+  if (dashboardDateRange.value?.length === 2 && dashboardDateRange.value[1]) {
+    const customEnd = toDate(dashboardDateRange.value[1])
+    if (customEnd) {
+      customEnd.setHours(23, 59, 59, 999)
+      return customEnd
+    }
+  }
   const end = new Date()
   end.setHours(23, 59, 59, 999)
   return end
@@ -3988,17 +4020,26 @@ const getDashboardProjectCost = (project) => {
   return projectCost + subProjectCost
 }
 
+const formatDashboardDateLabel = (date) => {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}-${day}`
+}
+
 const createDashboardBuckets = () => {
   const range = dashboardRanges.find(item => item.value === dashboardRange.value) || dashboardRanges[0]
   const start = getDashboardRangeStart()
   const end = getDashboardRangeEnd()
-  const bucketCount = range.value === 'month' ? 4 : (range.value === 'year' ? 4 : range.months)
+  const isCustomRange = dashboardDateRange.value?.length === 2
+  const bucketCount = isCustomRange ? 4 : (range.value === 'month' ? 4 : (range.value === 'year' ? 4 : range.months))
   const bucketSize = (end.getTime() - start.getTime()) / bucketCount
 
   return Array.from({ length: bucketCount }, (_, index) => {
     const bucketStart = new Date(start.getTime() + bucketSize * index)
     const bucketEnd = new Date(index === bucketCount - 1 ? end.getTime() : start.getTime() + bucketSize * (index + 1) - 1)
-    const label = range.value === 'month'
+    const label = isCustomRange
+      ? `${formatDashboardDateLabel(bucketStart)}-${formatDashboardDateLabel(bucketEnd)}`
+      : range.value === 'month'
       ? `${index + 1}周`
       : `${bucketStart.getMonth() + 1}月`
     return {
@@ -7854,6 +7895,16 @@ const handleLogout = () => {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(60, 74, 62, 0.22);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.14);
+}
+
+.dashboard-range-picker {
+  width: 260px !important;
+}
+
+@media (max-width: 640px) {
+  .dashboard-range-picker {
+    width: 100% !important;
+  }
 }
 
 .dashboard-chart-container {
