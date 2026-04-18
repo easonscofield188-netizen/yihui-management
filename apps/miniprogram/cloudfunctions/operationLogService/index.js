@@ -182,6 +182,16 @@ function formatLocalDateTime(value) {
 }
 
 /**
+ * 功能：读取日志时间戳，兼容新旧字段
+ * @param {Object} item 日志记录
+ * @returns {number} 毫秒时间戳
+ * @throws {Error} 无
+ */
+function getLogTimestamp(item) {
+  return toTimestamp(item.ts || item.create_timestamp || item.create_time || item.createdAt);
+}
+
+/**
  * 功能：将北京时间日期转换为 UTC 毫秒时间戳
  * @param {string} dateValue 日期，格式 YYYY-MM-DD
  * @param {boolean} isEnd 是否为当天结束
@@ -471,36 +481,39 @@ async function listOperationLogs(data, event) {
     page = 1,
     pageSize = 1000
   } = data || {};
-  const where = {};
+  const today = formatLocalDateTime(Date.now()).date;
 
-  if (user) where.un = user;
-  if (module) where.m = module;
-  if (status) where.s = status;
-
-  if (startDate || endDate) {
-    const startTime = startDate ? getLocalDateBoundaryTimestamp(startDate) : 0;
-    const endTime = endDate ? getLocalDateBoundaryTimestamp(endDate, true) : Date.now();
-    where.ts = _.gte(startTime).and(_.lte(endTime));
+  if (endDate && endDate < today) {
+    return { code: 400, message: '结束日期不能早于今天' };
+  }
+  if (startDate && endDate && startDate > endDate) {
+    return { code: 400, message: '开始日期不能晚于结束日期' };
   }
 
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(1000, Math.max(1, Number(pageSize) || 1000));
-  const countRes = await db.collection(OPERATION_LOG_COLLECTION).where(where).count();
-  const res = await db.collection(OPERATION_LOG_COLLECTION)
-    .where(where)
-    .orderBy('ts', 'desc')
-    .skip((safePage - 1) * safePageSize)
-    .limit(safePageSize)
-    .get();
-
   const allRes = await db.collection(OPERATION_LOG_COLLECTION)
-    .orderBy('ts', 'desc')
     .limit(1000)
     .get();
-  const allLogs = allRes.data || [];
+  const allLogs = (allRes.data || [])
+    .sort((a, b) => getLogTimestamp(b) - getLogTimestamp(a));
+  const startTime = startDate ? getLocalDateBoundaryTimestamp(startDate) : 0;
+  const endTime = endDate ? getLocalDateBoundaryTimestamp(endDate, true) : Date.now();
+  const filteredLogs = allLogs.filter(item => {
+    const logTime = getLogTimestamp(item);
+    const logUser = item.un || item.nickname || item.username || '';
+    const logModule = item.m || item.module || '';
+    const logStatus = item.s || item.status || '';
+    const matchTime = logTime >= startTime && logTime <= endTime;
+    const matchUser = !user || logUser === user;
+    const matchModule = !module || logModule === module;
+    const matchStatus = !status || logStatus === status;
+    return matchTime && matchUser && matchModule && matchStatus;
+  });
+  const startIndex = (safePage - 1) * safePageSize;
+  const pagedLogs = filteredLogs.slice(startIndex, startIndex + safePageSize);
   const users = Array.from(new Set(allLogs.map(item => item.un || item.nickname || item.username).filter(Boolean)));
   const modules = Array.from(new Set(allLogs.map(item => item.m || item.module).filter(Boolean)));
-  const today = formatLocalDateTime(Date.now()).date;
   const failedCount = allLogs.filter(item => (item.s || item.status) === '失败').length;
   const warningCount = allLogs.filter(item => (item.s || item.status) === '警告').length;
   const moduleMap = allLogs.reduce((map, item) => {
@@ -514,8 +527,8 @@ async function listOperationLogs(data, event) {
     code: 0,
     message: '查询成功',
     data: {
-      list: (res.data || []).map(formatLog),
-      total: countRes.total || 0,
+      list: pagedLogs.map(formatLog),
+      total: filteredLogs.length,
       users,
       modules,
       stats: {

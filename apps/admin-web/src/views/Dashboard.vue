@@ -448,12 +448,15 @@
                     v-model="operationLogFilters.startDate"
                     class="operation-log-control"
                     type="date"
+                    @change="handleOperationLogDateChange"
                   >
                   <span class="text-on-surface-variant/40 text-xs text-center"></span>
                   <input
                     v-model="operationLogFilters.endDate"
                     class="operation-log-control"
                     type="date"
+                    :min="operationLogTodayDate"
+                    @change="handleOperationLogDateChange"
                   >
                 </div>
               </div>
@@ -2956,6 +2959,7 @@
                   :key="card.title"
                   class="p-8 rounded-xl bg-surface-container-high border-b-2 border-transparent transition-all duration-300 group"
                   :class="card.hoverBorder"
+                  v-show="!(card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE'))"
                 >
                   <div class="flex justify-between items-start mb-6">
                     <div
@@ -2970,6 +2974,7 @@
                     <button
                       class="text-zinc-600 hover:text-zinc-300"
                       @click="openConfigDialog(card)"
+                      :disabled="card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE')"
                     >
                       <span class="material-symbols-outlined">settings</span>
                     </button>
@@ -3604,7 +3609,8 @@ const PERMISSION_STORAGE_KEY = 'admin-role-permissions'
 const settingPermissions = reactive([
   { key: 'DELETE_PROJECT', name: '删除项目', enabledRoles: ['ADMIN_SUPER'] },
   { key: 'VIEW_DASHBOARD', name: '查看数据总览', enabledRoles: ['ADMIN_SUPER', 'ADMIN_COM', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR'] },
-  { key: 'VIEW_OPERATION_LOGS', name: '查看操作记录日志', enabledRoles: ['ADMIN_SUPER'] }
+  { key: 'VIEW_OPERATION_LOGS', name: '查看操作记录日志', enabledRoles: ['ADMIN_SUPER'] },
+  { key: 'MANAGE_PROJECT_SCENE', name: '管理项目场景配置', enabledRoles: ['ADMIN_SUPER'] }
 ])
 
 const ROLE_ALIAS_MAP = {
@@ -4389,6 +4395,14 @@ const operationLogFilters = reactive({
 })
 const operationLogs = ref([])
 
+const operationLogTodayDate = computed(() => {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+})
+
 const operationLogUsers = computed(() => {
   const localUsers = operationLogs.value.map(item => item.user).filter(Boolean)
   return [...new Set([...operationLogOptions.users, ...localUsers])]
@@ -4460,22 +4474,55 @@ const writeOperationLog = async (logData) => {
 }
 
 /**
+ * 功能：校验操作日志日期范围
+ * @returns {boolean} 是否通过校验
+ * @throws {Error} 无
+ */
+const validateOperationLogDateRange = () => {
+  if (operationLogFilters.endDate && operationLogFilters.endDate < operationLogTodayDate.value) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('结束日期不能早于今天')
+    })
+    return false
+  }
+
+  if (operationLogFilters.startDate && operationLogFilters.endDate && operationLogFilters.startDate > operationLogFilters.endDate) {
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.warning('开始日期不能晚于结束日期')
+    })
+    return false
+  }
+
+  return true
+}
+
+/**
+ * 功能：处理操作日志日期变化
+ * @returns {void} 无返回值
+ * @throws {Error} 无
+ */
+const handleOperationLogDateChange = () => {
+  if (operationLogFilters.endDate && operationLogFilters.endDate < operationLogTodayDate.value) {
+    operationLogFilters.endDate = operationLogTodayDate.value
+  }
+  validateOperationLogDateRange()
+}
+
+/**
  * 功能：加载操作日志列表
  * @returns {Promise<void>} 无返回值
  * @throws {Error} 接口异常时提示用户
  */
 const loadOperationLogs = async () => {
   if (!hasPermission('VIEW_OPERATION_LOGS')) return
-  if (operationLogFilters.startDate && operationLogFilters.endDate && operationLogFilters.startDate > operationLogFilters.endDate) {
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.warning('开始日期不能晚于结束日期')
-    })
-    return
-  }
+  if (!validateOperationLogDateRange()) return
 
   operationLogLoading.value = true
   try {
     const res = await listOperationLogs({
+      user: operationLogFilters.user,
+      module: operationLogFilters.module,
+      status: operationLogFilters.status,
       startDate: operationLogFilters.startDate,
       endDate: operationLogFilters.endDate,
       page: 1,
