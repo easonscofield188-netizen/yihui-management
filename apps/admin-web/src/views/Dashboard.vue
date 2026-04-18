@@ -501,7 +501,7 @@
 
             <section
               v-loading="operationLogLoading"
-              class="bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-white/5"
+              class="bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-white/5 min-h-64"
             >
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">

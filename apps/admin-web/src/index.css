@@ -341,3 +341,12 @@ button:disabled *,
 .is-disabled-cursor * {
   cursor: not-allowed !important;
 }
+
+/* Element Plus Loading Mask Background */
+.el-loading-mask {
+  background-color: rgba(32, 31, 32, 0.9) !important;
+}
+
+.el-loading-spinner {
+  background-color: rgba(32, 31, 32, 0.9) !important;
+}
