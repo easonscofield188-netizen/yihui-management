@@ -1,9 +1,0 @@
-{
-  "triggers": [
-    {
-      "name": "dailyUpdateTrigger",
-      "type": "timer",
-      "config": "0 0 2 * * * *"
-    }
-  ]
-}

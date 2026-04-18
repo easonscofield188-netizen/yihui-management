@@ -1,9 +1,0 @@
-{
-  "name": "cronService",
-  "version": "1.0.0",
-  "description": "Daily cron job for project updates",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}
