@@ -110,8 +110,9 @@
                     v-for="range in dashboardRanges"
                     :key="range.value"
                     class="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
-                    :class="!dashboardDateRange?.length && dashboardRange === range.value ? 'bg-primary text-black' : 'text-on-surface-variant hover:text-on-surface'"
-                    @click="handleDashboardRangeSelect(range.value)"
+                    :class="((!dashboardDateRange?.length && dashboardRange === range.value) || (dashboardDateRange?.length && range.value === 'custom')) ? 'bg-primary text-black' : 'text-on-surface-variant hover:text-on-surface'"
+                    @click="!range.disabled && handleDashboardRangeSelect(range.value)"
+                    :disabled="range.disabled"
                   >
                     {{ range.label }}
                   </button>
@@ -823,6 +824,7 @@
           
           <div class="overflow-x-auto">
             <el-table 
+              ref="projectTableRef"
               v-loading="loadingProjects"
               element-loading-background="rgba(19, 19, 20, 0.8)"
               :data="paginatedProjects" 
@@ -834,6 +836,7 @@
             >
               <el-table-column
                 label="项目名称"
+                prop="name"
                 min-width="200"
                 align="left"
               >
@@ -908,6 +911,7 @@
               </el-table-column>
               <el-table-column
                 label="项目周期"
+                prop="projectDays"
                 min-width="90"
               >
                 <template #default="{ row }">
@@ -919,6 +923,7 @@
               </el-table-column>
               <el-table-column
                 label="施工周期"
+                prop="constructionDays"
                 min-width="90"
               >
                 <template #default="{ row }">
@@ -930,6 +935,7 @@
               </el-table-column>
               <el-table-column
                 label="回款周期"
+                prop="collectionDays"
                 min-width="90"
               >
                 <template #default="{ row }">
@@ -954,6 +960,7 @@
               </el-table-column>
               <el-table-column
                 label="项目状态"
+                prop="status"
                 min-width="110"
               >
                 <template #default="{ row }">
@@ -3546,7 +3553,7 @@ const startSessionActivityWatcher = () => {
 // 系统设置页面角色列表
 const settingRoles = [
   { label: '超级系统管理员', value: 'ADMIN_SUPER' },
-  { label: '系统管理员', value: 'ADMIN' },
+  { label: '系统管理员', value: 'ADMIN_COM' },
   { label: '项目经理', value: 'PROJECT_MANAGER' },
   { label: '财务主管', value: 'FINANCE_MANAGER' },
   { label: '普通访客', value: 'VISITOR' }
@@ -3557,9 +3564,27 @@ const PERMISSION_STORAGE_KEY = 'admin-role-permissions'
 
 const settingPermissions = reactive([
   { key: 'DELETE_PROJECT', name: '删除项目', enabledRoles: ['ADMIN_SUPER'] },
-  { key: 'VIEW_DASHBOARD', name: '查看数据总览', enabledRoles: ['ADMIN_SUPER', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR'] },
+  { key: 'VIEW_DASHBOARD', name: '查看数据总览', enabledRoles: ['ADMIN_SUPER', 'ADMIN_COM', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR'] },
   { key: 'VIEW_OPERATION_LOGS', name: '查看操作记录日志', enabledRoles: ['ADMIN_SUPER'] }
 ])
+
+const ROLE_ALIAS_MAP = {
+  ADMIN: 'ADMIN_COM',
+  ADMIN_COM: 'ADMIN'
+}
+
+const getRolePermissionValues = (roleValue) => {
+  if (!roleValue) return []
+  return [roleValue, ROLE_ALIAS_MAP[roleValue]].filter(Boolean)
+}
+
+const normalizePermissionRoles = (roles) => {
+  const roleSet = new Set(roles)
+  if (roleSet.has('ADMIN')) {
+    roleSet.add('ADMIN_COM')
+  }
+  return Array.from(roleSet)
+}
 
 /**
  * 功能：切换角色权限 * @param {Object} permission 权限对象 * @param {string} roleValue 角色标识
@@ -3586,7 +3611,7 @@ const loadSettingPermissions = () => {
     const permissionMap = JSON.parse(savedPermissions)
     settingPermissions.forEach(permission => {
       if (Array.isArray(permissionMap[permission.key])) {
-        permission.enabledRoles = permissionMap[permission.key]
+        permission.enabledRoles = normalizePermissionRoles(permissionMap[permission.key])
       }
     })
   } catch (error) {
@@ -3615,7 +3640,8 @@ loadSettingPermissions()
 const hasPermission = (permissionKey) => {
   const permission = settingPermissions.find(item => item.key === permissionKey)
   if (!permission) return false
-  return permission.enabledRoles.includes(currentUser.role)
+  const roleValues = getRolePermissionValues(currentUser.role)
+  return roleValues.some(roleValue => permission.enabledRoles.includes(roleValue))
 }
 
 const visibleMenuItems = computed(() => {
@@ -3940,7 +3966,8 @@ const dashboardRanges = [
   { label: '年度', value: 'year', months: 12 },
   { label: '半年', value: 'half', months: 6 },
   { label: '季度', value: 'quarter', months: 3 },
-  { label: '月度', value: 'month', months: 1 }
+  { label: '月度', value: 'month', months: 1 },
+  { label: '自定义', value: 'custom', disabled: true }
 ]
 
 const disabledDate = (time) => {
@@ -3977,6 +4004,16 @@ const getProjectRangeFilterDate = (project) => {
     return toDate(project.completionTime)
   }
   return getProjectPeriodStartDate(project)
+}
+
+const getProjectDeliveryDate = (project) => {
+  if (project?.type === 'long_term' && project?.status === 'terminated') {
+    return toDate(project.period?.[1])
+  }
+  if (isHistoricalProject(project)) {
+    return toDate(project.completionTime)
+  }
+  return toDate(project.completedTime)
 }
 
 const getProjectDashboardDate = (project) => getProjectRangeFilterDate(project)
@@ -4040,6 +4077,16 @@ const formatDashboardDateLabel = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${month}-${day}`
+}
+
+const formatDate = (date) => {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}/${month}/${day}`
 }
 
 const createDashboardBuckets = () => {
@@ -4459,6 +4506,7 @@ const sortInfo = reactive({
   prop: null,
   order: null
 })
+const projectTableRef = ref(null)
 
 // 自定义下拉框状�?
 const openDropdown = ref(null)
@@ -4472,6 +4520,51 @@ const selectFilter = (type, value) => {
 
 const ONGOING_PROJECT_STATUSES = ['negotiating', 'constructing', 'completed', 'settling', 'in_cooperation']
 const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'terminated']
+
+const getProjectSortValue = (project, prop) => {
+  if (prop === 'name' || prop === 'client') {
+    return String(project[prop] || '').trim().toLowerCase()
+  }
+  if (prop === 'createDateText') {
+    return toDate(project.createTime)?.getTime() ?? null
+  }
+  if (prop === 'deliveryDateText') {
+    return getProjectDeliveryDate(project)?.getTime() ?? null
+  }
+  if (prop === 'amount') {
+    return Number(project.amount) || 0
+  }
+  if (prop === 'status') {
+    return getStatusOrder(project.status)
+  }
+  if (prop === 'projectDays') {
+    return project.projectDays ?? null
+  }
+  if (prop === 'constructionDays') {
+    return project.constructionDays ?? null
+  }
+  if (prop === 'collectionDays') {
+    return project.collectionDays ?? null
+  }
+  return project[prop] ?? null
+}
+
+const compareProjectSortValue = (projectA, projectB, prop, order) => {
+  const valueA = getProjectSortValue(projectA, prop)
+  const valueB = getProjectSortValue(projectB, prop)
+  const emptyA = valueA === null || valueA === undefined || valueA === ''
+  const emptyB = valueB === null || valueB === undefined || valueB === ''
+
+  if (emptyA && emptyB) return 0
+  if (emptyA) return 1
+  if (emptyB) return -1
+
+  const result = typeof valueA === 'string' || typeof valueB === 'string'
+    ? String(valueA).localeCompare(String(valueB), 'zh-CN', { numeric: true })
+    : valueA - valueB
+
+  return order === 'ascending' ? result : -result
+}
 
 // 点击外部关闭下拉�?
 const closeDropdowns = (e) => {
@@ -4535,29 +4628,23 @@ const filteredProjects = computed(() => {
   })
 
   // 排序处理
-  if (sortInfo.prop) {
+  if (sortInfo.prop && sortInfo.order) {
+    filtered = [...filtered].sort((a, b) => compareProjectSortValue(a, b, sortInfo.prop, sortInfo.order))
+  } else {
+    // 默认按创建日期升序排列，相同日期按项目名称排序
     filtered = [...filtered].sort((a, b) => {
-      let valueA, valueB
+      // 首先按创建日期排序
+      const dateA = toDate(a.createTime)?.getTime() ?? 0
+      const dateB = toDate(b.createTime)?.getTime() ?? 0
       
-      if (sortInfo.prop === 'createDateText') {
-        valueA = a.createDate ? new Date(a.createDate).getTime() : 0
-        valueB = b.createDate ? new Date(b.createDate).getTime() : 0
-      } else if (sortInfo.prop === 'deliveryDateText') {
-        valueA = a.endDate ? new Date(a.endDate).getTime() : 0
-        valueB = b.endDate ? new Date(b.endDate).getTime() : 0
-      } else if (sortInfo.prop === 'amount') {
-        valueA = Number(a.amount) || 0
-        valueB = Number(b.amount) || 0
-      } else {
-        valueA = a[sortInfo.prop] || ''
-        valueB = b[sortInfo.prop] || ''
+      if (dateA !== dateB) {
+        return dateB - dateA
       }
       
-      if (sortInfo.order === 'ascending') {
-        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
-      } else {
-        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
-      }
+      // 日期相同则按项目名称排序，确保稳定排序
+      const nameA = a.name || ''
+      const nameB = b.name || ''
+      return nameA.localeCompare(nameB)
     })
   }
   
@@ -4590,13 +4677,14 @@ const handleResetFilters = () => {
   projectFilters.dateRange = []
   sortInfo.prop = null
   sortInfo.order = null
+  projectTableRef.value?.clearSort()
   currentPage.value = 1
 }
 
 // 处理表格排序
 const handleSortChange = (column) => {
-  sortInfo.prop = column.prop
-  sortInfo.order = column.order
+  sortInfo.prop = column.order ? column.prop : null
+  sortInfo.order = column.order || null
   currentPage.value = 1
 }
 
@@ -4695,7 +4783,6 @@ watch(today, () => {
       const pEnd = p.type === 'long_term' ? getLongTermPeriodEnd(p, now) : (p.settledTime || now);
       const pDays = calculateDiffDays(pStart, pEnd);
       
-      const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
       p.projectDaysText = pDays ? `${pDays}天` : '-';
       p.projectRangeText = `${formatDate(pStart)} - ${formatDate(pEnd)}`;
 
@@ -5528,8 +5615,8 @@ const handleInlineStatusChange = async (row, newVal) => {
             : new Date().toISOString()
           row.period = [row.period[0], periodEnd]
           const days = calculateDiffDays(row.period[0], row.period[1])
+          row.projectDays = days || null
           row.projectDaysText = days ? `${days}天` : '-'
-          const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-'
           row.projectRangeText = `${formatDate(row.period[0])} - ${formatDate(row.period[1])}`
           row.deliveryDateText = newVal === 'terminated' ? formatDate(row.period[1]) : '-'
         }
@@ -5572,7 +5659,9 @@ const handleInlineStatusChange = async (row, newVal) => {
           row.constructionDaysText = conDays ? `${conDays}天` : '-'
           row.collectionDaysText = colDays ? `${colDays}天` : '-'
 
-          const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
+          row.projectDays = pDays || null
+          row.constructionDays = conDays || null
+          row.collectionDays = colDays || null
           row.projectRangeText = `${formatDate(pStart)} - ${formatDate(pEnd)}`;
           row.constructionRangeText = row.constructingTime ? `${formatDate(row.constructingTime)} - ${formatDate(row.completedTime || now)}` : '-';
           row.collectionRangeText = row.settlingTime ? `${formatDate(row.settlingTime)} - ${formatDate(row.settledTime || now)}` : '-';
@@ -6062,8 +6151,6 @@ const loadProjects = async () => {
         let conRange;
         let colRange;
 
-        const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '-';
-
         if (p.type === 'historical') {
           // 补录单周期固定展�?-
           pDays = null;
@@ -6121,10 +6208,13 @@ const loadProjects = async () => {
           typeLabel: projectTypes.value.find(t => t.value === (p.type || (isHistorical ? 'historical' : 'normal')))?.label || (isHistorical ? '补录' : '常规'),
           statusColor: p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
           statusText: statusConfig ? statusConfig.label : '未知状态',
-          date: p.period ? new Date(p.period[0]).toLocaleDateString() : (p.negotiatingTime || p.createTime ? new Date(p.negotiatingTime || p.createTime).toLocaleDateString() : '-'),
+          date: p.period ? formatDate(p.period[0]) : (p.negotiatingTime || p.createTime ? formatDate(p.negotiatingTime || p.createTime) : '-'),
           createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-',
-          createDateText: createDate ? new Date(createDate).toLocaleDateString() : '-',
-          deliveryDateText: deliveryDate ? new Date(deliveryDate).toLocaleDateString() : '-',
+          createDateText: formatDate(createDate),
+          deliveryDateText: formatDate(deliveryDate),
+          projectDays: pDays || null,
+          constructionDays: conDays || null,
+          collectionDays: colDays || null,
           projectDaysText: pDays ? `${pDays}天` : '-',
           constructionDaysText: conDays ? `${conDays}天` : '-',
           collectionDaysText: colDays ? `${colDays}天` : '-',
