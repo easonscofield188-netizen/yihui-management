@@ -29,6 +29,8 @@ const MAX_BATCH_SIZE = 20;
 const FLUSH_DELAY_MS = 120;
 const LOG_RETENTION_DAYS = 180;
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const LOCAL_TIMEZONE_OFFSET_HOURS = 8;
+const LOCAL_TIMEZONE_OFFSET_MS = LOCAL_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000;
 
 let logQueue = [];
 let flushTimer = null;
@@ -132,17 +134,69 @@ function slimText(value, maxLength = MAX_CONTENT_LENGTH) {
 }
 
 /**
- * 功能：格式化云数据库时间
+ * 功能：将任意时间值转换为毫秒时间戳
  * @param {*} value 时间值
- * @returns {string} ISO 时间字符串
+ * @returns {number} 毫秒时间戳
  * @throws {Error} 无
  */
-function normalizeDate(value) {
-  if (!value) return new Date().toISOString();
-  if (value instanceof Date) return value.toISOString();
-  if (value.$date) return new Date(value.$date).toISOString();
+function toTimestamp(value) {
+  if (!value) return Date.now();
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (value.$date) return new Date(value.$date).getTime();
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  return Number.isNaN(date.getTime()) ? Date.now() : date.getTime();
+}
+
+/**
+ * 功能：补齐两位数字
+ * @param {number} value 数字
+ * @returns {string} 两位字符串
+ * @throws {Error} 无
+ */
+function padTwo(value) {
+  return String(value).padStart(2, '0');
+}
+
+/**
+ * 功能：按北京时间格式化日期和时间
+ * @param {*} value 时间值
+ * @returns {Object} 日期、时间与 ISO 字符串
+ * @throws {Error} 无
+ */
+function formatLocalDateTime(value) {
+  const timestamp = toTimestamp(value);
+  const localDate = new Date(timestamp + LOCAL_TIMEZONE_OFFSET_MS);
+  const year = localDate.getUTCFullYear();
+  const month = padTwo(localDate.getUTCMonth() + 1);
+  const day = padTwo(localDate.getUTCDate());
+  const hour = padTwo(localDate.getUTCHours());
+  const minute = padTwo(localDate.getUTCMinutes());
+  const second = padTwo(localDate.getUTCSeconds());
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}:${second}`,
+    createTime: new Date(timestamp).toISOString()
+  };
+}
+
+/**
+ * 功能：将北京时间日期转换为 UTC 毫秒时间戳
+ * @param {string} dateValue 日期，格式 YYYY-MM-DD
+ * @param {boolean} isEnd 是否为当天结束
+ * @returns {number} UTC 毫秒时间戳
+ * @throws {Error} 无
+ */
+function getLocalDateBoundaryTimestamp(dateValue, isEnd = false) {
+  const [year, month, day] = String(dateValue || '').split('-').map(Number);
+  if (!year || !month || !day) return isEnd ? Date.now() : 0;
+
+  const hour = isEnd ? 23 : 0;
+  const minute = isEnd ? 59 : 0;
+  const second = isEnd ? 59 : 0;
+  const millisecond = isEnd ? 999 : 0;
+  return Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - LOCAL_TIMEZONE_OFFSET_MS;
 }
 
 /**
@@ -153,17 +207,14 @@ function normalizeDate(value) {
  */
 function formatLog(item) {
   const timestamp = item.ts || item.create_timestamp || Date.now();
-  const createTime = item.create_time || normalizeDate(timestamp);
-  const dateObj = new Date(createTime);
-  const date = Number.isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().slice(0, 10);
-  const time = Number.isNaN(dateObj.getTime()) ? '' : dateObj.toTimeString().slice(0, 8);
+  const displayTime = formatLocalDateTime(item.create_time || timestamp);
   const user = item.un || item.nickname || item.username || '未知用户';
   const initials = user.slice(0, 1) || '用';
 
   return {
     id: item._id || item.id,
-    date,
-    time,
+    date: displayTime.date,
+    time: displayTime.time,
     user,
     username: item.username || '',
     userId: item.uid || item.user_id || item.userId || '',
@@ -173,7 +224,7 @@ function formatLog(item) {
     action: item.a || item.action || '',
     content: item.c || item.content || '',
     status: item.s || item.status || '成功',
-    createTime
+    createTime: displayTime.createTime
   };
 }
 
@@ -427,8 +478,8 @@ async function listOperationLogs(data, event) {
   if (status) where.s = status;
 
   if (startDate || endDate) {
-    const startTime = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
-    const endTime = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Date.now();
+    const startTime = startDate ? getLocalDateBoundaryTimestamp(startDate) : 0;
+    const endTime = endDate ? getLocalDateBoundaryTimestamp(endDate, true) : Date.now();
     where.ts = _.gte(startTime).and(_.lte(endTime));
   }
 
@@ -449,7 +500,7 @@ async function listOperationLogs(data, event) {
   const allLogs = allRes.data || [];
   const users = Array.from(new Set(allLogs.map(item => item.un || item.nickname || item.username).filter(Boolean)));
   const modules = Array.from(new Set(allLogs.map(item => item.m || item.module).filter(Boolean)));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatLocalDateTime(Date.now()).date;
   const failedCount = allLogs.filter(item => (item.s || item.status) === '失败').length;
   const warningCount = allLogs.filter(item => (item.s || item.status) === '警告').length;
   const moduleMap = allLogs.reduce((map, item) => {
@@ -468,7 +519,7 @@ async function listOperationLogs(data, event) {
       users,
       modules,
       stats: {
-        todayCount: allLogs.filter(item => normalizeDate(item.ts || item.create_timestamp).slice(0, 10) === today).length,
+        todayCount: allLogs.filter(item => formatLocalDateTime(item.ts || item.create_timestamp).date === today).length,
         abnormalCount: failedCount + warningCount,
         activeModule
       }
