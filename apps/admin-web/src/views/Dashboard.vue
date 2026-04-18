@@ -125,6 +125,7 @@
                   class="dashboard-range-picker custom-date-picker-styled h-9"
                   format="YYYY-MM-DD"
                   value-format="YYYY-MM-DD"
+                  :disabled-date="disabledDate"
                 />
               </div>
             </div>
@@ -3936,6 +3937,10 @@ const dashboardRanges = [
   { label: '月度', value: 'month', months: 1 }
 ]
 
+const disabledDate = (time) => {
+  return time.getTime() > new Date().getTime();
+}
+
 const handleDashboardRangeSelect = (rangeValue) => {
   dashboardRange.value = rangeValue;
   dashboardDateRange.value = [];
@@ -4038,7 +4043,7 @@ const createDashboardBuckets = () => {
     const bucketStart = new Date(start.getTime() + bucketSize * index)
     const bucketEnd = new Date(index === bucketCount - 1 ? end.getTime() : start.getTime() + bucketSize * (index + 1) - 1)
     const label = isCustomRange
-      ? `${formatDashboardDateLabel(bucketStart)}-${formatDashboardDateLabel(bucketEnd)}`
+      ? `${formatDashboardDateLabel(bucketStart)}至${formatDashboardDateLabel(bucketEnd)}`
       : range.value === 'month'
       ? `${index + 1}周`
       : `${bucketStart.getMonth() + 1}月`
