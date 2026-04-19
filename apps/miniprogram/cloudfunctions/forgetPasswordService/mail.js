@@ -18,6 +18,7 @@ function getSmtpConfig() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM || user;
+  const timeout = Number(process.env.SMTP_TIMEOUT_MS || 15000);
 
   if (!host || !port || !user || !pass) {
     throw new Error('SMTP 配置缺失');
@@ -29,8 +30,22 @@ function getSmtpConfig() {
     user,
     pass,
     from,
-    secure: port === 465
+    secure: port === 465,
+    timeout
   };
+}
+
+/**
+ * 功能：隐藏邮箱敏感信息，用于日志排查
+ * @param {string} email 邮箱
+ * @returns {string} 脱敏邮箱
+ * @throws {Error} 无
+ */
+function maskEmail(email) {
+  const value = String(email || '');
+  const [name, domain] = value.split('@');
+  if (!name || !domain) return value ? '***' : '';
+  return `${name.slice(0, 2)}***@${domain}`;
 }
 
 /**
@@ -64,22 +79,42 @@ function buildResetCodeHtml(code) {
  */
 async function sendMail(to, code) {
   const config = getSmtpConfig();
+  console.log('[forgetPasswordService] SMTP send start', {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: maskEmail(config.user),
+    from: maskEmail(config.from),
+    to: maskEmail(to)
+  });
+
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
     secure: config.secure,
+    connectionTimeout: config.timeout,
+    greetingTimeout: config.timeout,
+    socketTimeout: config.timeout,
     auth: {
       user: config.user,
       pass: config.pass
     }
   });
 
-  return transporter.sendMail({
+  const result = await transporter.sendMail({
     from: config.from,
     to,
     subject: '找回密码验证码',
     html: buildResetCodeHtml(code)
   });
+
+  console.log('[forgetPasswordService] SMTP send success', {
+    accepted: result.accepted,
+    rejected: result.rejected,
+    response: result.response
+  });
+
+  return result;
 }
 
 module.exports = {

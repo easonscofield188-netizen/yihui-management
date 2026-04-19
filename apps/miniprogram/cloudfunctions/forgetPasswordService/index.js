@@ -147,11 +147,13 @@ async function handleSendResetCode(data) {
   try {
     const user = await findUserByAccount(account);
     if (!user || !isEmail(user.email) || user.status === 'disabled') {
+      console.log('[forgetPasswordService] skip send reset code: user missing, email missing, or disabled');
       return { code: 0, message: GENERIC_SEND_MESSAGE };
     }
 
     const limit = await checkSendLimit(user._id);
     if (limit.limited) {
+      console.log('[forgetPasswordService] skip send reset code: rate limited', { userId: user._id });
       return { code: 0, message: GENERIC_SEND_MESSAGE };
     }
 
@@ -159,7 +161,7 @@ async function handleSendResetCode(data) {
     const now = Date.now();
     const expireAt = now + RESET_CODE_TTL_MS;
 
-    await db.collection(RESET_CODE_COLLECTION).add({
+    const addRes = await db.collection(RESET_CODE_COLLECTION).add({
       data: {
         userId: user._id,
         email: user.email,
@@ -176,7 +178,20 @@ async function handleSendResetCode(data) {
       }
     });
 
-    await sendMail(user.email, code);
+    try {
+      await sendMail(user.email, code);
+    } catch (mailError) {
+      if (addRes && addRes._id) {
+        await db.collection(RESET_CODE_COLLECTION).doc(addRes._id).update({
+          data: {
+            used: true,
+            usedAt: Date.now(),
+            failReason: 'mail_send_failed'
+          }
+        });
+      }
+      throw mailError;
+    }
   } catch (error) {
     console.warn('发送找回密码验证码失败，已返回统一提示', error.message || error);
   }
