@@ -5,6 +5,9 @@
       "description": "系统管理员账号信息",
       "type": "object",
       "properties": {
+        "last_login_ip": { "type": "string", "description": "最后一次登录 IP" },
+        "common_login_ips": { "type": "array", "description": "常用登录 IP 列表，登录次数达到阈值后写入" },
+        "login_ip_stats": { "type": "array", "description": "登录 IP 统计，包含 ip、login_count、first_login_time、last_login_time" },
         "username": { "type": "string", "description": "登录账号" },
         "password": { "type": "string", "description": "MD5 加密后的密码" },
         "role": { "type": "string", "description": "用户角色标识" },

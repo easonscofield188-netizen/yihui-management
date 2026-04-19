@@ -216,7 +216,15 @@ const handleLogin = async () => {
       if (res.data.userInfo) {
         localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
       }
-      ElMessage.success('登录成功，欢迎回来')
+      if (res.data.abnormalLoginWarning) {
+        ElMessage.warning({
+          message: `安全提醒：当前账号正在使用非常用 IP ${res.data.loginIp || ''} 登录，请确认是否本人操作。`,
+          duration: 8000,
+          showClose: true
+        })
+      } else {
+        ElMessage.success('登录成功，欢迎回来')
+      }
       router.push('/dashboard')
     } else {
       // 如果没有 token 但 code 是 0，也视为成功 (取决于具体后端实现)

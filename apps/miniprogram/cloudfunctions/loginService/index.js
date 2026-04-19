@@ -13,6 +13,9 @@ cloud.init({
 });
 
 const db = cloud.database();
+const OPERATION_LOG_COLLECTION = 'operation_logs';
+const COMMON_IP_LOGIN_THRESHOLD = 2;
+const MAX_LOGIN_IP_STATS = 20;
 
 exports.main = async (event, context) => {
   // --- 兼容性处理：解析请求体 ---
@@ -64,18 +67,29 @@ exports.main = async (event, context) => {
     if (res.data && res.data.length > 0) {
       const user = res.data[0];
       const loginTime = new Date().toISOString();
+      const clientIp = getClientIp(event);
+      const ipResult = buildLoginIpStats(user.login_ip_stats, clientIp, loginTime);
       await db.collection('users').doc(user._id).update({
         data: {
           lastLoginTime: loginTime,
+          last_login_ip: clientIp,
+          login_ip_stats: ipResult.loginIpStats,
+          common_login_ips: ipResult.commonLoginIps,
           updateTime: db.serverDate()
         }
       });
+
+      if (ipResult.isUnusual) {
+        await recordUnusualLoginLog(user, clientIp, event);
+      }
       
       return {
         code: 0,
         message: '登录成功',
         data: {
           token: 'auth-token-' + Date.now() + '-' + user._id,
+          abnormalLoginWarning: ipResult.isUnusual,
+          loginIp: clientIp,
           userInfo: {
             id: user._id,
             username: user.username,
@@ -131,6 +145,90 @@ function getRoleName(role) {
     user: '普通用户'
   };
   return roleMap[role] || role || '系统管理员';
+}
+
+function getClientIp(event) {
+  const headers = event.headers || {};
+  const rawIp = headers['x-forwarded-for']
+    || headers['X-Forwarded-For']
+    || headers['x-real-ip']
+    || headers['X-Real-IP']
+    || headers['x-client-ip']
+    || headers['X-Client-IP']
+    || headers['x-original-forwarded-for']
+    || headers['X-Original-Forwarded-For']
+    || event.requestContext?.identity?.sourceIp
+    || event.requestContext?.http?.sourceIp
+    || '';
+  return String(rawIp || '').split(',')[0].trim() || 'unknown';
+}
+
+function getUserAgent(event) {
+  const headers = event.headers || {};
+  return String(headers['user-agent'] || headers['User-Agent'] || '').slice(0, 240);
+}
+
+function buildLoginIpStats(rawStats, clientIp, loginTime) {
+  const stats = Array.isArray(rawStats) ? rawStats : [];
+  const hasClientIp = clientIp && clientIp !== 'unknown';
+  const hasCommonIp = stats.some(item => Number(item.login_count || 0) >= COMMON_IP_LOGIN_THRESHOLD);
+  const currentStat = hasClientIp ? stats.find(item => item.ip === clientIp) : null;
+  const isUnusual = Boolean(hasClientIp && hasCommonIp && (!currentStat || Number(currentStat.login_count || 0) < COMMON_IP_LOGIN_THRESHOLD));
+  const nextStats = stats
+    .filter(item => item && item.ip && item.ip !== clientIp)
+    .map(item => ({
+      ip: item.ip,
+      login_count: Number(item.login_count || 0),
+      first_login_time: item.first_login_time || loginTime,
+      last_login_time: item.last_login_time || loginTime
+    }));
+
+  if (hasClientIp) {
+    nextStats.unshift({
+      ip: clientIp,
+      login_count: Number(currentStat?.login_count || 0) + 1,
+      first_login_time: currentStat?.first_login_time || loginTime,
+      last_login_time: loginTime
+    });
+  }
+
+  const loginIpStats = nextStats
+    .sort((a, b) => new Date(b.last_login_time).getTime() - new Date(a.last_login_time).getTime())
+    .slice(0, MAX_LOGIN_IP_STATS);
+  const commonLoginIps = loginIpStats
+    .filter(item => Number(item.login_count || 0) >= COMMON_IP_LOGIN_THRESHOLD)
+    .map(item => item.ip);
+
+  return {
+    isUnusual,
+    loginIpStats,
+    commonLoginIps
+  };
+}
+
+async function recordUnusualLoginLog(user, clientIp, event) {
+  try {
+    const now = Date.now();
+    await db.collection(OPERATION_LOG_COLLECTION).add({
+      data: {
+        uid: user._id,
+        un: String(user.nickname || user.username || '').slice(0, 20),
+        username: user.username || '',
+        m: '安全登录',
+        a: 'login',
+        c: `账号 ${user.username || user._id} 使用非常用 IP ${clientIp} 登录`,
+        s: '警告',
+        ip: clientIp,
+        user_agent: getUserAgent(event),
+        ts: now,
+        create_time: new Date(now).toISOString(),
+        create_timestamp: now,
+        createdAt: new Date(now).toISOString()
+      }
+    });
+  } catch (error) {
+    console.warn('非常用 IP 登录日志写入失败，已忽略', error.message || error);
+  }
 }
 
 async function getCurrentUserDoc(data, event) {

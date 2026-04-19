@@ -161,3 +161,9 @@
 > 2. 在导入 `projects` 时，将客户 `_id` 填入 `clientId` 字段。
 > 3. 导入 `projects` 后，获取项目的 `_id`。
 > 4. 在导入 `costs` 和 `project_vouchers` 时，将项目 `_id` 填入 `projectId` 字段。
+## 登录 IP 安全字段补充
+
+`users` 集合新增以下字段：
+- `last_login_ip` (string): 最后一次登录 IP
+- `common_login_ips` (array): 常用登录 IP 列表，登录次数达到阈值后写入
+- `login_ip_stats` (array): 登录 IP 统计，包含 `ip`、`login_count`、`first_login_time`、`last_login_time`

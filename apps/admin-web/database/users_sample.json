@@ -9,6 +9,9 @@
     "avatarUrl": "",
     "avatarFileId": "",
     "lastLoginTime": "",
+    "last_login_ip": "",
+    "common_login_ips": [],
+    "login_ip_stats": [],
     "updateTime": ""
   }
 ]
