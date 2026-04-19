@@ -7,7 +7,7 @@
           杭州亿辉
         </h1>
         <p class="font-space tracking-wide text-sm opacity-60">
-          艺术科技园林
+          艺术创意园林
         </p>
       </div>
       
@@ -53,7 +53,7 @@
       <!-- Header -->
       <header class="h-16 fixed top-0 right-0 left-64 z-40 bg-neutral-950/40 backdrop-blur-md border-b border-white/5 px-8 flex items-center justify-between">
         <div class="text-xl font-black text-primary truncate mr-4">
-          亿辉文化·艺术科技管理系统
+          亿辉文化·艺术创意管理系统
         </div>
         
         <div class="flex items-center gap-6 shrink-0">

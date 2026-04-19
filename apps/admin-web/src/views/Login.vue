@@ -112,14 +112,14 @@
             </LoginInput>
 
             <!-- Remember Me -->
-            <div class="flex items-center gap-2 px-1">
+            <!-- <div class="flex items-center gap-2 px-1">
               <el-checkbox
                 v-model="loginForm.remember"
                 class="custom-checkbox"
               >
                 <span class="text-xs text-on-surface-variant">保持登录状态</span>
               </el-checkbox>
-            </div>
+            </div> -->
 
             <!-- Submit Button -->
             <div class="pt-4">
@@ -142,7 +142,7 @@
 
           <!-- Support Footer -->
           <div class="mt-12 pt-8 border-t border-white/5 flex justify-between items-center text-[10px] text-on-surface-variant/40 uppercase tracking-widest font-medium">
-            <span>© 2024 杭州亿辉文化创意</span>
+            <span>© 2024 杭州亿辉文化创意有限公司</span>
             <div class="flex gap-4">
               <a
                 href="#"
