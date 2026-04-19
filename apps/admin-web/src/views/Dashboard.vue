@@ -2,13 +2,22 @@
   <div class="flex min-h-screen bg-background text-on-surface">
     <!-- Sidebar -->
     <aside class="fixed left-0 top-0 h-full w-64 bg-neutral-900/60 backdrop-blur-xl border-r border-emerald-900/20 z-50 flex flex-col">
-      <div class="px-6 py-8 flex flex-col gap-1">
-        <h1 class="text-lg font-bold text-primary tracking-tighter">
-          杭州亿辉
-        </h1>
-        <p class="font-space tracking-wide text-sm opacity-60">
-          艺术创意园林
-        </p>
+      <div class="px-6 py-8 flex items-center gap-4">
+        <div class="h-14 w-14 logo-area">
+          <img
+            src="/yihuikj-logo.png"
+            alt="亿辉科技Logo"
+            class="w-full h-full object-contain"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <h1 class="text-lg font-bold text-primary tracking-tighter">
+            杭州亿辉
+          </h1>
+          <p class="font-space tracking-wide text-sm opacity-60">
+            艺术创意园林
+          </p>
+        </div>
       </div>
       
       <nav class="flex-1 mt-4">
@@ -8584,5 +8593,11 @@ const handleLogout = () => {
   bottom: auto;
   top: -10px;
   box-shadow: 0 0 15px rgba(82, 238, 138, 0.5);
+}
+
+.logo-area {
+  overflow: hidden;
+  border-radius: 50%;
+  background-color: #fff;
 }
 </style>
