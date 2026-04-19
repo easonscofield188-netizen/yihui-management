@@ -58,8 +58,8 @@ function buildResetCodeHtml(code) {
   return `
     <div style="margin:0;padding:24px;background:#f6f8fb;font-family:Arial,'Microsoft YaHei',sans-serif;color:#1f2937;">
       <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;padding:28px;border:1px solid #e5e7eb;">
-        <h2 style="margin:0 0 16px;font-size:22px;color:#111827;">找回密码验证码</h2>
-        <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#4b5563;">您正在进行后台管理系统密码重置操作，请在页面中输入以下验证码：</p>
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827;">亿辉-找回密码验证码</h2>
+        <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#4b5563;">您正在进行“杭州亿辉文化创意有限公司”后台管理系统密码重置操作，请在页面中输入以下验证码：</p>
         <div style="margin:22px 0;padding:18px;background:#111827;color:#ffffff;border-radius:8px;text-align:center;font-size:32px;font-weight:700;letter-spacing:8px;">
           ${code}
         </div>
