@@ -5,6 +5,10 @@
       "description": "系统管理员账号信息",
       "type": "object",
       "properties": {
+        "email": { "type": "string", "description": "绑定邮箱，用于找回密码" },
+        "passwordHash": { "type": "string", "description": "sha256 哈希后的登录密码" },
+        "status": { "type": "string", "description": "账号状态，如 active、disabled" },
+        "updatedAt": { "type": "number", "description": "最后更新时间戳" },
         "last_login_ip": { "type": "string", "description": "最后一次登录 IP" },
         "common_login_ips": { "type": "array", "description": "常用登录 IP 列表，登录次数达到阈值后写入" },
         "login_ip_stats": { "type": "array", "description": "登录 IP 统计，包含 ip、login_count、first_login_time、last_login_time" },
@@ -164,6 +168,25 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "记录创建时间" }
       },
       "required": ["user_id", "module", "content", "status", "create_timestamp"]
+    },
+    "PasswordResetCode": {
+      "title": "密码重置验证码",
+      "description": "忘记密码邮箱验证码与 resetToken 记录",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "用户 ID" },
+        "email": { "type": "string", "description": "接收验证码的邮箱" },
+        "codeHash": { "type": "string", "description": "验证码哈希，不存明文验证码" },
+        "scene": { "type": "string", "description": "固定为 forgot_password" },
+        "expireAt": { "type": "number", "description": "过期时间戳" },
+        "used": { "type": "boolean", "description": "是否已使用" },
+        "verified": { "type": "boolean", "description": "是否已验证通过" },
+        "verifyToken": { "type": "string", "description": "验证通过后生成的重置凭证" },
+        "createdAt": { "type": "number", "description": "创建时间戳" },
+        "verifiedAt": { "type": "number", "description": "验证通过时间戳" },
+        "usedAt": { "type": "number", "description": "使用时间戳" }
+      },
+      "required": ["userId", "email", "codeHash", "scene", "expireAt", "used", "verified", "createdAt"]
     }
   },
   "firestore": {
@@ -202,6 +225,10 @@
     "operation_logs": {
       "schema": { "$ref": "OperationLog" },
       "description": "操作日志集合"
+    },
+    "password_reset_codes": {
+      "schema": { "$ref": "PasswordResetCode" },
+      "description": "忘记密码验证码集合"
     }
   }
 }

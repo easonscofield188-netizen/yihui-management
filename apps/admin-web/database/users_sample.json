@@ -1,7 +1,10 @@
 [
   {
     "username": "admin",
+    "email": "",
     "password": "e10adc3949ba59abbe56e057f20f883e",
+    "passwordHash": "",
+    "status": "active",
     "role": "ADMIN_SUPER",
     "roleName": "超级系统管理员",
     "employeeNo": "YH-ADMIN-001",
@@ -12,6 +15,7 @@
     "last_login_ip": "",
     "common_login_ips": [],
     "login_ip_stats": [],
+    "updatedAt": "",
     "updateTime": ""
   }
 ]

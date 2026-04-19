@@ -14,6 +14,20 @@ export function loginService(data) {
 }
 
 /**
+ * 忘记密码接口
+ * 对应腾讯云函数名: forgetPasswordService
+ * HTTP 访问路径: /forgetPasswordService
+ * @param {Object} data - { action, account, code, resetToken, newPassword }
+ */
+export function forgetPasswordService(data) {
+  return request({
+    url: '/forgetPasswordService',
+    method: 'post',
+    data
+  });
+}
+
+/**
  * 获取用户信息 (示例)
  */
 export function getInfo() {

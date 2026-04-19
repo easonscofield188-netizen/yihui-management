@@ -50,7 +50,7 @@ exports.main = async (event, context) => {
     }
   }
 
-  const { username, password } = body;
+  const { username, password, legacyPassword } = body;
 
   if (!username || !password) {
     return { code: 400, message: '账号或密码不能为空' };
@@ -60,12 +60,16 @@ exports.main = async (event, context) => {
     // 在 users 集合中查询匹配的账号密码
     // 注意：前端已对密码进行 MD5 加密，因此数据库中存储的也应是 MD5 加密后的字符串
     const res = await db.collection('users').where({
-      username: username,
-      password: password
+      username: username
     }).get();
+    const user = (res.data || []).find(item => {
+      if (item.passwordHash && item.passwordHash === password) return true;
+      if (item.password && item.password === password) return true;
+      if (legacyPassword && item.password && item.password === legacyPassword) return true;
+      return false;
+    });
 
-    if (res.data && res.data.length > 0) {
-      const user = res.data[0];
+    if (user) {
       const loginTime = new Date().toISOString();
       const clientIp = getClientIp(event);
       const ipResult = buildLoginIpStats(user.login_ip_stats, clientIp, loginTime);

@@ -1,0 +1,10 @@
+{
+  "name": "forgetPasswordService",
+  "version": "1.0.0",
+  "description": "忘记密码邮箱验证码重置云函数",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "wx-server-sdk": "latest"
+  }
+}

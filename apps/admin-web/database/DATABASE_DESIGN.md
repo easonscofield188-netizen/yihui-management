@@ -167,3 +167,27 @@
 - `last_login_ip` (string): 最后一次登录 IP
 - `common_login_ips` (array): 常用登录 IP 列表，登录次数达到阈值后写入
 - `login_ip_stats` (array): 登录 IP 统计，包含 `ip`、`login_count`、`first_login_time`、`last_login_time`
+
+## 忘记密码字段补充
+
+`users` 集合需包含：
+- `_id` (string): 用户 ID
+- `username` (string): 登录账号
+- `email` (string): 绑定邮箱，用于接收找回密码验证码
+- `passwordHash` (string): sha256 哈希后的密码
+- `status` (string): 账号状态，如 `active`、`disabled`
+- `updatedAt` (number): 最后更新时间戳
+
+新增 `password_reset_codes` 集合：
+- `_id` (string): 验证码记录 ID
+- `userId` (string): 用户 ID
+- `email` (string): 接收验证码的邮箱
+- `codeHash` (string): 验证码哈希，不保存明文验证码
+- `scene` (string): 固定为 `forgot_password`
+- `expireAt` (number): 过期时间戳，默认 5 分钟
+- `used` (boolean): 是否已使用
+- `verified` (boolean): 是否已完成验证码校验
+- `verifyToken` (string): 验证成功后生成的重置凭证
+- `createdAt` (number): 创建时间戳
+- `verifiedAt` (number|null): 验证通过时间戳
+- `usedAt` (number|null): 使用时间戳

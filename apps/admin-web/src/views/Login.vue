@@ -104,10 +104,10 @@
                 </el-icon>
               </template>
               <template #extra>
-                <a
-                  href="#"
+                <router-link
+                  to="/forgot-password"
                   class="text-[10px] text-secondary/60 hover:text-secondary transition-colors uppercase tracking-widest"
-                >忘记密码?</a>
+                >忘记密码?</router-link>
               </template>
             </LoginInput>
 
@@ -202,11 +202,13 @@ const handleLogin = async () => {
   
   try {
     // 使用 MD5 加密密码
+    const passwordHash = CryptoJS.SHA256(loginForm.password).toString()
     const md5Password = CryptoJS.MD5(loginForm.password).toString()
     
     const res = await loginService({
       username: loginForm.username,
-      password: md5Password
+      password: passwordHash,
+      legacyPassword: md5Password
     })
     
     // 假设后端返回 { code: 0, data: { token: '...' } }
