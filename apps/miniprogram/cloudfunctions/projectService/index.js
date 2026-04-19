@@ -5,12 +5,15 @@
 'use strict';
 
 const cloud = require("wx-server-sdk");
+const nodemailer = require("nodemailer");
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
 });
 
 const db = cloud.database();
+const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const ADMIN_COM_ROLE = 'ADMIN_COM';
 
 exports.main = async (event, context) => {
   let action, data;
@@ -27,6 +30,7 @@ exports.main = async (event, context) => {
   try {
     switch (action) {
       case 'create':
+      case 'createProject':
         return await createProject(data);
       case 'list':
         return await listProjects(data);
@@ -486,7 +490,7 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects } = params;
+  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
@@ -576,9 +580,11 @@ async function createProject(params) {
       subProjects: subProjectsData,
       amountEditCount: 0, // 初始化修改次数为0
       ...financials,
+      createdAt: now,
       createTime: db.serverDate(),
       updateTime: db.serverDate()
     };
+    delete data.currentUser;
 
     // 初始化时间节点 (仅针对常规项目)
     if (type !== 'historical') {
@@ -595,6 +601,20 @@ async function createProject(params) {
     const res = await db.collection('projects').add({
       data
     });
+
+    // 发送邮件通知超级管理员（仅当创建者是普通管理员时）
+    if (currentUser && currentUser.role === ADMIN_COM_ROLE) {
+      try {
+        const adminEmails = await getSuperAdminEmails();
+        if (adminEmails.length > 0) {
+          await sendProjectCreatedEmail(adminEmails, data, currentUser);
+        }
+      } catch (emailError) {
+        console.error('发送邮件通知失败:', emailError);
+        // 邮件发送失败不影响主流程
+      }
+    }
+
     return { code: 0, message: '创建成功', data: { id: res._id } };
   } catch (err) {
     console.error('创建项目失败:', err);
@@ -611,5 +631,195 @@ async function listProjects(params) {
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+// 格式化日期时间
+function formatDateTime(dateValue) {
+  if (!dateValue) return '-';
+  if (dateValue.$date) {
+    dateValue = dateValue.$date;
+  }
+  const date = new Date(dateValue);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleString('zh-CN', { 
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function getSmtpConfig() {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 465);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from = process.env.SMTP_FROM || user;
+
+  if (!host || !port || !user || !pass) {
+    throw new Error('SMTP 配置缺失');
+  }
+
+  return {
+    host,
+    port,
+    user,
+    pass,
+    from,
+    secure: port === 465
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function maskEmail(email) {
+  const value = String(email || '');
+  const [name, domain] = value.split('@');
+  if (!name || !domain) return value ? '***' : '';
+  return `${name.slice(0, 2)}***@${domain}`;
+}
+
+function getProjectAmount(projectData) {
+  return projectData.totalAmount ?? projectData.amount ?? 0;
+}
+
+function formatMoney(value) {
+  const numberValue = Number(value || 0);
+  if (!Number.isFinite(numberValue)) return '0.00';
+  return numberValue.toFixed(2);
+}
+
+function getProjectCost(projectData) {
+  const mainCost = Array.isArray(projectData.costs)
+    ? projectData.costs.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+    : 0;
+  const subProjectCost = Array.isArray(projectData.subProjects)
+    ? projectData.subProjects.reduce((sum, item) => {
+      const costs = Array.isArray(item.costs) ? item.costs : [];
+      return sum + costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0);
+    }, 0)
+    : 0;
+  return mainCost + subProjectCost;
+}
+
+function getProjectTypeText(projectData) {
+  const type = projectData.type || (projectData.isHistorical ? 'historical' : 'normal');
+  const typeMap = {
+    normal: '常规项目',
+    historical: '补录项目',
+    long_term: '长期项目'
+  };
+  return projectData.typeLabel || typeMap[type] || type || '-';
+}
+
+const CLIENT_ROLE_MAP = {
+  pm: '项目经理',
+  boss: '老板本身',
+  agent: '中间人',
+  other: '其他'
+};
+
+function getClientRoleText(projectData) {
+  const role = projectData.role || projectData.clientRole || '';
+  return projectData.roleLabel || CLIENT_ROLE_MAP[role] || role || '-';
+}
+
+function getClientSourceText(projectData) {
+  return projectData.clientSourceLabel || projectData.sourceLabel || projectData.clientSource || projectData.source || '-';
+}
+
+function getProjectDescription(projectData) {
+  return projectData.description ?? projectData.desc ?? '';
+}
+
+function buildProjectCreatedEmailHtml(projectData, creator) {
+  const creatorName = `${creator.username || '-'} (${creator.nickname || creator.username || '-'})`;
+  const description = getProjectDescription(projectData);
+
+  return `
+    <div style="margin:0;padding:24px;background:#f6f8fb;font-family:Arial,'Microsoft YaHei',sans-serif;color:#1f2937;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;padding:28px;border:1px solid #e5e7eb;">
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827;">新增项目提醒</h2>
+        <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4b5563;">系统管理员新增了项目，请及时查看后台管理系统。</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="padding:10px 12px;width:132px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">新增人</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(creatorName)}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">项目名称</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(projectData.name)}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">客户单位</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(projectData.client)}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">项目类型</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(getProjectTypeText(projectData))}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">客户来源</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(getClientSourceText(projectData))}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">客户角色</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(getClientRoleText(projectData))}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">项目金额</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">¥${escapeHtml(formatMoney(getProjectAmount(projectData)))}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">项目成本</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">¥${escapeHtml(formatMoney(getProjectCost(projectData)))}</td></tr>
+          <tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">新增时间</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(formatDateTime(projectData.createdAt || Date.now()))}</td></tr>
+          ${description ? `<tr><td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:700;">项目描述</td><td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(description)}</td></tr>` : ''}
+        </table>
+        <p style="margin:18px 0 0;font-size:13px;color:#6b7280;">此邮件由系统自动发送，请勿直接回复。</p>
+      </div>
+    </div>
+  `;
+}
+
+// 获取所有超级管理员的邮箱
+async function getSuperAdminEmails() {
+  try {
+    const res = await db.collection('users')
+      .where({
+        role: ADMIN_SUPER_ROLE
+      })
+      .field({
+        email: true
+      })
+      .get();
+    
+    return Array.from(new Set((res.data || [])
+      .map(user => String(user.email || '').trim())
+      .filter(isValidEmail)));
+  } catch (err) {
+    console.error('获取超级管理员邮箱失败:', err);
+    return [];
+  }
+}
+
+// 发送项目创建邮件
+async function sendProjectCreatedEmail(emails, projectData, creator) {
+  if (!emails || emails.length === 0) return;
+  
+  try {
+    const smtpConfig = getSmtpConfig();
+    const transporter = nodemailer.createTransport({
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
+      auth: {
+        user: smtpConfig.user,
+        pass: smtpConfig.pass
+      }
+    });
+    const mailOptions = {
+      from: smtpConfig.from,
+      to: emails,
+      subject: '【系统通知】新增项目提醒',
+      html: buildProjectCreatedEmailHtml(projectData, creator)
+    };
+    
+    const result = await transporter.sendMail(mailOptions);
+    console.log('新增项目提醒邮件发送成功:', emails.map(maskEmail).join(','), result.response || '');
+  } catch (err) {
+    console.error('邮件发送失败:', err);
+    // 邮件发送失败不影响主流程
   }
 }

@@ -35,7 +35,7 @@
         </div>
       </nav>
 
-      <div class="p-6 border-t border-white/5">
+      <div class="p-6 border-t border-white/5 cursor-pointer hover:bg-white/5 transition-colors" @click="openUserProfileEdit">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center overflow-hidden">
             <img
@@ -3301,6 +3301,19 @@ const currentUserRoleText = computed(() => {
 })
 
 const isSuperAdmin = computed(() => currentUser.role === 'ADMIN_SUPER')
+
+// 打开用户信息编辑弹窗
+const openUserProfileEdit = () => {
+  // 填充表单数据
+  userDialog.form = {
+    username: currentUser.username,
+    nickname: currentUser.nickname,
+    avatarUrl: currentUser.avatarUrl,
+    avatarFileId: currentUser.avatarFileId
+  }
+  // 显示对话框
+  userDialog.visible = true
+}
 
 const formatLastLogin = (value) => {
   if (!value) return '-'
@@ -6913,7 +6926,13 @@ const handleSaveProject = async () => {
       res = await createProject({
         ...projectData,
         contractFileIds: contracts.value.map(c => c.id),
-        previewFileIds: previews.value.map(p => p.id)
+        previewFileIds: previews.value.map(p => p.id),
+        currentUser: {
+          id: currentUser.id,
+          username: currentUser.username,
+          nickname: currentUser.nickname,
+          role: currentUser.role
+        }
       })
     }
     
