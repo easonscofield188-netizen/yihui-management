@@ -1271,7 +1271,7 @@
                       placeholder="请选择项目类型" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
-                      :disabled="isViewMode || form.type === 'historical' || isFieldReadOnly('type')"
+                      :disabled="isViewMode || (isEditMode && form.type === 'historical') || isFieldReadOnly('type')"
                     >
                       <el-option 
                         v-for="item in projectTypes" 
@@ -2395,9 +2395,10 @@
                             v-if="!isViewMode && !isLongTermTerminated"
                             class="text-[10px] border px-3 py-1 rounded transition-all font-bold"
                             :class="index % 2 === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'"
+                            :disabled="sp.costs && sp.costs.length >= costCategories.length"
                             @click="addSubProjectCost(sp)"
                           >
-                            添加成本记录
+                            {{ sp.costs && sp.costs.length >= costCategories.length ? '已达类目上限' : '添加成本记录' }}
                           </button>
                         </div>
                         <div class="overflow-x-auto">
@@ -2426,6 +2427,7 @@
                                       :key="cat.value" 
                                       :label="cat.label" 
                                       :value="cat.value" 
+                                      :disabled="isSubProjectCategorySelected(sp, cat.value, cIdx)"
                                     />
                                   </el-select>
                                 </td>
@@ -5137,7 +5139,7 @@ const addSubProjectCost = (subProject) => {
   subProject.costs.push({
     id: Date.now() + Math.random(),
     category: '',
-    supplier: '',
+    supplier: '无',
     amount: 0,
     isSettled: true
   })
@@ -5164,7 +5166,7 @@ const costCategories = ref([])
 
 // 供应商列表（目前默认只有一个“无”）
 const suppliers = ref([
-  { id: 'none', label: '无', value: 'none' }
+  { id: '无', label: '无', value: '无' }
 ])
 
 /**
@@ -5676,9 +5678,9 @@ const isFieldReadOnly = (fieldName) => {
     return false;
   }
 
-  // 补录单特殊逻辑：项目类型和项目状态始终只读
+  // 补录单特殊逻辑：项目类型和项目状态在编辑时只读
   if (form.type === 'historical') {
-    if (fieldName === 'type' || fieldName === 'status') {
+    if ((fieldName === 'type' || fieldName === 'status') && !isCreating.value) {
       return true;
     }
     // 其余字段均可正常修改
@@ -5724,7 +5726,7 @@ const addCost = () => {
   costs.value.push({
     id: Date.now() + Math.random(), 
     category: '',
-    supplier: '',
+    supplier: '无',
     amount: 0,
     isSettled: true // 默认设为已结�?
   })
@@ -5735,6 +5737,14 @@ const addCost = () => {
  */
 const isCategorySelected = (categoryValue, currentIndex) => {
   return costs.value.some((item, index) => index !== currentIndex && item.category === categoryValue);
+}
+
+/**
+ * 检查子项目成本类目是否已被选择
+ */
+const isSubProjectCategorySelected = (subProject, categoryValue, currentIndex) => {
+  if (!subProject.costs) return false;
+  return subProject.costs.some((item, index) => index !== currentIndex && item.category === categoryValue);
 }
 
 // 单据凭证列表
