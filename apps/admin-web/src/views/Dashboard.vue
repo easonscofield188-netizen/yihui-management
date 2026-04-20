@@ -5399,18 +5399,18 @@ watch(() => form.isHasPreview, async (newVal, oldVal) => {
             previews.value = []
             ElMessage.success('预览图已清理')
           } catch {
-            // 用户取消，恢复为“是�?
+            // 用户取消，恢复为“是”
             form.isHasPreview = YES_NO_VALUE.YES
           }
         })
       } catch (err) {
-        console.error('清理预览图失�?', err)
+        console.error('清理预览图失败', err)
       }
     }
   }
 })
 
-// 过滤后的项目状态列�?
+// 过滤后的项目状态列表
 const filteredProjectStatuses = computed(() => {
   const isHistorical = form.type === 'historical' || (selectedProjectId.value && projects.value.find(p => p.id === selectedProjectId.value)?.isHistorical);
   if (isHistorical) {
@@ -5424,7 +5424,7 @@ const filteredProjectStatuses = computed(() => {
     return projectStatuses.value.filter(s => s.value === 'in_cooperation' || s.value === 'terminated')
   }
   
-  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状�?
+  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状态
   if (isCreating.value && form.type !== 'historical') {
     return projectStatuses.value.filter(s => s.value !== 'closed' && s.value !== 'in_cooperation' && s.value !== 'terminated')
   }
@@ -5433,7 +5433,7 @@ const filteredProjectStatuses = computed(() => {
 })
 
 /**
- * 获取特定行的可选状态列�?
+ * 获取特定行的可选状态列表
  */
 const getRowProjectStatuses = (row) => {
   if (row.isHistorical) {
@@ -5445,10 +5445,10 @@ const getRowProjectStatuses = (row) => {
   return projectStatuses.value.filter(s => s.value !== 'in_cooperation' && s.value !== 'terminated')
 }
 
-// 施工周期变更处理：联动回款周期开始日�?
+// 施工周期变更处理：联动回款周期开始日期
 const handleConstructionPeriodChange = (val) => {
   if (val && val[1] && (!form.collectionPeriod || !form.collectionPeriod[0])) {
-    // 回款周期的开始日期默认是施工周期的结束日�?
+    // 回款周期的开始日期默认是施工周期的结束日期
     form.collectionPeriod = [val[1], val[1]]
   }
 }
