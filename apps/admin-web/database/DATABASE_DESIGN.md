@@ -6,8 +6,12 @@
 
 ### 1.1 管理员表 (`users`)
 用于管理后台登录账号。
+- `_id` (string): 用户记录 ID，由数据库生成；业务中用于关联当前登录用户、操作日志等。
 - `username` (string): 登录账号
-- `password` (string): MD5 加密后的密码
+- `email` (string): 绑定邮箱，用于接收找回密码验证码；普通系统管理员新建项目通知也会查询超级管理员邮箱。
+- `password` (string): 历史兼容字段。早期为 MD5 加密后的密码；当前登录页会额外传 `legacyPassword` 兼容旧密码校验，建议后续统一迁移到 `passwordHash`。
+- `passwordHash` (string): SHA256 哈希后的登录密码，忘记密码重置成功后会更新此字段。
+- `status` (string): 账号状态，如 `active`、`disabled`；用于控制账号是否可登录。
 - `role` (string): 角色标识（如 ADMIN_SUPER、ADMIN_COM）
 - `roleName` (string): 角色名称（如 超级系统管理员、系统管理员）
 - `employeeNo` (string): 工号
@@ -15,7 +19,16 @@
 - `avatarUrl` (string): 用户头像访问地址
 - `avatarFileId` (string): 用户头像云存储文件 ID
 - `lastLoginTime` (timestamp/string): 最后登录时间
+- `last_login_ip` (string): 最后一次登录 IP，用于登录安全提示和审计。
+- `common_login_ips` (array): 常用登录 IP 列表；某个 IP 登录次数达到阈值后写入。
+- `login_ip_stats` (array): 登录 IP 统计列表，每项包含：
+  - `ip` (string): 登录 IP
+  - `login_count` (number): 该 IP 累计登录次数
+  - `first_login_time` (string): 该 IP 首次登录时间
+  - `last_login_time` (string): 该 IP 最近登录时间
+- `created_at` (timestamp/string): 用户创建时间。实际库中可能为腾讯云控制台显示的 Date/Timestamp。
 - `updateTime` (timestamp): 最后更新时间
+- `updatedAt` (number): 最后更新时间戳，忘记密码重置等接口会使用；实际库中常见为毫秒时间戳。
 
 ### 1.2 系统通用配置表 (`system_configs`)
 > `SYSTEM_SETTING` 分组用于系统运行参数。当前支持 `SESSION_TIMEOUT_MINUTES`，`value` 为用户无操作自动退出登录时间，单位：分钟，默认 30。
