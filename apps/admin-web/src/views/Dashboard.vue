@@ -166,14 +166,14 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                   <h5 class="text-sm font-bold tracking-widest uppercase">对比分析</h5>
                 </div>
-                <div class="h-64 flex items-end justify-around gap-8 px-8 dashboard-chart-container relative">
+                <div class="h-64 flex items-end justify-around gap-3 px-2 dashboard-chart-container relative overflow-x-auto">
                   <div class="absolute inset-0 flex flex-col justify-between pointer-events-none px-6 py-2 opacity-10">
                     <div v-for="line in 5" :key="line" class="border-t border-emerald-400 w-full h-0" />
                   </div>
                   <div
                     v-for="bar in dashboardQuarterBars"
                     :key="`${dashboardRange}-${bar.label}`"
-                    class="flex-1 flex flex-col items-center group relative z-10"
+                    class="flex-1 min-w-12 flex flex-col items-center group relative z-10"
                     @mouseenter="dashboardHoveredBar = bar"
                     @mouseleave="dashboardHoveredBar = null"
                   >
@@ -189,6 +189,7 @@
                     <div
                       v-if="dashboardHoveredBar?.label === bar.label"
                       class="dashboard-bar-tooltip"
+                      :class="{ 'is-inside': bar.height >= 120 }"
                     >
                       <div class="text-[10px] text-on-surface-variant mb-1">{{ bar.label }}</div>
                       <div class="text-sm font-bold text-primary">{{ bar.amountText }}</div>
@@ -4088,6 +4089,9 @@ const handleDashboardRangeSelect = (rangeValue) => {
 
 const dashboardMoney = (amount) => {
   const value = Number(amount) || 0
+  if (Math.abs(value) < 10000) {
+    return `${value.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}元`
+  }
   return `${(value / 10000).toFixed(1)}万元`
 }
 
@@ -4134,6 +4138,9 @@ const getDashboardRangeStart = () => {
     }
   }
   const range = dashboardRanges.find(item => item.value === dashboardRange.value) || dashboardRanges[0]
+  if (range.value === 'year') {
+    return new Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0)
+  }
   const start = new Date()
   start.setHours(0, 0, 0, 0)
   start.setMonth(start.getMonth() - range.months)
@@ -4147,6 +4154,9 @@ const getDashboardRangeEnd = () => {
       customEnd.setHours(23, 59, 59, 999)
       return customEnd
     }
+  }
+  if (dashboardRange.value === 'year') {
+    return new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999)
   }
   const end = new Date()
   end.setHours(23, 59, 59, 999)
@@ -4201,7 +4211,16 @@ const createDashboardBuckets = () => {
   const start = getDashboardRangeStart()
   const end = getDashboardRangeEnd()
   const isCustomRange = dashboardDateRange.value?.length === 2
-  const bucketCount = isCustomRange ? 4 : (range.value === 'month' ? 4 : (range.value === 'year' ? 4 : range.months))
+  if (!isCustomRange && range.value === 'year') {
+    const year = start.getFullYear()
+    return Array.from({ length: 12 }, (_, index) => ({
+      label: `${index + 1}月`,
+      start: new Date(year, index, 1, 0, 0, 0, 0).getTime(),
+      end: new Date(year, index + 1, 0, 23, 59, 59, 999).getTime()
+    }))
+  }
+
+  const bucketCount = isCustomRange ? 4 : (range.value === 'month' ? 4 : range.months)
   const bucketSize = (end.getTime() - start.getTime()) / bucketCount
 
   return Array.from({ length: bucketCount }, (_, index) => {
@@ -4211,7 +4230,7 @@ const createDashboardBuckets = () => {
       ? `${formatDashboardDateLabel(bucketStart)}至${formatDashboardDateLabel(bucketEnd)}`
       : range.value === 'month'
       ? `${index + 1}周`
-      : `${bucketStart.getMonth() + 1}月`
+      : `${bucketEnd.getMonth() + 1}月`
     return {
       label,
       start: bucketStart.getTime(),
@@ -4257,28 +4276,35 @@ const dashboardKpis = computed(() => {
 })
 
 const dashboardQuarterBars = computed(() => {
-  const buckets = createDashboardBuckets().map(bucket => {
-    let orderCount = 0
-    const amount = filteredDashboardProjects.value.reduce((sum, project) => {
-      const projectDate = getProjectDashboardDate(project)
-      if (!projectDate) return sum
-      const time = projectDate.getTime()
-      if (time < bucket.start || time > bucket.end) return sum
-      orderCount += 1
-      return sum + getDashboardProjectAmount(project)
-    }, 0)
-    return { ...bucket, amount, orderCount }
-  })
+  const now = Date.now()
+  const buckets = createDashboardBuckets()
+    .filter(bucket => dashboardRange.value !== 'year' || bucket.start <= now)
+    .map(bucket => {
+      let orderCount = 0
+      const amount = filteredDashboardProjects.value.reduce((sum, project) => {
+        const projectDate = getProjectDashboardDate(project)
+        if (!projectDate) return sum
+        const time = projectDate.getTime()
+        if (time < bucket.start || time > bucket.end) return sum
+        orderCount += 1
+        return sum + getDashboardProjectAmount(project)
+      }, 0)
+      return { ...bucket, amount, orderCount }
+    })
   const maxAmount = Math.max(...buckets.map(item => item.amount), 1)
 
   return buckets.map((bucket, index) => {
-    const height = bucket.amount ? Math.max(70, 220 * bucket.amount / maxAmount) : 24
+    // 为柱顶金额标签和底部月份文字预留空间，避免最大值标签被滚动容器裁切。
+    const height = bucket.amount ? Math.max(70, 170 * bucket.amount / maxAmount) : 24
+    const isCurrentBucket = dashboardRange.value === 'year'
+      ? now >= bucket.start && now <= bucket.end
+      : index === buckets.length - 1
     return {
-      label: index === buckets.length - 1 ? `${bucket.label}（当前）` : bucket.label,
+      label: isCurrentBucket ? `${bucket.label}（当前）` : bucket.label,
       height,
       amountText: dashboardMoney(bucket.amount),
       orderCount: bucket.orderCount,
-      active: index === buckets.length - 1
+      active: isCurrentBucket
     }
   })
 })
@@ -8585,6 +8611,14 @@ const handleLogout = () => {
   background: rgba(12, 15, 13, 0.92);
   border-right: 1px solid rgba(82, 238, 138, 0.26);
   border-bottom: 1px solid rgba(82, 238, 138, 0.26);
+}
+
+.dashboard-bar-tooltip.is-inside {
+  top: 12px;
+}
+
+.dashboard-bar-tooltip.is-inside::after {
+  display: none;
 }
 
 .dashboard-bar-face {
