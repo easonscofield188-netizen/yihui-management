@@ -1,0 +1,79 @@
+.profile-page {
+  padding-top: 50rpx;
+}
+
+.profile-card {
+  padding: 44rpx 30rpx;
+  text-align: center;
+}
+
+.avatar {
+  width: 112rpx;
+  height: 112rpx;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #146c43;
+  color: #fff;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 112rpx;
+}
+
+.name {
+  margin-top: 22rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.username {
+  margin-top: 7rpx;
+  color: #7b8781;
+  font-size: 24rpx;
+}
+
+.role {
+  display: inline-block;
+  margin-top: 18rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #e5f2eb;
+  color: #146c43;
+  font-size: 22rpx;
+}
+
+.info-card {
+  margin-top: 24rpx;
+  padding: 8rpx 28rpx;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0;
+  border-bottom: 2rpx solid #f0f2f1;
+}
+
+.info-row:last-child {
+  border-bottom: 0;
+}
+
+.sync {
+  color: #146c43;
+}
+
+.logout-button {
+  height: 84rpx;
+  margin-top: 36rpx;
+  border-radius: 15rpx;
+  background: #fff;
+  color: #b54747;
+  font-size: 28rpx;
+  line-height: 84rpx;
+}
+
+.version {
+  margin-top: 36rpx;
+  text-align: center;
+  font-size: 22rpx;
+}

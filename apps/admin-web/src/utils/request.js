@@ -15,6 +15,15 @@ const service = axios.create({
   }
 });
 
+function clearExpiredSession() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userInfo');
+  localStorage.removeItem('isLoggedIn');
+  if (window.location.hash !== '#/login') {
+    window.location.hash = '#/login';
+  }
+}
+
 // 请求拦截器
 service.interceptors.request.use(
   config => {
@@ -40,6 +49,9 @@ service.interceptors.response.use(
   response => {
     const res = response.data;
     console.log('✅ 响应成功:', res);
+    if (res.code === 401) {
+      clearExpiredSession();
+    }
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败');
       return Promise.reject(new Error(res.message || 'Error'));
@@ -59,6 +71,7 @@ service.interceptors.response.use(
       message = '接口不存在：请检查云函数 HTTP 访问路径是否配置正确';
     } else if (error.response.status === 401) {
       message = '登录状态已过期，请重新登录';
+      clearExpiredSession();
     }
     
     ElMessage.error({

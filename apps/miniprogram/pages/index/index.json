@@ -1,6 +1,11 @@
 {
-  "navigationBarTitleText": "基础能力",
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "navigationBarBackgroundColor": "#ffffff",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f9f9ff",
   "usingComponents": {
-    "cloud-tip-modal": "/components/cloudTipModal/index"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-loading": "tdesign-miniprogram/loading/loading"
   }
 }

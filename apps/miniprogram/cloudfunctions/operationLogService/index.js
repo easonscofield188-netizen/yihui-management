@@ -6,6 +6,7 @@
 'use strict';
 
 const cloud = require('wx-server-sdk');
+const crypto = require('crypto');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -14,6 +15,7 @@ cloud.init({
 const db = cloud.database();
 const _ = db.command;
 const OPERATION_LOG_COLLECTION = 'operation_logs';
+const SESSION_COLLECTION = 'auth_sessions';
 const VIEW_OPERATION_LOGS = 'VIEW_OPERATION_LOGS';
 const WRITE_ACTIONS = new Set(['create', 'add', 'insert', 'update', 'edit', 'modify', 'delete', 'remove']);
 const WRITE_STATUS = new Set(['成功', '失败', '警告']);
@@ -129,13 +131,16 @@ function parseBody(event) {
  * @returns {string} 用户 ID
  * @throws {Error} 无
  */
-function getTokenUserId(event) {
+function getAuthToken(event) {
   const headers = event.headers || {};
   const authorization = headers.authorization || headers.Authorization || '';
-  const token = authorization.replace(/^Bearer\s+/i, '');
-  if (!token || !token.startsWith('auth-token-')) return '';
-  const parts = token.split('-');
-  return parts.slice(3).join('-');
+  const body = parseBody(event);
+  return String(
+    body.data?.authToken
+    || body.authToken
+    || authorization.replace(/^Bearer\s+/i, '')
+    || ''
+  ).trim();
 }
 
 /**
@@ -145,14 +150,24 @@ function getTokenUserId(event) {
  * @throws {Error} 数据库异常
  */
 async function getCurrentUser(event) {
-  const userId = getTokenUserId(event);
-  if (!userId) {
+  const token = getAuthToken(event);
+  if (!token) {
     return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
   }
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (sessionResult.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const userId = session.userId;
 
   const res = await db.collection('users').doc(userId).get();
   if (!res.data) {
     return { error: { code: 404, message: '用户不存在' } };
+  }
+  if (res.data.status && res.data.status !== 'active') {
+    return { error: { code: 403, message: '账号已停用' } };
   }
 
   return { userId, user: res.data };

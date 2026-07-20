@@ -1,0 +1,22 @@
+<view class="page profile-page">
+  <view class="profile-card card" wx:if="{{userInfo}}">
+    <view class="avatar">{{userInfo.avatarText}}</view>
+    <view class="name">{{userInfo.nickname || userInfo.username}}</view>
+    <view class="username">@{{userInfo.username}}</view>
+    <view class="role">{{userInfo.roleName || userInfo.role}}</view>
+  </view>
+
+  <view class="info-card card" wx:if="{{userInfo}}">
+    <view class="info-row">
+      <view class="muted">员工编号</view>
+      <view>{{userInfo.employeeNo || '未设置'}}</view>
+    </view>
+    <view class="info-row">
+      <view class="muted">数据同步</view>
+      <view class="sync">已连接电脑端</view>
+    </view>
+  </view>
+
+  <button class="logout-button" bindtap="logout">退出登录</button>
+  <view class="version muted">易汇项目记账 · MVP 1.0</view>
+</view>

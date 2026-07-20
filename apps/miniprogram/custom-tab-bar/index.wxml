@@ -1,0 +1,14 @@
+<view class="tab-bar">
+  <view class="tab-item {{selected === 0 ? 'selected' : ''}}" data-index="0" data-path="/pages/index/index" bindtap="switchTab">
+    <t-icon name="tree-square-dot" size="46rpx" color="{{selected === 0 ? selectedColor : color}}" />
+    <text>项目</text>
+  </view>
+  <view class="create-item" bindtap="createProject">
+    <view class="create-button"><t-icon name="add" size="58rpx" color="#ffffff" /></view>
+    <text>新建项目</text>
+  </view>
+  <view class="tab-item {{selected === 1 ? 'selected' : ''}}" data-index="1" data-path="/pages/profile/index" bindtap="switchTab">
+    <t-icon name="user" size="46rpx" color="{{selected === 1 ? selectedColor : color}}" />
+    <text>我的</text>
+  </view>
+</view>

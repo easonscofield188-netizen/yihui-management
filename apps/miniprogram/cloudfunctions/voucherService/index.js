@@ -6,6 +6,7 @@
 'use strict';
 
 const cloud = require("wx-server-sdk");
+const crypto = require('crypto');
 
 // 初始化云开发环境
 cloud.init({
@@ -13,6 +14,10 @@ cloud.init({
 });
 
 const db = cloud.database();
+const SESSION_COLLECTION = 'auth_sessions';
+const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
+const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
+const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
 
 /**
  * 解析multipart/form-data请求
@@ -217,21 +222,32 @@ exports.main = async (event, context) => {
   }
   
   try {
+    const auth = await authenticate(event, data || {});
+    if (auth.error) return auth.error;
+    if (!READ_ROLES.has(auth.user.role || 'user')) {
+      return { code: 403, message: '当前账号无凭证访问权限' };
+    }
     // 根据操作类型执行相应的函数
     switch (action) {
       case 'add':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await addVoucher(data);
       case 'list':
         return await getVouchers(data);
       case 'delete':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await deleteVoucher(data);
       case 'upload':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await uploadImage(event);
       case 'updateBatch':
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
         return await updateVouchersProject(data);
       case 'renameProjectVouchers':
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
         return await renameProjectVouchers(data);
       case 'deleteByProject':
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
         return await deleteVouchersByProject(data);
       default:
         // 处理未知操作
@@ -256,6 +272,33 @@ exports.main = async (event, context) => {
   }
 };
 
+function forbidden() {
+  return { code: 403, message: '当前账号无此操作权限' };
+}
+
+function getAuthToken(event, data) {
+  const headers = event.headers || {};
+  const authorization = headers.authorization || headers.Authorization || '';
+  return String(data.authToken || event.authToken || authorization.replace(/^Bearer\s+/i, '') || '').trim();
+}
+
+async function authenticate(event, data) {
+  const token = getAuthToken(event, data);
+  if (!token) return { error: { code: 401, message: '请先登录' } };
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (sessionResult.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const userResult = await db.collection('users').doc(session.userId).get();
+  if (!userResult.data) return { error: { code: 401, message: '用户不存在或已停用' } };
+  if (userResult.data.status && userResult.data.status !== 'active') {
+    return { error: { code: 403, message: '账号已停用' } };
+  }
+  return { user: userResult.data };
+}
+
 /**
  * 记录凭证信息
  */
@@ -273,8 +316,13 @@ async function addVoucher(params) {
   if (!fileId || !fileUrl) {
     return { code: 400, message: '缺少文件 ID 或文件 URL' };
   }
+  if (!projectId || projectId === 'DEFAULT_PROJECT') {
+    return { code: 400, message: '请选择凭证所属项目' };
+  }
 
   try {
+    const projectResult = await db.collection('projects').doc(projectId).get();
+    if (!projectResult.data) return { code: 404, message: '项目不存在' };
     const res = await db.collection('project_vouchers').add({
       data: {
         projectId,

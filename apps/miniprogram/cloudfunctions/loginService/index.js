@@ -6,6 +6,7 @@
 'use strict';
 
 const cloud = require("wx-server-sdk");
+const crypto = require('crypto');
 
 // 初始化云开发环境
 cloud.init({
@@ -14,6 +15,8 @@ cloud.init({
 
 const db = cloud.database();
 const OPERATION_LOG_COLLECTION = 'operation_logs';
+const SESSION_COLLECTION = 'auth_sessions';
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMON_IP_LOGIN_THRESHOLD = 2;
 const MAX_LOGIN_IP_STATS = 20;
 
@@ -41,6 +44,8 @@ exports.main = async (event, context) => {
           return await updateUserInfo(data, event);
         case 'uploadAvatar':
           return await uploadAvatar(data, event);
+        case 'logout':
+          return await logout(data, event);
         default:
           return { code: 400, message: '未知操作' };
       }
@@ -50,7 +55,11 @@ exports.main = async (event, context) => {
     }
   }
 
-  const { username, password, legacyPassword } = body;
+  const { username, passwordPlain, legacyPassword } = body;
+  const password = body.password
+    || (passwordPlain ? crypto.createHash('sha256').update(String(passwordPlain)).digest('hex') : '');
+  const compatibleLegacyPassword = legacyPassword
+    || (passwordPlain ? crypto.createHash('md5').update(String(passwordPlain)).digest('hex') : '');
 
   if (!username || !password) {
     return { code: 400, message: '账号或密码不能为空' };
@@ -63,9 +72,10 @@ exports.main = async (event, context) => {
       username: username
     }).get();
     const user = (res.data || []).find(item => {
+      if (item.status && item.status !== 'active') return false;
       if (item.passwordHash && item.passwordHash === password) return true;
       if (item.password && item.password === password) return true;
-      if (legacyPassword && item.password && item.password === legacyPassword) return true;
+      if (compatibleLegacyPassword && item.password && item.password === compatibleLegacyPassword) return true;
       return false;
     });
 
@@ -87,11 +97,13 @@ exports.main = async (event, context) => {
         await recordUnusualLoginLog(user, clientIp, event);
       }
       
+      const session = await createSession(user._id, event);
       return {
         code: 0,
         message: '登录成功',
         data: {
-          token: 'auth-token-' + Date.now() + '-' + user._id,
+          token: session.token,
+          expiresAt: session.expiresAt,
           abnormalLoginWarning: ipResult.isUnusual,
           loginIp: clientIp,
           userInfo: {
@@ -123,13 +135,49 @@ exports.main = async (event, context) => {
   }
 };
 
-function getTokenUserId(event) {
+function getAuthToken(data, event) {
   const headers = event.headers || {};
   const authorization = headers.authorization || headers.Authorization || '';
-  const token = authorization.replace(/^Bearer\s+/i, '');
-  if (!token || !token.startsWith('auth-token-')) return '';
-  const parts = token.split('-');
-  return parts.slice(3).join('-');
+  return String(
+    data.authToken
+    || event.authToken
+    || authorization.replace(/^Bearer\s+/i, '')
+    || ''
+  ).trim();
+}
+
+async function createSession(userId, event) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  const sessionData = {
+    tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+    userId,
+    expiresAt,
+    clientIp: getClientIp(event),
+    createTime: db.serverDate()
+  };
+  try {
+    await db.collection(SESSION_COLLECTION).add({ data: sessionData });
+  } catch (error) {
+    if (!/collection|集合/i.test(error.message || '')) throw error;
+    try {
+      await db.createCollection(SESSION_COLLECTION);
+    } catch (createError) {
+      if (!/exist|已存在/i.test(createError.message || '')) throw createError;
+    }
+    await db.collection(SESSION_COLLECTION).add({ data: sessionData });
+  }
+  return { token, expiresAt };
+}
+
+async function getSessionUserId(data, event) {
+  const token = getAuthToken(data, event);
+  if (!token) return '';
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const result = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (result.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) return '';
+  return session.userId || '';
 }
 
 function isSafeInput(str) {
@@ -236,7 +284,7 @@ async function recordUnusualLoginLog(user, clientIp, event) {
 }
 
 async function getCurrentUserDoc(data, event) {
-  const userId = data.userId || getTokenUserId(event);
+  const userId = await getSessionUserId(data, event);
   if (!userId) {
     return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
   }
@@ -244,6 +292,9 @@ async function getCurrentUserDoc(data, event) {
   const res = await db.collection('users').doc(userId).get();
   if (!res.data) {
     return { error: { code: 404, message: '用户不存在' } };
+  }
+  if (res.data.status && res.data.status !== 'active') {
+    return { error: { code: 403, message: '账号已停用' } };
   }
 
   return { userId, user: res.data };
@@ -278,8 +329,8 @@ async function updateUserInfo(data, event) {
   const result = await getCurrentUserDoc(data, event);
   if (result.error) return result.error;
 
-  const { nickname, role, avatarUrl, avatarFileId } = data;
-  if (!isSafeInput(nickname) || !isSafeInput(role) || !isSafeInput(avatarUrl)) {
+  const { nickname, avatarUrl, avatarFileId } = data;
+  if (!isSafeInput(nickname) || !isSafeInput(avatarUrl)) {
     return { code: 400, message: '输入包含非法字符' };
   }
 
@@ -288,7 +339,6 @@ async function updateUserInfo(data, event) {
   };
 
   if (nickname !== undefined) updateData.nickname = String(nickname).trim();
-  if (role !== undefined) updateData.role = String(role).trim() || 'user';
   if (avatarUrl !== undefined) updateData.avatarUrl = String(avatarUrl).trim();
   if (avatarFileId !== undefined) updateData.avatarFileId = String(avatarFileId).trim();
 
@@ -347,4 +397,13 @@ async function uploadAvatar(data, event) {
       avatarFileId: uploadRes.fileID
     }
   };
+}
+
+async function logout(data, event) {
+  const token = getAuthToken(data, event);
+  if (token) {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await db.collection(SESSION_COLLECTION).where({ tokenHash }).remove();
+  }
+  return { code: 0, message: '已退出登录' };
 }

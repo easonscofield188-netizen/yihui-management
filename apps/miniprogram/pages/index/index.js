@@ -1,185 +1,108 @@
-// index.js
+const api = require("../../utils/api");
+const STATUS_OPTIONS = [
+  { label: "全部", value: "" },
+  { label: "已交付", value: "completed" },
+  { label: "已结清", value: "closed" },
+];
+const STATUS_LABELS = {
+  negotiating: "洽谈中", constructing: "施工中", completed: "已交付",
+  settling: "结算中", closed: "已结清", in_cooperation: "合作中", terminated: "已终止",
+};
+
+function money(value, digits = 2) {
+  const amount = Number(value || 0);
+  return Number.isFinite(amount)
+    ? amount.toLocaleString("zh-CN", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    : digits ? "0.00" : "0";
+}
+
+function decorateProject(project) {
+  const isClosed = project.status === "closed";
+  return {
+    ...project,
+    projectCode: project.projectCode || project.code || project.projectNo ||
+      `PRJ-${String(project._id || "").slice(-8).toUpperCase()}`,
+    statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
+    isClosed,
+    amountLabel: isClosed ? "结算金额" : "订单金额",
+    amountText: money(project.amount),
+    unreceivedText: money(project.unreceivedAmount, 0),
+    costText: money(project.payableAmount, 0),
+  };
+}
+
 Page({
   data: {
-    showTip: false,
-    powerList: [
-      {
-        title: "云托管",
-        tip: "不限语言的全托管容器服务",
-        showItem: false,
-        item: [
-          {
-            type: "cloudbaserun",
-            title: "云托管调用",
-          },
-        ],
-      },
-      {
-        title: "云函数",
-        tip: "安全、免鉴权运行业务代码",
-        showItem: false,
-        item: [
-          {
-            type: "getOpenId",
-            title: "获取OpenId",
-          },
-          {
-            type: "getMiniProgramCode",
-            title: "生成小程序码",
-          },
-        ],
-      },
-      {
-        title: "数据库",
-        tip: "安全稳定的文档型数据库",
-        showItem: false,
-        item: [
-          {
-            type: "createCollection",
-            title: "创建集合",
-          },
-          {
-            type: "selectRecord",
-            title: "增删改查记录",
-          },
-          // {
-          //   title: '聚合操作',
-          //   page: 'sumRecord',
-          // },
-        ],
-      },
-      {
-        title: "云存储",
-        tip: "自带CDN加速文件存储",
-        showItem: false,
-        item: [
-          {
-            type: "uploadFile",
-            title: "上传文件",
-          },
-        ],
-      },
-      {
-        title: "AI 接入能力",
-        tip: "云开发 AI 接入能力",
-        showItem: false,
-        item: [
-          {
-            type: "model-guide",
-            title: "大模型对话指引",
-          },
-        ],
-      },
-      {
-        title: "AI 智能开发小程序",
-        tip: "连接 AI 开发工具与 MCP 开发小程序",
-        type: "ai-assistant",
-        skipEnvCheck: true,
-        showItem: false,
-        item: [],
-      },
-    ],
-    haveCreateCollection: false,
-    title: "",
-    content: "",
+    projects: [], keyword: "", statusIndex: 0, statusOptions: STATUS_OPTIONS,
+    page: 1, loading: false, hasMore: true, total: 0,
+    statusBarHeight: 0, navHeight: 88,
   },
-  onClickPowerInfo(e) {
-    const app = getApp();
-    const index = e.currentTarget.dataset.index;
-    const powerList = this.data.powerList;
-    const selectedItem = powerList[index];
-    
-    // 检查是否跳过环境配置检测
-    if (!selectedItem.skipEnvCheck && !app.globalData.env) {
-      wx.showModal({
-        title: "提示",
-        content: "请在 `miniprogram/app.js` 中正确配置 `env` 参数",
-      });
+  onLoad() {
+    wx.setNavigationBarColor({
+      frontColor: "#000000",
+      backgroundColor: "#ffffff",
+      animation: { duration: 0, timingFunc: "linear" },
+    });
+    const systemInfo = wx.getSystemInfoSync();
+    const statusBarHeight = systemInfo.statusBarHeight || 0;
+    const menuButton = wx.getMenuButtonBoundingClientRect();
+    const contentHeight = menuButton && menuButton.height
+      ? menuButton.height + Math.max(0, menuButton.top - statusBarHeight) * 2
+      : 88;
+    this.setData({ statusBarHeight, navHeight: statusBarHeight + contentHeight });
+  },
+  onShow() {
+    if (!api.getToken()) {
+      wx.reLaunch({ url: "/pages/login/index" });
       return;
     }
-    if (selectedItem.link) {
-      wx.navigateTo({
-        url: `../web/index?url=${selectedItem.link}&title=${selectedItem.title}`,
+    const tabBar = this.getTabBar && this.getTabBar();
+    if (tabBar) tabBar.setData({ selected: 0 });
+    this.loadProjects(true);
+  },
+  onPullDownRefresh() {
+    this.loadProjects(true).finally(() => wx.stopPullDownRefresh());
+  },
+  onReachBottom() {
+    if (this.data.hasMore) this.loadProjects(false);
+  },
+  onKeywordInput(event) {
+    this.setData({ keyword: event.detail.value });
+  },
+  onSearch() {
+    this.loadProjects(true);
+  },
+  clearKeyword() {
+    this.setData({ keyword: "" }, () => this.loadProjects(true));
+  },
+  onStatusTap(event) {
+    const statusIndex = Number(event.currentTarget.dataset.index);
+    if (statusIndex === this.data.statusIndex) return;
+    this.setData({ statusIndex }, () => this.loadProjects(true));
+  },
+  openProject(event) {
+    wx.navigateTo({ url: `/pages/project-detail/index?id=${event.currentTarget.dataset.id}` });
+  },
+  async loadProjects(reset) {
+    if (this.data.loading) return;
+    const page = reset ? 1 : this.data.page;
+    this.setData({ loading: true });
+    try {
+      const status = this.data.statusOptions[this.data.statusIndex].value;
+      const result = await api.listProjects({
+        page, pageSize: 20, keyword: this.data.keyword.trim(), status,
       });
-    } else if (selectedItem.type) {
-      wx.navigateTo({
-        url: `/pages/example/index?envId=${this.data.selectedEnv?.envId}&type=${selectedItem.type}`,
-      });
-    } else if (selectedItem.page) {
-      wx.navigateTo({
-        url: `/pages/${selectedItem.page}/index`,
-      });
-    } else if (
-      selectedItem.title === "数据库" &&
-      !this.data.haveCreateCollection
-    ) {
-      this.onClickDatabase(powerList, selectedItem);
-    } else {
-      selectedItem.showItem = !selectedItem.showItem;
+      const incoming = (result.list || []).map(decorateProject);
       this.setData({
-        powerList,
+        projects: reset ? incoming : this.data.projects.concat(incoming),
+        total: result.total || 0,
+        page: page + 1,
+        hasMore: Boolean(result.hasMore),
       });
+    } catch (error) {
+      wx.showToast({ title: error.message || "项目加载失败", icon: "none" });
+    } finally {
+      this.setData({ loading: false });
     }
-  },
-
-  jumpPage(e) {
-    const { type, page } = e.currentTarget.dataset;
-    console.log("jump page", type, page);
-    if (type) {
-      wx.navigateTo({
-        url: `/pages/example/index?envId=${this.data.selectedEnv?.envId}&type=${type}`,
-      });
-    } else {
-      wx.navigateTo({
-        url: `/pages/${page}/index?envId=${this.data.selectedEnv?.envId}`,
-      });
-    }
-  },
-
-  onClickDatabase(powerList, selectedItem) {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "createCollection",
-        },
-      })
-      .then((resp) => {
-        if (resp.result.success) {
-          this.setData({
-            haveCreateCollection: true,
-          });
-        }
-        selectedItem.showItem = !selectedItem.showItem;
-        this.setData({
-          powerList,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
   },
 });

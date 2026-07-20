@@ -1,0 +1,60 @@
+<view class="login-page">
+  <view class="login-content">
+    <view class="brand">
+      <view class="brand-mark">
+        <t-icon name="building-1" size="64rpx" color="#86a0cd" />
+      </view>
+      <view class="brand-name">「亿辉记」财务管理</view>
+      <view class="brand-tip">专业、高效的财务协作平台</view>
+    </view>
+
+    <view class="login-form">
+      <view class="field-group">
+        <view class="field-label">账号</view>
+        <view class="field-box">
+          <t-input
+            t-class="login-input"
+            borderless
+            prefix-icon="user"
+            placeholder="请输入您的账号"
+            placeholder-class="login-placeholder"
+            value="{{username}}"
+            bindchange="onUsernameInput"
+          />
+        </view>
+      </view>
+
+      <view class="field-group password-group">
+        <view class="field-label">密码</view>
+        <view class="field-box">
+          <t-input
+            t-class="login-input"
+            borderless
+            prefix-icon="lock-on"
+            suffix-icon="{{showPassword ? 'browse' : 'browse-off'}}"
+            type="{{showPassword ? 'text' : 'password'}}"
+            placeholder="请输入密码"
+            placeholder-class="login-placeholder"
+            value="{{password}}"
+            confirm-type="done"
+            bindchange="onPasswordInput"
+            bindenter="submit"
+            bindclick="togglePassword"
+          />
+        </view>
+      </view>
+
+      <t-button
+        t-class="login-button"
+        theme="primary"
+        block
+        content="登录"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+        bindtap="submit"
+      />
+    </view>
+
+    <view class="help">忘记密码？请登录电脑端管理后台进行重置</view>
+  </view>
+</view>

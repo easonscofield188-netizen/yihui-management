@@ -910,7 +910,7 @@
                           v-if="row.type" 
                           size="small" 
                           effect="dark" 
-                          class="!border-white/10 !text-[10px] !px-1.5 !h-5 !leading-5"
+                          class="!border-white/10 !text-xs !px-1.5 !h-5 !leading-5"
                           :class="[
                             row.type === 'normal' ? '!bg-emerald-500/10 !text-emerald-400 !border-emerald-500/20' : 
                             row.type === 'historical' ? '!bg-amber-500/10 !text-amber-400 !border-amber-500/20' : 
@@ -945,7 +945,8 @@
               >
                 <template #default="{ row }">
                   <span 
-                    class="font-mono text-xs"
+                    v-if="row.type !== 'normal'"
+                    class="font-mono text-sm"
                     :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
                   >{{ row.createDateText }}</span>
                 </template>
@@ -958,45 +959,9 @@
               >
                 <template #default="{ row }">
                   <span 
-                    class="font-mono text-xs"
+                    class="font-mono text-sm"
                     :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
                   >{{ row.deliveryDateText }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                label="项目周期"
-                prop="projectDays"
-                min-width="90"
-              >
-                <template #default="{ row }">
-                  <span 
-                    class="text-xs font-bold"
-                    :class="row.projectDaysText !== '-' ? 'text-primary' : 'text-on-surface-variant/40'"
-                  >{{ row.projectDaysText }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                label="施工周期"
-                prop="constructionDays"
-                min-width="90"
-              >
-                <template #default="{ row }">
-                  <span 
-                    class="text-xs font-bold"
-                    :class="row.constructionDaysText !== '-' ? 'text-secondary' : 'text-on-surface-variant/40'"
-                  >{{ row.constructionDaysText }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                label="回款周期"
-                prop="collectionDays"
-                min-width="90"
-              >
-                <template #default="{ row }">
-                  <span 
-                    class="text-xs font-bold"
-                    :class="row.collectionDaysText !== '-' ? 'text-orange-400' : 'text-on-surface-variant/40'"
-                  >{{ row.collectionDaysText }}</span>
                 </template>
               </el-table-column>
               <el-table-column
@@ -1021,7 +986,7 @@
                   <el-dropdown 
                     trigger="click" 
                     popper-class="status-dropdown-popper"
-                    :disabled="isCreating || row.status === 'closed'"
+                    :disabled="isCreating || (row.status === 'closed' && row.type !== 'normal')"
                     @command="(val) => handleInlineStatusChange(row, val)"
                     @click.stop
                   >
@@ -1272,10 +1237,10 @@
                       placeholder="请选择项目类型" 
                       class="w-full custom-select" 
                       popper-class="custom-dropdown"
-                      :disabled="isViewMode || (isEditMode && form.type === 'historical') || isFieldReadOnly('type')"
+                      :disabled="isCreating || isViewMode || (isEditMode && form.type === 'historical') || isFieldReadOnly('type')"
                     >
                       <el-option 
-                        v-for="item in projectTypes" 
+                        v-for="item in (isCreating ? projectTypes.filter(type => type.value === 'normal') : projectTypes)" 
                         :key="item.value" 
                         :label="item.label" 
                         :value="item.value" 
@@ -1323,19 +1288,22 @@
                     </el-select>
                   </div>
 
-                  <!-- Start Date (Only for New Project Mode) -->
+                  <!-- 常规项目始终展示交付日期；长期项目仅在创建时展示开始日期 -->
                   <div
-                    v-if="isCreating && form.type !== 'historical'"
+                    v-if="form.type === 'normal' || (isCreating && form.type === 'long_term')"
                     class="space-y-2"
                   >
-                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日</label>
+                    <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">
+                      {{ form.type === 'normal' ? '交付日期' : '开始日期' }}
+                    </label>
                     <el-date-picker
                       v-model="form.startDate"
                       type="date"
-                      placeholder="选择开始日期"
+                      :placeholder="form.type === 'normal' ? '选择交付日期' : '选择开始日期'"
                       class="!w-full custom-date-picker"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD"
+                      :disabled="isViewMode || (form.type === 'normal' && !isCreating)"
                       :disabled-date="disabledFutureDate"
                     />
                   </div>
@@ -1360,7 +1328,7 @@
 
                   <!-- Project Period -->
                   <div
-                    v-if="form.type !== 'historical' && !isCreating"
+                    v-if="!isCreating && (form.type === 'long_term' || (form.type === 'normal' && SHOW_REGULAR_PROJECT_PERIODS))"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -1397,7 +1365,7 @@
 
                   <!-- Construction Period -->
                   <div
-                    v-if="form.type !== 'long_term' && form.type !== 'historical' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -1435,7 +1403,7 @@
 
                   <!-- Collection Period -->
                   <div
-                    v-if="form.type !== 'long_term' && form.type !== 'historical' && !isCreating && ['settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['settling', 'closed'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -2299,7 +2267,7 @@
                         </div>
                       </div>
                       <div>
-                        <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">开始日</div>
+                        <div class="text-[10px] text-on-surface-variant uppercase tracking-tighter">开始日期</div>
                         <div class="text-sm font-medium text-on-surface">{{ sp.startDate || '-' }}</div>
                       </div>
                       <div>
@@ -2346,7 +2314,7 @@
                           </el-select>
                         </div>
                         <div class="space-y-2">
-                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日</label>
+                          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">开始日期</label>
                           <el-date-picker
                             v-model="sp.startDate"
                             type="date"
@@ -3239,6 +3207,9 @@ import {
   FullScreen,
 } from '@element-plus/icons-vue'
 
+// 暂时隐藏常规项目周期展示；保留原数据和逻辑，便于后续重新启用
+const SHOW_REGULAR_PROJECT_PERIODS = false
+
 // 获取API域名
 const DEFAULT_ADMIN_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDjlwOlzc23T2bj6EUmlx2AkEAQqItGaRRXbTZNKA9uZtUWNLACpgTrMyCTqQbBxVgnAbjSGch7y7up5-T7Xm7dfwOQFwV9fokxxCTSC_Q1_KfdPFnpUg2cXuyCANDhpGLDIhvEC6y5hAuosFC5R4U4NPiqRiH6iVeYdWASI_lTeVcufcmzVBuuuf-Gm3UkZyDW8gzrB2R_dxs0WYHYSDkbZlv5k6cAer0sHeV3n5A2dSKy4zNYUmz1hitr0fhydNn8pYcg2yAEZPA'
 const apiDomain = import.meta.env.VITE_TCB_BASE_URL || ''
@@ -3255,6 +3226,13 @@ const normalizeYesNo = (value, defaultValue = YES_NO_VALUE.NO) => {
   if (value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES || value === true) return YES_NO_VALUE.YES
   if (value === YES_NO_VALUE.NO || value === LEGACY_YES_NO_VALUE.NO || value === false) return YES_NO_VALUE.NO
   return defaultValue
+}
+
+// 兼容历史数据中 none/null 等“无供应商”占位值
+const normalizeSupplier = (value) => {
+  const supplier = String(value ?? '').trim()
+  const emptyValues = new Set(['', 'none', 'null', 'undefined', 'n/a', '无'])
+  return emptyValues.has(supplier.toLowerCase()) ? '无' : supplier
 }
 
 const isCostSettled = (value) => {
@@ -3985,8 +3963,8 @@ const getStatusOrder = (statusValue) => {
   return status ? status.sortOrder : 0
 }
 
-// 仅长期项目允许状态回溯，其他项目类型不允许
-const canRollbackStatus = (project) => project?.type === 'long_term'
+// 常规和长期项目允许自由切换状态；补录项目继续保持原有限制
+const canRollbackStatus = (project) => project?.type === 'normal' || project?.type === 'long_term'
 
 // 获取原始项目状态（用于编辑模式下的状态回溯保护）
 const originalProjectStatus = computed(() => {
@@ -5023,7 +5001,7 @@ const form = reactive({
   type: 'normal',     // 项目类型
   scene: '',          // 项目场景
   period: [null, null],       // 项目周期（日期范围数组）
-  startDate: new Date().toISOString().split('T')[0], // 开始日期（新建项目模式）
+  startDate: '', // 常规项目交付日期由用户选择
   constructionPeriod: [null, null], // 施工周期（历史模式）
   collectionPeriod: [null, null],   // 回款周期（历史模式）
   completionTime: null, // 完结时间（补录单专用）
@@ -5034,7 +5012,7 @@ const form = reactive({
   staffCount: null,   // 人员数量
   amount: '',         // 订单金额
   receivedAmount: null,  // 已收账款
-  desc: '',           // 项目描述
+  desc: '无',         // 项目描述默认值
   isHistorical: false, // 标识是否为历史补录项目  isHasContract: YES_NO_VALUE.NO, // 是否有合同  isHasPreview: YES_NO_VALUE.NO,   // 是否有预览图
   isHasVoucher: YES_NO_VALUE.YES,   // 是否有发票凭证  amountEditCount: 0,   // 订单金额修改次数
   subProjects: []      // 子项目列表
@@ -5452,11 +5430,7 @@ const filteredProjectStatuses = computed(() => {
     return projectStatuses.value.filter(s => s.value === 'in_cooperation' || s.value === 'terminated')
   }
   
-  // 常规项目新建时，禁止选择「已结清」状态，且排除长期项目的专属状态
-  if (isCreating.value && form.type !== 'historical') {
-    return projectStatuses.value.filter(s => s.value !== 'closed' && s.value !== 'in_cooperation' && s.value !== 'terminated')
-  }
-  
+  // 常规项目开放全部常规状态
   return projectStatuses.value.filter(s => s.value !== 'in_cooperation' && s.value !== 'terminated')
 })
 
@@ -5495,6 +5469,9 @@ watch(() => form.type, (newVal) => {
     if (!isEditMode.value && !isViewMode.value) {
       form.status = 'in_cooperation';
       form.isHistorical = false;
+      if (!form.startDate) {
+        form.startDate = new Date().toISOString().split('T')[0];
+      }
       // 长期项目默认添加一个子项目
       if (form.subProjects.length === 0) {
         addSubProject();
@@ -5504,6 +5481,7 @@ watch(() => form.type, (newVal) => {
     if (!isEditMode.value && !isViewMode.value) {
       form.status = 'negotiating';
       form.isHistorical = false;
+      form.startDate = '';
     }
   }
 });
@@ -5734,8 +5712,8 @@ const isFieldReadOnly = (fieldName) => {
 
   if (!isProjectClosed.value) return false;
   
-  // 已结清项目仅开放：项目名称、项目描述、成本支出、凭证上传、已收账�?
-  const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'isHasVoucher', 'receivedAmount'];
+  // 已结清常规项目仍允许自由切换状态
+  const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'isHasVoucher', 'receivedAmount', 'status'];
   return !allowedFields.includes(fieldName);
 };
 
@@ -6210,7 +6188,7 @@ const handleViewProject = async (project) => {
   
   // 回显数据
   const now = today.value.toISOString()
-  const pStart = project.negotiatingTime || project.createTime
+  const pStart = project.startDate || project.negotiatingTime || project.createTime
   Object.assign(form, {
     name: project.name,
     type: project.type || (project.isHistorical ? 'historical' : 'normal'),
@@ -6239,6 +6217,10 @@ const handleViewProject = async (project) => {
       ...sp,
       id: sp.id || Date.now() + Math.random(),
       isHasVoucher: normalizeYesNo(sp.isHasVoucher, YES_NO_VALUE.NO),
+      costs: (sp.costs || []).map(cost => ({
+        ...cost,
+        supplier: normalizeSupplier(cost.supplier)
+      })),
       isCollapsed: true // 默认折叠
     })) : []
   })
@@ -6250,7 +6232,7 @@ const handleViewProject = async (project) => {
   costs.value = project.costs ? project.costs.map(c => ({
     id: Date.now() + Math.random(),
     category: c.category,
-    supplier: c.supplier,
+    supplier: normalizeSupplier(c.supplier),
     amount: c.amount,
     isSettled: c.isSettled !== undefined ? isCostSettled(c.isSettled) : true // 历史数据默认为已结清
   })) : []
@@ -6591,7 +6573,7 @@ const resetForm = () => {
     type: 'normal',
     scene: '',
     period: [null, null],
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: '',
     constructionPeriod: [null, null],
     collectionPeriod: [null, null],
     completionTime: null,
@@ -6602,7 +6584,7 @@ const resetForm = () => {
     staffCount: null,
     amount: '',
     receivedAmount: null,
-    desc: '',
+    desc: '无',
     isHistorical: false,
     isHasContract: YES_NO_VALUE.NO,
     isHasPreview: YES_NO_VALUE.NO,
@@ -6722,17 +6704,15 @@ const validateProjectForm = (checkVouchers = true) => {
     if (!form.completionTime) return '请选择交付日期';
     if (new Date(form.completionTime) > new Date()) return '交付日期不能晚于当前时间';
   } else {
-    // 常规项目新建时，禁止选择「已结清」状态
-    if (isCreating.value && form.status === 'closed') {
-      return '常规项目新建时，禁止选择「已结清」状态';
-    }
-
-    // 新建项目模式：校验开始日期
-    if (isCreating.value) {
+    // 常规项目交付日期由用户选择，且不能晚于当前日期
+    if (form.type === 'normal' && isCreating.value) {
+      if (!form.startDate) return '请选择交付日期';
+      if (new Date(form.startDate) > new Date()) return '交付日期不能晚于当前日期';
+    } else if (form.type === 'long_term' && isCreating.value) {
       if (!form.startDate) return '请选择项目开始日期';
       if (new Date(form.startDate) > new Date()) return '项目开始日期不能晚于当前日期';
-    } else {
-      // 历史模式或编辑模式：校验项目周期
+    } else if (form.type === 'long_term') {
+      // 长期项目编辑模式继续校验原有项目周期
       if (!form.period || !form.period[0] || !form.period[1]) return '请选择项目周期';
     }
   }
@@ -6864,7 +6844,7 @@ const handleSaveProject = async () => {
       completionTime: form.completionTime ? new Date(form.completionTime).toISOString() : null,
       costs: costs.value.map(item => ({
         category: item.category,
-        supplier: item.supplier,
+        supplier: normalizeSupplier(item.supplier),
         amount: Number(item.amount),
         isSettled: isCostSettled(item.isSettled)
       })),
@@ -6878,11 +6858,15 @@ const handleSaveProject = async () => {
         costs: (sp.costs || []).map(c => ({
           id: c.id,
           category: c.category,
-          supplier: c.supplier,
+          supplier: normalizeSupplier(c.supplier),
           amount: Number(c.amount),
           isSettled: isCostSettled(c.isSettled)
         }))
       }))
+    }
+
+    if (form.type === 'normal') {
+      projectData.startDate = form.startDate
     }
 
     // 处理周期数据
@@ -6899,7 +6883,6 @@ const handleSaveProject = async () => {
       const systemToday = new Date().toISOString().split('T')[0];
       projectData.period = [today, systemToday];
       projectData.negotiatingTime = date; // 记录项目周期开始时�?
-      projectData.createTime = new Date().toISOString();
       
       // 根据初始状态初始化其他周期
       if (form.status === 'constructing') {
@@ -6913,6 +6896,13 @@ const handleSaveProject = async () => {
         projectData.constructingTime = date;
         projectData.completedTime = date;
         projectData.settlingTime = date;
+        projectData.constructionPeriod = [today, today];
+        projectData.collectionPeriod = [today, today];
+      } else if (form.status === 'closed') {
+        projectData.constructingTime = date;
+        projectData.completedTime = date;
+        projectData.settlingTime = date;
+        projectData.settledTime = date;
         projectData.constructionPeriod = [today, today];
         projectData.collectionPeriod = [today, today];
       }
@@ -7801,6 +7791,10 @@ const handleLogout = () => {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
+.custom-number-input .el-input__inner {
+  text-align: left !important;
+}
+
 .custom-select-small .el-select__placeholder,
 .custom-select-small .el-select__selected-item {
   color: #e5e2e3 !important;
@@ -8134,12 +8128,11 @@ const handleLogout = () => {
   box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
 }
 .is-closed.status-badge-trigger {
-  cursor: not-allowed;
   opacity: 0.8;
 }
 
 .status-text {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(229, 226, 227, 0.9);
   letter-spacing: 0.5px;

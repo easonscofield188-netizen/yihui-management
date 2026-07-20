@@ -1,0 +1,127 @@
+<view class="page detail-page" wx:if="{{project}}">
+  <view class="project-summary card">
+    <view class="summary-head">
+      <view>
+        <view class="project-name">{{project.name}}</view>
+        <view class="client muted">{{project.client || '未填写客户'}}</view>
+      </view>
+      <view class="status">{{project.statusLabel}}</view>
+    </view>
+    <view class="amount-main">
+      <view class="amount-label">订单金额</view>
+      <view class="amount-value">¥{{project.amountText}}</view>
+    </view>
+    <view class="financial-grid">
+      <view>
+        <view class="financial-label">已收</view>
+        <view class="financial-value positive">¥{{project.receivedText}}</view>
+      </view>
+      <view>
+        <view class="financial-label">待收</view>
+        <view class="financial-value warning">¥{{project.unreceivedText}}</view>
+      </view>
+      <view>
+        <view class="financial-label">总成本</view>
+        <view class="financial-value">¥{{project.payableText}}</view>
+      </view>
+      <view>
+        <view class="financial-label">已付成本</view>
+        <view class="financial-value">¥{{project.paidText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="actions" wx:if="{{canWrite}}">
+    <button class="action-button receipt-button" bindtap="openReceipt">+ 登记收款</button>
+    <button class="action-button cost-button" bindtap="openCost">+ 登记支出</button>
+  </view>
+
+  <view class="section card">
+    <view class="section-head">
+      <view class="section-title">成本明细</view>
+      <view class="muted">{{project.costs.length || 0}} 笔</view>
+    </view>
+    <view class="cost-row" wx:for="{{project.costs}}" wx:key="id">
+      <view>
+        <view class="cost-category">{{item.category || '其他'}}</view>
+        <view class="cost-supplier muted">{{item.supplier || '无供应商'}}</view>
+      </view>
+      <view class="cost-right">
+        <view class="cost-amount">¥{{item.amount}}</view>
+        <view class="settled {{item.isSettled === true || item.isSettled === '是' ? 'yes' : ''}}">
+          {{item.isSettled === true || item.isSettled === '是' ? '已支付' : '未支付'}}
+        </view>
+      </view>
+    </view>
+    <view class="empty-row muted" wx:if="{{!project.costs || project.costs.length === 0}}">暂无成本记录</view>
+  </view>
+
+  <view class="section card">
+    <view class="section-head">
+      <view class="section-title">项目凭证</view>
+      <button class="upload-button" wx:if="{{canWrite}}" loading="{{uploading}}" bindtap="chooseVoucher">拍照上传</button>
+    </view>
+    <view class="voucher-grid" wx:if="{{vouchers.length}}">
+      <image
+        class="voucher"
+        wx:for="{{vouchers}}"
+        wx:key="_id"
+        src="{{item.displayUrl || item.fileUrl}}"
+        mode="aspectFill"
+        data-url="{{item.displayUrl || item.fileUrl}}"
+        bindtap="previewVoucher"
+      />
+    </view>
+    <view class="empty-row muted" wx:else>暂无凭证</view>
+  </view>
+
+  <view class="section card">
+    <view class="section-title">项目说明</view>
+    <view class="description">{{project.desc || '暂无说明'}}</view>
+  </view>
+</view>
+
+<view class="page loading-page muted" wx:if="{{loading && !project}}">正在加载项目…</view>
+
+<view class="overlay" wx:if="{{formMode}}" bindtap="closeForm">
+  <view class="form-sheet" catchtap="stopPropagation">
+    <view class="sheet-title">{{formMode === 'receipt' ? '登记收款' : '登记支出'}}</view>
+    <view class="field-label">本次金额</view>
+    <view class="amount-input-wrap">
+      <text>¥</text>
+      <input
+        class="amount-input"
+        type="digit"
+        placeholder="0.00"
+        value="{{amountInput}}"
+        bindinput="onAmountInput"
+      />
+    </view>
+
+    <block wx:if="{{formMode === 'cost'}}">
+      <view class="field-label">成本类别</view>
+      <picker mode="selector" range="{{categories}}" value="{{categoryIndex}}" bindchange="onCategoryChange">
+        <view class="picker-field">{{categories[categoryIndex]}}⌄</view>
+      </picker>
+      <view class="field-label">供应商</view>
+      <input
+        class="text-input"
+        placeholder="选填，默认为无"
+        value="{{supplierInput}}"
+        bindinput="onSupplierInput"
+      />
+      <view class="switch-row">
+        <view>
+          <view class="switch-title">已支付</view>
+          <view class="muted switch-tip">开启后计入已付成本</view>
+        </view>
+        <switch color="#146C43" checked="{{settled}}" bindchange="onSettledChange" />
+      </view>
+    </block>
+
+    <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitRecord">
+      确认提交
+    </button>
+    <button class="cancel-button" disabled="{{submitting}}" bindtap="closeForm">取消</button>
+  </view>
+</view>

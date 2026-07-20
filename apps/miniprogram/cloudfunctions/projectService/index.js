@@ -6,6 +6,7 @@
 
 const cloud = require("wx-server-sdk");
 const nodemailer = require("nodemailer");
+const crypto = require('crypto');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -14,33 +15,52 @@ cloud.init({
 const db = cloud.database();
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
+const SESSION_COLLECTION = 'auth_sessions';
+const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
+const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
+const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
 
 exports.main = async (event, context) => {
   let action, data;
   
   if (event.action) {
     action = event.action;
-    data = event.data;
+    data = event.data || {};
   } else if (event.body) {
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
     action = body.action;
-    data = body.data;
+    data = body.data || {};
   }
 
   try {
+    const auth = await authenticate(event, data || {});
+    if (auth.error) return auth.error;
+    if (!READ_ROLES.has(auth.user.role || 'user')) {
+      return { code: 403, message: '当前账号无项目访问权限' };
+    }
     switch (action) {
       case 'create':
       case 'createProject':
-        return await createProject(data);
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
+        return await createProject({ ...data, currentUser: auth.user });
       case 'list':
         return await listProjects(data);
+      case 'get':
+        return await getProject(data);
       case 'update':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await updateProject(data);
+      case 'quickRecord':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
+        return await quickRecord(data, auth.user);
       case 'delete':
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
         return await deleteProject(data);
       case 'syncFinancials':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await syncFinancials(data);
       case 'syncHistoryFinancials':
+        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
         return await syncHistoryFinancials(data);
       default:
         return { code: 400, message: '未知操作' };
@@ -50,6 +70,33 @@ exports.main = async (event, context) => {
     return { code: 500, message: '操作失败', error: error.message };
   }
 };
+
+function forbidden() {
+  return { code: 403, message: '当前账号无此操作权限' };
+}
+
+function getAuthToken(event, data) {
+  const headers = event.headers || {};
+  const authorization = headers.authorization || headers.Authorization || '';
+  return String(data.authToken || event.authToken || authorization.replace(/^Bearer\s+/i, '') || '').trim();
+}
+
+async function authenticate(event, data) {
+  const token = getAuthToken(event, data);
+  if (!token) return { error: { code: 401, message: '请先登录' } };
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (sessionResult.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const userResult = await db.collection('users').doc(session.userId).get();
+  if (!userResult.data) return { error: { code: 401, message: '用户不存在或已停用' } };
+  if (userResult.data.status && userResult.data.status !== 'active') {
+    return { error: { code: 403, message: '账号已停用' } };
+  }
+  return { user: { ...userResult.data, id: session.userId } };
+}
 
 // 计算资金相关字段
 function calculateFinancials(amount, receivedAmount, costs, subProjects) {
@@ -199,6 +246,12 @@ const isSafeInput = (str) => {
   return !unsafePattern.test(str);
 };
 
+function normalizeSupplier(value) {
+  const supplier = String(value ?? '').trim();
+  const emptyValues = new Set(['', 'none', 'null', 'undefined', 'n/a', '无']);
+  return emptyValues.has(supplier.toLowerCase()) ? '无' : supplier;
+}
+
 async function deleteProject(params) {
   const { id } = params;
   if (!id) {
@@ -285,7 +338,19 @@ async function updateProject(params) {
     }
 
     if (oldProject.status === 'closed' && oldProject.type !== 'historical') {
-      const allowedFields = ['name', 'desc', 'costs', 'vouchers', 'receivedAmount'];
+      const allowedFields = [
+        'name',
+        'desc',
+        'costs',
+        'vouchers',
+        'receivedAmount',
+        'status',
+        'negotiatingTime',
+        'constructingTime',
+        'completedTime',
+        'settlingTime',
+        'settledTime'
+      ];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
       
       // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
@@ -307,7 +372,7 @@ async function updateProject(params) {
       if (illegalChanges.length > 0) {
         return { 
           code: 403, 
-          message: '已结清项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款',
+          message: '已结清项目仅可编辑：项目状态、项目名称、项目描述、成本支出、凭证上传及已收账款',
           details: `非法修改了字段: ${illegalChanges.join(', ')}`
         };
       }
@@ -348,7 +413,7 @@ async function updateProject(params) {
       // 清洗成本数据，确保没有 NaN 或 undefined
       updateDataFinal.costs = costs.map(item => ({
         category: item.category || '',
-        supplier: item.supplier || '',
+        supplier: normalizeSupplier(item.supplier),
         amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
         isSettled: item.isSettled || '否'
       }));
@@ -367,7 +432,7 @@ async function updateProject(params) {
         costs: (sp.costs || []).map(c => ({
           id: c.id || Date.now() + Math.random(),
           category: c.category || '',
-          supplier: c.supplier || '',
+          supplier: normalizeSupplier(c.supplier),
           amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
           isSettled: c.isSettled || false
         }))
@@ -490,23 +555,15 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
+  const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
   }
 
-  // 补录单特殊逻辑
-  if (type === 'historical') {
-    params.status = 'closed';
-    params.isHistorical = true;
-    if (!completionTime) return { code: 400, message: '补录单必须填写完结时间' };
-  } else {
-    // 常规项目新建时，禁止选择「已结清」状态
-    if (status === 'closed') {
-      return { code: 400, message: '常规项目新建时，禁止选择「已结清」状态' };
-    }
+  if (type !== 'normal') {
+    return { code: 400, message: '新建项目仅支持常规类型' };
   }
 
   // 合同/预览图校验
@@ -534,6 +591,15 @@ async function createProject(params) {
     }
   }
 
+  if (type === 'normal') {
+    if (!startDate) {
+      return { code: 400, message: '请选择交付日期' };
+    }
+    if (isFutureDateValue(startDate)) {
+      return { code: 400, message: '交付日期不能晚于当前日期' };
+    }
+  }
+
   if (Array.isArray(period) && period[0] && isFutureDateValue(period[0])) {
     return { code: 400, message: '项目开始日期不能晚于当前日期' };
   }
@@ -554,6 +620,12 @@ async function createProject(params) {
 
   try {
     const now = new Date().toISOString();
+    const costsData = Array.isArray(costs)
+      ? costs.map(cost => ({
+        ...cost,
+        supplier: normalizeSupplier(cost.supplier)
+      }))
+      : [];
     
     const subProjectsData = (subProjects && Array.isArray(subProjects)) ? subProjects.map(sp => ({
       id: sp.id || Date.now() + Math.random(),
@@ -565,18 +637,19 @@ async function createProject(params) {
       costs: (sp.costs || []).map(c => ({
         id: c.id || Date.now() + Math.random(),
         category: c.category || '',
-        supplier: c.supplier || '',
+        supplier: normalizeSupplier(c.supplier),
         amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
         isSettled: c.isSettled || false
       }))
     })) : [];
 
     // 计算资金
-    const financials = calculateFinancials(amount, received, costs, subProjectsData);
+    const financials = calculateFinancials(amount, received, costsData, subProjectsData);
     
     const data = {
       ...params,
       receivedAmount: received,
+      costs: costsData,
       subProjects: subProjectsData,
       amountEditCount: 0, // 初始化修改次数为0
       ...financials,
@@ -585,6 +658,7 @@ async function createProject(params) {
       updateTime: db.serverDate()
     };
     delete data.currentUser;
+    delete data.authToken;
 
     // 初始化时间节点 (仅针对常规项目)
     if (type !== 'historical') {
@@ -622,12 +696,150 @@ async function createProject(params) {
   }
 }
 
-async function listProjects(params) {
+async function getProject(params) {
+  const { id } = params || {};
+  if (!id) return { code: 400, message: '缺少项目 ID' };
   try {
-    const res = await db.collection('projects')
-      .orderBy('createTime', 'desc')
-      .get();
-    return { code: 0, message: '查询成功', data: res.data };
+    const result = await db.collection('projects').doc(id).get();
+    if (!result.data) return { code: 404, message: '项目不存在' };
+    return { code: 0, message: '查询成功', data: result.data };
+  } catch (err) {
+    console.error('查询项目详情失败:', err);
+    return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+function toCents(value) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return null;
+  if (Math.abs(numberValue * 100 - Math.round(numberValue * 100)) > 0.000001) return null;
+  return Math.round(numberValue * 100);
+}
+
+async function quickRecord(params, currentUser) {
+  const { projectId, recordType, amount, category, supplier, isSettled, requestId } = params || {};
+  if (!projectId || !requestId || !['receipt', 'cost'].includes(recordType)) {
+    return { code: 400, message: '记账参数不完整' };
+  }
+  const amountCents = toCents(amount);
+  if (!amountCents || amountCents <= 0) {
+    return { code: 400, message: '金额必须大于 0，且最多保留两位小数' };
+  }
+  if (recordType === 'cost' && (!category || !isSafeInput(category) || !isSafeInput(supplier))) {
+    return { code: 400, message: '请填写有效的成本类别和供应商' };
+  }
+
+  try {
+    const transactionResult = await db.runTransaction(async transaction => {
+      const projectRef = transaction.collection('projects').doc(projectId);
+      const projectResult = await projectRef.get();
+      const project = projectResult.data;
+      if (!project) throw new Error('PROJECT_NOT_FOUND');
+
+      const requestIds = Array.isArray(project.mobileRequestIds) ? project.mobileRequestIds : [];
+      if (requestIds.includes(requestId)) {
+        return { duplicated: true, project };
+      }
+
+      const updateData = {
+        mobileRequestIds: [...requestIds.slice(-99), requestId],
+        updateTime: db.serverDate(),
+        lastMobileRecord: {
+          requestId,
+          recordType,
+          amount: amountCents / 100,
+          operatorId: currentUser.id,
+          operatorName: currentUser.nickname || currentUser.username || '',
+          createdAt: new Date().toISOString()
+        }
+      };
+
+      if (recordType === 'receipt') {
+        const totalCents = toCents(project.amount || 0) || 0;
+        const receivedCents = toCents(project.receivedAmount || 0) || 0;
+        const nextReceivedCents = receivedCents + amountCents;
+        if (nextReceivedCents > totalCents) throw new Error('RECEIPT_EXCEEDS_AMOUNT');
+        updateData.receivedAmount = nextReceivedCents / 100;
+        Object.assign(updateData, calculateFinancials(
+          project.amount,
+          updateData.receivedAmount,
+          project.costs,
+          project.subProjects
+        ));
+      } else {
+        const costs = Array.isArray(project.costs) ? project.costs : [];
+        updateData.costs = [...costs, {
+          id: `mobile-${requestId}`,
+          category: String(category).trim(),
+          supplier: normalizeSupplier(supplier),
+          amount: amountCents / 100,
+          isSettled: isSettled === true || isSettled === '是'
+        }];
+        Object.assign(updateData, calculateFinancials(
+          project.amount,
+          project.receivedAmount,
+          updateData.costs,
+          project.subProjects
+        ));
+      }
+
+      await projectRef.update({ data: updateData });
+      return { duplicated: false, financials: updateData };
+    });
+
+    return {
+      code: 0,
+      message: transactionResult.duplicated ? '该笔记录已提交' : '记账成功',
+      data: { duplicated: transactionResult.duplicated }
+    };
+  } catch (err) {
+    if (err.message === 'PROJECT_NOT_FOUND') return { code: 404, message: '项目不存在' };
+    if (err.message === 'RECEIPT_EXCEEDS_AMOUNT') return { code: 400, message: '本次收款会使累计收款超过订单金额' };
+    console.error('移动端快速记账失败:', err);
+    return { code: 500, message: '记账失败，请稍后重试', error: err.message };
+  }
+}
+
+async function listProjects(params) {
+  const {
+    page,
+    pageSize,
+    keyword = '',
+    status = ''
+  } = params || {};
+  const usePagination = page !== undefined || pageSize !== undefined || keyword || status;
+  const currentPage = Math.max(1, Number(page) || 1);
+  const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+  try {
+    let query = db.collection('projects');
+    const conditions = {};
+    if (status) conditions.status = status;
+    if (keyword) {
+      conditions.name = db.RegExp({
+        regexp: String(keyword).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        options: 'i'
+      });
+    }
+    if (Object.keys(conditions).length) query = query.where(conditions);
+    const countResult = usePagination ? await query.count() : null;
+    let orderedQuery = query.orderBy('createTime', 'desc');
+    if (usePagination) {
+      orderedQuery = orderedQuery.skip((currentPage - 1) * currentPageSize).limit(currentPageSize);
+    }
+    const res = await orderedQuery.get();
+    if (!usePagination) return { code: 0, message: '查询成功', data: res.data };
+    const total = countResult.total || 0;
+    return {
+      code: 0,
+      message: '查询成功',
+      data: {
+        list: res.data,
+        total,
+        page: currentPage,
+        pageSize: currentPageSize,
+        hasMore: currentPage * currentPageSize < total
+      }
+    };
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
