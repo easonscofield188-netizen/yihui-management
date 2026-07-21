@@ -44,6 +44,9 @@ Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
+    windowHeight: 667,
+    keyboardHeight: 0,
+    costScrollTarget: "",
     costCategories: FALLBACK_CATEGORIES,
     categoryIndex: 0,
     costs: [],
@@ -57,10 +60,40 @@ Page({
 
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
+    const systemInfo = wx.getSystemInfoSync();
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
     const costs = normalizeCosts(draft.costs);
-    this.setData({ ...getNavMetrics(), costs }, () => this.updateSummary());
+    this.setData({
+      ...getNavMetrics(),
+      windowHeight: systemInfo.windowHeight || systemInfo.screenHeight || 667,
+      costs,
+    }, () => this.updateSummary());
     this.loadCategories();
+    this.bindKeyboardListener();
+  },
+
+  onUnload() {
+    this.unbindKeyboardListener();
+  },
+
+  bindKeyboardListener() {
+    this.keyboardHandler = (res) => {
+      const keyboardHeight = Math.max(0, Number(res.height) || 0);
+      this.setData({
+        keyboardHeight,
+        costScrollTarget: keyboardHeight > 0 ? "cost-amount-anchor" : "",
+      });
+    };
+    if (typeof wx.onKeyboardHeightChange === "function") {
+      wx.onKeyboardHeightChange(this.keyboardHandler);
+    }
+  },
+
+  unbindKeyboardListener() {
+    if (this.keyboardHandler && typeof wx.offKeyboardHeightChange === "function") {
+      wx.offKeyboardHeightChange(this.keyboardHandler);
+    }
+    this.keyboardHandler = null;
   },
 
   async loadCategories() {
@@ -100,11 +133,27 @@ Page({
   },
 
   closeAddCost() {
-    this.setData({ addCostVisible: false, categoryPickerVisible: false });
+    this.setData({
+      addCostVisible: false,
+      categoryPickerVisible: false,
+      keyboardHeight: 0,
+      costScrollTarget: "",
+    });
   },
 
   onAddCostVisibleChange(event) {
     if (!event.detail.visible) this.closeAddCost();
+  },
+
+  onAmountFocus() {
+    this.setData({ costScrollTarget: "cost-amount-anchor" });
+  },
+
+  onAmountBlur() {
+    // 部分 Android 机型不会及时发送高度为 0 的事件，失焦时兜底恢复。
+    setTimeout(() => {
+      this.setData({ keyboardHeight: 0, costScrollTarget: "" });
+    }, 180);
   },
 
   onCostInput(event) {
@@ -150,7 +199,7 @@ Page({
       amount: numericAmount,
       isSettled: Boolean(isSettled),
     }];
-    this.setData({ costs, addCostVisible: false }, () => this.updateSummary());
+    this.setData({ costs, addCostVisible: false, keyboardHeight: 0 }, () => this.updateSummary());
   },
 
   manageCost(event) {

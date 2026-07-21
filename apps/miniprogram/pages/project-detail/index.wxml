@@ -84,7 +84,11 @@
 <view class="page loading-page muted" wx:if="{{loading && !project}}">正在加载项目…</view>
 
 <view class="overlay" wx:if="{{formMode}}" bindtap="closeForm">
-  <view class="form-sheet" catchtap="stopPropagation">
+  <view
+    class="form-sheet"
+    style="transform: translateY(-{{keyboardHeight}}px); max-height: {{keyboardHeight > 0 ? (windowHeight - keyboardHeight - 16) : (windowHeight * 0.78)}}px;"
+    catchtap="stopPropagation"
+  >
     <view class="sheet-title">{{formMode === 'receipt' ? '登记收款' : '登记支出'}}</view>
     <view class="field-label">本次金额</view>
     <view class="amount-input-wrap">
@@ -94,6 +98,8 @@
         type="digit"
         placeholder="0.00"
         value="{{amountInput}}"
+        adjust-position="{{false}}"
+        cursor-spacing="160"
         bindinput="onAmountInput"
       />
     </view>
@@ -108,6 +114,8 @@
         class="text-input"
         placeholder="选填，默认为无"
         value="{{supplierInput}}"
+        adjust-position="{{false}}"
+        cursor-spacing="120"
         bindinput="onSupplierInput"
       />
       <view class="switch-row">

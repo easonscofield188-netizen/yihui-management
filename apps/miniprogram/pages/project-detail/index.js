@@ -54,14 +54,39 @@ Page({
     categoryIndex: 0,
     categories: ["真植物", "人工", "材料", "运输", "伙食", "其他"],
     requestId: "",
+    keyboardHeight: 0,
+    windowHeight: 667,
   },
 
   onLoad(options) {
     const user = wx.getStorageSync("userInfo") || {};
+    const systemInfo = wx.getSystemInfoSync();
     this.setData({
       projectId: options.id || "",
       canWrite: WRITE_ROLES.includes(user.role),
+      windowHeight: systemInfo.windowHeight || systemInfo.screenHeight || 667,
     });
+    this.bindKeyboardListener();
+  },
+
+  onUnload() {
+    this.unbindKeyboardListener();
+  },
+
+  bindKeyboardListener() {
+    this.keyboardHandler = (res) => {
+      this.setData({ keyboardHeight: Math.max(0, Number(res.height) || 0) });
+    };
+    if (typeof wx.onKeyboardHeightChange === "function") {
+      wx.onKeyboardHeightChange(this.keyboardHandler);
+    }
+  },
+
+  unbindKeyboardListener() {
+    if (this.keyboardHandler && typeof wx.offKeyboardHeightChange === "function") {
+      wx.offKeyboardHeightChange(this.keyboardHandler);
+    }
+    this.keyboardHandler = null;
   },
 
   onShow() {
@@ -135,7 +160,9 @@ Page({
   },
 
   closeForm() {
-    if (!this.data.submitting) this.setData({ formMode: "" });
+    if (!this.data.submitting) {
+      this.setData({ formMode: "", keyboardHeight: 0 });
+    }
   },
 
   stopPropagation() {},
@@ -180,7 +207,7 @@ Page({
     try {
       const result = await api.quickRecord(payload);
       wx.showToast({ title: result.duplicated ? "该笔已提交" : "记账成功", icon: "success" });
-      this.setData({ formMode: "", requestId: "" });
+      this.setData({ formMode: "", requestId: "", keyboardHeight: 0 });
       await this.loadDetail();
     } catch (error) {
       wx.showToast({ title: error.message || "提交失败", icon: "none" });

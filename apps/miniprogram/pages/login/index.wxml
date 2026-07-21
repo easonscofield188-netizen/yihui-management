@@ -15,7 +15,7 @@
           <t-input
             t-class="login-input"
             borderless
-            prefix-icon="user"
+            prefix-icon="user" 
             placeholder="请输入您的账号"
             placeholder-class="login-placeholder"
             value="{{username}}"

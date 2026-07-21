@@ -201,9 +201,12 @@
 
 .form-sheet {
   width: 100%;
+  max-height: 78vh;
+  overflow-y: auto;
   padding: 34rpx 34rpx calc(32rpx + env(safe-area-inset-bottom));
   border-radius: 30rpx 30rpx 0 0;
   background: #fff;
+  transition: transform 0.18s ease, max-height 0.18s ease;
 }
 
 .sheet-title {

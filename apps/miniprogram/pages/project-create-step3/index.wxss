@@ -10,4 +10,28 @@ page { background: #f9f9ff; }
 .cost-card { margin-bottom: 30rpx; padding: 30rpx; }.cost-top, .cost-bottom, .cost-meta { display: flex; align-items: center; justify-content: space-between; }.cost-meta { gap: 18rpx; color: #343943; font-size: 28rpx; }.settled-tag { padding: 6rpx 16rpx; border-radius: 24rpx; font-size: 22rpx; }.is-paid { background: #d9f9e4; color: #237a42; }.is-pending { background: #fff0e6; color: #b54708; }.cost-amount { color: #002045; font-size: 42rpx; font-weight: 700; }.cost-bottom { margin-top: 28rpx; }.supplier-name { color: #121c2c; font-size: 38rpx; font-weight: 700; }.cost-desc { margin-top: 10rpx; color: #5f6365; font-size: 26rpx; }.more-action { display: flex; width: 72rpx; height: 72rpx; align-items: center; justify-content: flex-end; }
 .empty-cost { display: flex; height: 220rpx; margin-bottom: 30rpx; flex-direction: column; align-items: center; justify-content: center; gap: 14rpx; border-radius: 28rpx; background: #fff; color: #74777f; font-size: 27rpx; }.summary-grid { display: flex; gap: 24rpx; }.summary-card { box-sizing: border-box; width: 50%; min-height: 220rpx; padding: 28rpx 30rpx; border: 2rpx solid #e2e8fb; border-radius: 26rpx; background: #f0f3ff; }.summary-label { margin-top: 32rpx; }.summary-value { margin-top: 10rpx; color: #121c2c; font-size: 36rpx; font-weight: 700; }
 .wizard-footer { position: relative; z-index: 8; display: flex; box-sizing: border-box; width: 100%; height: calc(142rpx + env(safe-area-inset-bottom)); padding: 18rpx 30rpx calc(18rpx + env(safe-area-inset-bottom)); flex: none; align-items: center; justify-content: space-between; border-top: 2rpx solid #f0f3ff; background: rgba(249,249,255,.98); }.footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }.disabled-button { color: #989fa6; }.next-button { width: 200rpx; height: 100rpx !important; margin: 0; border-radius: 20rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }
-.add-cost-popup { overflow: hidden; border-radius: 28rpx 28rpx 0 0; background: #f9f9ff; }.add-cost-dialog { padding: 32rpx 34rpx calc(34rpx + env(safe-area-inset-bottom)); }.popup-title { display: flex; align-items: center; justify-content: space-between; color: #002045; font-size: 36rpx; font-weight: 700; }.field-label { margin: 28rpx 0 14rpx; color: #242c3a; font-size: 26rpx; }.input-shell { box-sizing: border-box; width: 100%; min-height: 84rpx; overflow: hidden; border: 2rpx solid #c4c6cf; border-radius: 14rpx; background: #f0f3ff; }.select-shell { display: flex; align-items: center; }.form-input { min-height: 80rpx; padding: 0 24rpx; color: #121c2c; font-size: 28rpx; line-height: 80rpx; }.settled-row { display: flex; margin-top: 30rpx; align-items: center; justify-content: space-between; color: #242c3a; font-size: 28rpx; }.save-cost-action { display: flex; margin-top: 32rpx; justify-content: center; }.save-cost-button { width: 320rpx; height: 88rpx !important; margin: 0 !important; border-radius: 16rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }
+.add-cost-popup { overflow: visible; background: transparent; }
+.add-cost-dialog {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  padding: 32rpx 34rpx calc(34rpx + env(safe-area-inset-bottom));
+  border-radius: 28rpx 28rpx 0 0;
+  background: #f9f9ff;
+  transition: transform 0.18s ease, max-height 0.18s ease;
+}
+.add-cost-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.popup-title { display: flex; flex: none; align-items: center; justify-content: space-between; margin-bottom: 8rpx; color: #002045; font-size: 36rpx; font-weight: 700; }
+.field-label { margin: 28rpx 0 14rpx; color: #242c3a; font-size: 26rpx; }
+.input-shell { box-sizing: border-box; width: 100%; min-height: 84rpx; overflow: hidden; border: 2rpx solid #c4c6cf; border-radius: 14rpx; background: #f0f3ff; }
+.select-shell { display: flex; align-items: center; }
+.form-input { min-height: 80rpx; padding: 0 24rpx; color: #121c2c; font-size: 28rpx; line-height: 80rpx; }
+.settled-row { display: flex; margin-top: 30rpx; align-items: center; justify-content: space-between; color: #242c3a; font-size: 28rpx; }
+.save-cost-action { display: flex; margin-top: 32rpx; padding-bottom: 12rpx; justify-content: center; }
+.save-cost-button { width: 320rpx; height: 88rpx !important; margin: 0 !important; border-radius: 16rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }

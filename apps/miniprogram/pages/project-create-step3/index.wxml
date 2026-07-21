@@ -24,6 +24,71 @@
 
   <view class="wizard-footer"><t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" /><t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" /><t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled /></view>
 
-  <t-popup t-class-content="add-cost-popup" visible="{{addCostVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="onAddCostVisibleChange"><view class="add-cost-dialog"><view class="popup-title"><text>添加成本</text><t-icon name="close" size="42rpx" color="#43474e" bindtap="closeAddCost" /></view><view class="field-label">成本类别</view><view class="input-shell select-shell" bindtap="openCategoryPicker"><t-input t-class="form-input" borderless readonly value="{{costCategories[categoryIndex].label}}" suffix-icon="chevron-down" /></view><view class="field-label">供应商</view><view class="input-shell"><t-input t-class="form-input" borderless readonly value="{{costForm.supplier}}" /></view><view class="field-label">成本金额</view><view class="input-shell"><t-input t-class="form-input" borderless type="digit" value="{{costForm.amount}}" placeholder="请输入金额" data-field="amount" bindchange="onCostInput" /></view><view class="settled-row"><text>已支付</text><t-switch value="{{costForm.isSettled}}" bindchange="onSettledChange" /></view><view class="save-cost-action"><t-button t-class="save-cost-button" theme="primary" content="确认添加" bindtap="saveCost" /></view></view></t-popup>
+  <t-popup
+    t-class-content="add-cost-popup"
+    visible="{{addCostVisible}}"
+    placement="bottom"
+    close-on-overlay-click
+    bindvisible-change="onAddCostVisibleChange"
+  >
+    <view
+      class="add-cost-dialog"
+      style="transform: translateY(-{{keyboardHeight}}px); max-height: {{keyboardHeight > 0 ? (windowHeight - keyboardHeight - 16) : (windowHeight * 0.78)}}px;"
+    >
+      <view class="popup-title">
+        <text>添加成本</text>
+        <t-icon name="close" size="42rpx" color="#43474e" bindtap="closeAddCost" />
+      </view>
+      <scroll-view
+        class="add-cost-scroll"
+        scroll-y
+        scroll-into-view="{{costScrollTarget}}"
+        scroll-with-animation
+        show-scrollbar="{{false}}"
+        enhanced
+      >
+        <view class="field-label">成本类别</view>
+        <view class="input-shell select-shell" bindtap="openCategoryPicker">
+          <t-input t-class="form-input" borderless readonly value="{{costCategories[categoryIndex].label}}" suffix-icon="chevron-down" />
+        </view>
+        <view class="field-label">供应商</view>
+        <view class="input-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            value="{{costForm.supplier}}"
+            placeholder="请输入供应商"
+            data-field="supplier"
+            adjust-position="{{false}}"
+            cursor-spacing="120"
+            bindchange="onCostInput"
+          />
+        </view>
+        <view id="cost-amount-anchor" class="field-label">成本金额</view>
+        <view class="input-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            type="digit"
+            value="{{costForm.amount}}"
+            placeholder="请输入金额"
+            data-field="amount"
+            adjust-position="{{false}}"
+            cursor-spacing="160"
+            bindfocus="onAmountFocus"
+            bindblur="onAmountBlur"
+            bindchange="onCostInput"
+          />
+        </view>
+        <view class="settled-row">
+          <text>已支付</text>
+          <t-switch value="{{costForm.isSettled}}" bindchange="onSettledChange" />
+        </view>
+        <view class="save-cost-action">
+          <t-button t-class="save-cost-button" theme="primary" content="确认添加" bindtap="saveCost" />
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
   <t-picker visible="{{categoryPickerVisible}}" value="{{categoryPickerValue}}" title="选择成本类别" bindconfirm="onCategoryConfirm" bindcancel="closeCategoryPicker" bindclose="closeCategoryPicker"><t-picker-item options="{{costCategories}}" /></t-picker>
 </view>

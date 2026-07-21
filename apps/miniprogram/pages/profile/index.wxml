@@ -18,5 +18,5 @@
   </view>
 
   <button class="logout-button" bindtap="logout">退出登录</button>
-  <view class="version muted">易汇项目记账 · MVP 1.0</view>
+  <view class="version muted">亿辉记 · MVP 1.0</view>
 </view>
