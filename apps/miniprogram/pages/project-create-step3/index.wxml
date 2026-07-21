@@ -1,0 +1,29 @@
+<view class="step3-page">
+  <view class="step3-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#002045" /></view>
+    <view class="nav-title">新建项目</view>
+  </view>
+
+  <scroll-view class="step3-scroll" scroll-y show-scrollbar="{{false}}">
+    <view class="progress-section"><view class="progress-text"><text>步骤 3 / 4</text><text class="progress-percent">已完成 75%</text></view><view class="progress"><view class="progress-current"></view></view></view>
+    <view class="page-title">成本支出</view>
+
+    <view class="total-card"><view class="card-label">总预计成本</view><view class="total-amount">¥{{totalCostText}}</view></view>
+
+    <view class="cost-head"><view class="cost-title">成本列表</view><t-button t-class="add-cost-button" theme="primary" icon="add" content="添加成本" bindtap="openAddCost" /></view>
+    <view wx:if="{{costs.length}}">
+      <view class="cost-card" wx:for="{{costs}}" wx:key="id">
+        <view class="cost-top"><view class="cost-meta"><text>{{item.category}}</text><text class="settled-tag {{item.isSettled ? 'is-paid' : 'is-pending'}}">{{item.isSettled ? '已支付' : '待支付'}}</text></view><view class="cost-amount">¥{{item.amount}}</view></view>
+        <view class="cost-bottom"><view><view class="supplier-name">{{item.supplier}}</view><view class="cost-desc">项目{{item.category}}费用</view></view><view class="more-action" data-id="{{item.id}}" bindtap="manageCost"><t-icon name="ellipsis" size="48rpx" color="#43474e" /></view></view>
+      </view>
+    </view>
+    <view class="empty-cost" wx:else><t-icon name="folder-open" size="76rpx" color="#989fa6" /><text>暂未添加成本</text></view>
+
+    <view class="summary-grid"><view class="summary-card"><t-icon name="catalog" size="52rpx" color="#002045" /><view class="summary-label">类别</view><view class="summary-value">{{costs.length}} 项生效</view></view><view class="summary-card"><t-icon name="bill" size="52rpx" color="#ba1a1a" /><view class="summary-label">待支付</view><view class="summary-value">¥{{pendingCostText}}</view></view></view>
+  </scroll-view>
+
+  <view class="wizard-footer"><t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" /><t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" /><t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled /></view>
+
+  <t-popup t-class-content="add-cost-popup" visible="{{addCostVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="onAddCostVisibleChange"><view class="add-cost-dialog"><view class="popup-title"><text>添加成本</text><t-icon name="close" size="42rpx" color="#43474e" bindtap="closeAddCost" /></view><view class="field-label">成本类别</view><view class="input-shell select-shell" bindtap="openCategoryPicker"><t-input t-class="form-input" borderless readonly value="{{costCategories[categoryIndex].label}}" suffix-icon="chevron-down" /></view><view class="field-label">供应商</view><view class="input-shell"><t-input t-class="form-input" borderless readonly value="{{costForm.supplier}}" /></view><view class="field-label">成本金额</view><view class="input-shell"><t-input t-class="form-input" borderless type="digit" value="{{costForm.amount}}" placeholder="请输入金额" data-field="amount" bindchange="onCostInput" /></view><view class="settled-row"><text>已支付</text><t-switch value="{{costForm.isSettled}}" bindchange="onSettledChange" /></view><view class="save-cost-action"><t-button t-class="save-cost-button" theme="primary" content="确认添加" bindtap="saveCost" /></view></view></t-popup>
+  <t-picker visible="{{categoryPickerVisible}}" value="{{categoryPickerValue}}" title="选择成本类别" bindconfirm="onCategoryConfirm" bindcancel="closeCategoryPicker" bindclose="closeCategoryPicker"><t-picker-item options="{{costCategories}}" /></t-picker>
+</view>

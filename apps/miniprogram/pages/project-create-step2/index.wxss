@@ -1,0 +1,36 @@
+page { background: #f9f9ff; }
+.step2-page { --td-brand-color: #1a365d; display: flex; height: 100vh; overflow: hidden; flex-direction: column; background: #f9f9ff; color: #121c2c; }
+.step2-nav { position: relative; display: flex; box-sizing: border-box; flex: none; align-items: center; justify-content: center; border-bottom: 2rpx solid #f0f3ff; background: #f9f9ff; }
+.nav-close { position: absolute; left: 30rpx; bottom: 0; display: flex; width: 80rpx; height: 88rpx; align-items: center; justify-content: flex-start; }
+.nav-title { color: #002045; font-size: 42rpx; font-weight: 700; }
+.step2-scroll { box-sizing: border-box; width: 100%; height: 0; min-height: 0; padding: 38rpx 30rpx 44rpx; flex: 1; }
+.progress-section { margin-bottom: 56rpx; }
+.progress-text { display: flex; align-items: center; justify-content: space-between; color: #343943; font-size: 28rpx; }
+.progress-percent { color: #002045; font-size: 26rpx; font-weight: 700; }
+.progress { height: 14rpx; margin-top: 24rpx; overflow: hidden; border-radius: 14rpx; background: #e7eeff; }
+.progress-current { width: 50%; height: 100%; border-radius: inherit; background: #1a365d; }
+.page-title { margin-bottom: 40rpx; color: #002045; font-size: 52rpx; font-weight: 700; line-height: 1.2; }
+.money-card, .staff-card { box-sizing: border-box; margin-bottom: 28rpx; padding: 34rpx 30rpx; border-radius: 26rpx; background: #fff; box-shadow: 0 8rpx 28rpx rgba(26, 54, 93, .045); }
+.card-label { color: #43474e; font-size: 27rpx; line-height: 40rpx; }
+.amount-row { display: flex; min-height: 146rpx; align-items: center; }
+.currency { margin-right: 22rpx; color: #343943; font-size: 42rpx; font-weight: 700; }
+.amount-currency { color: #b4becc; font-size: 58rpx; }
+.amount-input { flex: 1; min-height: 130rpx; color: #002045; font-size: 58rpx; font-weight: 700; line-height: 130rpx; }
+.recommend-row { display: flex; padding-top: 24rpx; align-items: center; justify-content: space-between; border-top: 2rpx solid #c4c6cf; color: #43474e; font-size: 25rpx; }
+.received-card { padding-bottom: 28rpx; }
+.received-row { min-height: 110rpx; }
+.received-input { flex: 1; min-height: 96rpx; color: #002045; font-size: 40rpx; font-weight: 600; line-height: 96rpx; }
+.staff-head { display: flex; margin-bottom: 28rpx; align-items: flex-start; justify-content: space-between; }
+.staff-subtitle { margin-top: 4rpx; color: #343943; font-size: 34rpx; }
+.staff-icon { display: flex; width: 88rpx; height: 88rpx; align-items: center; justify-content: center; border-radius: 18rpx; background: #e7ebf0; }
+.stepper { display: flex; height: 130rpx; padding: 10rpx 14rpx; align-items: center; border-radius: 22rpx; background: #f0f3ff; }
+.stepper-action { display: flex; width: 104rpx; height: 104rpx; flex: none; align-items: center; justify-content: center; border-radius: 18rpx; }
+.stepper-minus { background: #fff; box-shadow: 0 4rpx 10rpx rgba(26, 54, 93, .08); }
+.stepper-plus { background: #002c58; }
+.staff-value { display: flex; min-width: 0; height: 100rpx; flex: 1; align-items: center; justify-content: center; color: #002045; font-size: 54rpx; font-weight: 700; }
+.quick-team-row { display: flex; justify-content: space-between; gap: 14rpx; padding: 8rpx 0 30rpx; }
+.quick-team { min-width: 0; flex: 1; height: 72rpx !important; margin: 0 !important; padding: 0 12rpx !important; border: 0 !important; border-radius: 40rpx !important; background: #e7eeff !important; color: #43474e !important; font-size: 23rpx !important; }
+.wizard-footer { position: relative; z-index: 8; display: flex; box-sizing: border-box; width: 100%; height: calc(142rpx + env(safe-area-inset-bottom)); padding: 18rpx 30rpx calc(18rpx + env(safe-area-inset-bottom)); flex: none; align-items: center; justify-content: space-between; border-top: 2rpx solid #f0f3ff; background: rgba(249, 249, 255, .98); }
+.footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }
+.disabled-button { color: #989fa6; }
+.next-button { width: 200rpx; height: 100rpx !important; margin: 0; border-radius: 20rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }

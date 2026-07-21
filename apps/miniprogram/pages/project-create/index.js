@@ -328,7 +328,7 @@ Page({
       wx.showToast({ title: "请完成本页必填信息", icon: "none" });
       return;
     }
-    wx.setStorageSync(DRAFT_KEY, this.data.form);
-    wx.showToast({ title: "第 1 步已保存", icon: "success" });
+    wx.setStorageSync(DRAFT_KEY, { ...(wx.getStorageSync(DRAFT_KEY) || {}), ...this.data.form });
+    wx.navigateTo({ url: "/pages/project-create-step2/index" });
   },
 });

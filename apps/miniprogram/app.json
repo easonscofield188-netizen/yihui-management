@@ -3,6 +3,9 @@
     "pages/login/index",
     "pages/index/index",
     "pages/project-create/index",
+    "pages/project-create-step2/index",
+    "pages/project-create-step3/index",
+    "pages/project-create-step4/index",
     "pages/project-detail/index",
     "pages/profile/index"
   ],

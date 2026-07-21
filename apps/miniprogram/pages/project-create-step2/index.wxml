@@ -1,0 +1,52 @@
+<view class="step2-page">
+  <view class="step2-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#242c3a" /></view>
+    <view class="nav-title">新建项目</view>
+  </view>
+
+  <scroll-view class="step2-scroll" scroll-y show-scrollbar="{{false}}">
+    <view class="progress-section">
+      <view class="progress-text"><text>步骤 2 / 4</text><text class="progress-percent">已完成 50%</text></view>
+      <view class="progress"><view class="progress-current"></view></view>
+    </view>
+
+    <view class="page-title">金额与人员</view>
+
+    <view class="money-card order-card">
+      <view class="card-label">订单金额</view>
+      <view class="amount-row">
+        <text class="currency amount-currency">¥</text>
+        <t-input t-class="amount-input" borderless type="digit" value="{{form.amount}}" placeholder="0.00" placeholder-style="color: #d8dce4" data-field="amount" bindchange="onMoneyChange" />
+      </view>
+      <view class="recommend-row"><text>根据项目规模推荐的基础配置</text><t-icon name="info-circle" size="34rpx" color="#002045" bindtap="showRecommendation" /></view>
+    </view>
+
+    <view class="money-card received-card">
+      <view class="card-label">已收金额</view>
+      <view class="amount-row received-row">
+        <text class="currency">¥</text>
+        <t-input t-class="received-input" borderless type="digit" value="{{form.receivedAmount}}" placeholder="输入金额" placeholder-style="color: #c9ccd3" data-field="receivedAmount" bindchange="onMoneyChange" />
+      </view>
+    </view>
+
+    <view class="staff-card">
+      <view class="staff-head">
+        <view><view class="card-label">人员总数</view><view class="staff-subtitle">人员分配</view></view>
+        <view class="staff-icon"><t-icon name="member" size="48rpx" color="#002045" /></view>
+      </view>
+      <view class="stepper">
+        <view class="stepper-action stepper-minus" bindtap="decreaseStaff"><t-icon name="minus" size="48rpx" color="#002045" /></view>
+        <view class="staff-value">{{form.staffCount}}</view>
+        <view class="stepper-action stepper-plus" bindtap="increaseStaff"><t-icon name="add" size="50rpx" color="#ffffff" /></view>
+      </view>
+    </view>
+
+    <view class="quick-team-row"><t-button wx:for="{{quickTeams}}" wx:key="value" t-class="quick-team" theme="default" variant="base" content="{{item.label}}" data-value="{{item.value}}" bindtap="selectQuickTeam" /></view>
+  </scroll-view>
+
+  <view class="wizard-footer">
+    <t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" />
+    <t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" />
+    <t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled />
+  </view>
+</view>
