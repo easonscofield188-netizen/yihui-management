@@ -122,7 +122,7 @@ Page({
   },
 
   openProjects() {
-    wx.switchTab({ url: "/pages/index/index" });
+    wx.navigateTo({ url: "/pages/project-overview/index" });
   },
 
   logout() {

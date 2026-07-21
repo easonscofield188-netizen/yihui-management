@@ -51,6 +51,9 @@ exports.main = async (event, context) => {
         return await createProject({ ...data, currentUser: auth.user });
       case 'list':
         return await listProjects(data);
+      case 'overview':
+      case 'getOverview':
+        return await getOverview(data);
       case 'get':
         return await getProject(data);
       case 'update':
@@ -885,6 +888,286 @@ async function listProjects(params) {
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+function toOverviewDate(value) {
+  if (!value) return null;
+  const raw = value.$date || value;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isHistoricalOverviewProject(project) {
+  return project && (project.type === 'historical' || !!project.isHistorical);
+}
+
+function getOverviewProjectDate(project) {
+  if (isHistoricalOverviewProject(project)) {
+    return toOverviewDate(project.completionTime);
+  }
+  return toOverviewDate(project.period && project.period[0])
+    || toOverviewDate(project.startDate)
+    || toOverviewDate(project.negotiatingTime)
+    || toOverviewDate(project.createTime);
+}
+
+function isOverviewCostSettled(value) {
+  if (value === undefined || value === null || value === '') return true;
+  return value === true || value === 1 || ['是', 'true', '已支付', '已结清'].includes(String(value).toLowerCase());
+}
+
+function getOverviewProjectAmount(project) {
+  return Number(project.amount) || Number(project.totalAmount) || 0;
+}
+
+function getOverviewProjectCost(project) {
+  if (Number(project.payableAmount)) return Number(project.payableAmount);
+  const projectCost = Array.isArray(project.costs)
+    ? project.costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+    : 0;
+  const subProjectCost = Array.isArray(project.subProjects)
+    ? project.subProjects.reduce((sum, subProject) => {
+      const costs = Array.isArray(subProject.costs) ? subProject.costs : [];
+      return sum + costs.reduce((costSum, cost) => costSum + (Number(cost.amount) || 0), 0);
+    }, 0)
+    : 0;
+  return projectCost + subProjectCost;
+}
+
+function getOverviewProjectPaidCost(project) {
+  if (project.paidAmount !== undefined && project.paidAmount !== null && project.paidAmount !== '') {
+    return Number(project.paidAmount) || 0;
+  }
+  const projectPaid = Array.isArray(project.costs)
+    ? project.costs.reduce((sum, cost) => {
+      if (!isOverviewCostSettled(cost.isSettled)) return sum;
+      return sum + (Number(cost.amount) || 0);
+    }, 0)
+    : 0;
+  const subProjectPaid = Array.isArray(project.subProjects)
+    ? project.subProjects.reduce((sum, subProject) => {
+      const costs = Array.isArray(subProject.costs) ? subProject.costs : [];
+      return sum + costs.reduce((costSum, cost) => {
+        if (!isOverviewCostSettled(cost.isSettled)) return costSum;
+        return costSum + (Number(cost.amount) || 0);
+      }, 0);
+    }, 0)
+    : 0;
+  return projectPaid + subProjectPaid;
+}
+
+function getOverviewRangeBounds(rangeType, startDate, endDate) {
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  if (rangeType === 'custom' && startDate && endDate) {
+    const start = toOverviewDate(startDate);
+    const end = toOverviewDate(endDate);
+    if (!start || !end) return null;
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  if (rangeType === 'year') {
+    return {
+      start: new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0),
+      end: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+    };
+  }
+
+  const months = rangeType === 'quarter' ? 3 : 1;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setMonth(start.getMonth() - months);
+  return { start, end };
+}
+
+function getPreviousOverviewBounds(bounds) {
+  const duration = bounds.end.getTime() - bounds.start.getTime();
+  const end = new Date(bounds.start.getTime() - 1);
+  const start = new Date(end.getTime() - duration);
+  return { start, end };
+}
+
+function getRecentOneMonthBounds() {
+  // 最近一个月：与顶部筛选无关，固定为「今天往前推 1 个自然月」到今天
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setMonth(start.getMonth() - 1);
+  return { start, end };
+}
+
+function filterOverviewProjects(projects, bounds) {
+  const start = bounds.start.getTime();
+  const end = bounds.end.getTime();
+  return projects.filter((project) => {
+    const projectDate = getOverviewProjectDate(project);
+    if (!projectDate) return false;
+    const time = projectDate.getTime();
+    return time >= start && time <= end;
+  });
+}
+
+function buildOverviewMetrics(projects) {
+  const totalAmount = projects.reduce((sum, item) => sum + getOverviewProjectAmount(item), 0);
+  const receivedAmount = projects.reduce((sum, item) => sum + (Number(item.receivedAmount) || 0), 0);
+  const unpaidAmount = Math.max(0, totalAmount - receivedAmount);
+  const totalCost = projects.reduce((sum, item) => sum + getOverviewProjectCost(item), 0);
+  const paidCost = projects.reduce((sum, item) => sum + getOverviewProjectPaidCost(item), 0);
+  const unpaidCost = Math.max(0, totalCost - paidCost);
+  const profit = totalAmount - totalCost;
+  const profitRate = totalAmount ? (profit / totalAmount) * 100 : 0;
+  const costRate = totalAmount ? (totalCost / totalAmount) * 100 : 0;
+  return {
+    orderCount: projects.length,
+    totalAmount: Number(totalAmount.toFixed(2)),
+    receivedAmount: Number(receivedAmount.toFixed(2)),
+    unpaidAmount: Number(unpaidAmount.toFixed(2)),
+    totalCost: Number(totalCost.toFixed(2)),
+    paidCost: Number(paidCost.toFixed(2)),
+    unpaidCost: Number(unpaidCost.toFixed(2)),
+    profit: Number(profit.toFixed(2)),
+    profitRate: Number(profitRate.toFixed(2)),
+    costRate: Number(costRate.toFixed(2))
+  };
+}
+
+function getOverviewPeriodLabel(rangeType, startDate, endDate, bounds) {
+  if (rangeType === 'custom' && startDate && endDate) {
+    return `${String(startDate).slice(0, 10)} ~ ${String(endDate).slice(0, 10)}`;
+  }
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  if (rangeType === 'year') return String(now.getFullYear());
+  if (rangeType === 'quarter') {
+    return `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
+  }
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getOverviewStatusMeta(status) {
+  const labels = {
+    negotiating: '洽谈中',
+    constructing: '施工中',
+    completed: '已交付',
+    settling: '结账中',
+    closed: '已结清',
+    in_cooperation: '合作中',
+    terminated: '已终止'
+  };
+  if (status === 'completed' || status === 'closed') {
+    return { label: labels[status] || '已完成', tone: 'done' };
+  }
+  if (status === 'terminated') {
+    return { label: labels[status] || '已终止', tone: 'ended' };
+  }
+  return { label: labels[status] || '进行中', tone: 'doing' };
+}
+
+async function fetchAllProjectsForOverview() {
+  const MAX_LIMIT = 100;
+  const collection = db.collection('projects');
+  const countResult = await collection.count();
+  const total = countResult.total || 0;
+  if (!total) return [];
+
+  const batchCount = Math.ceil(total / MAX_LIMIT);
+  const tasks = [];
+  for (let i = 0; i < batchCount; i += 1) {
+    tasks.push(
+      collection.orderBy('createTime', 'desc').skip(i * MAX_LIMIT).limit(MAX_LIMIT).get()
+    );
+  }
+  const results = await Promise.all(tasks);
+  return results.reduce((list, result) => list.concat(result.data || []), []);
+}
+
+async function getOverview(params = {}) {
+  const rangeType = String(params.rangeType || 'all').trim();
+  const startDate = params.startDate ? String(params.startDate).slice(0, 10) : '';
+  const endDate = params.endDate ? String(params.endDate).slice(0, 10) : '';
+  const allowedRanges = new Set(['all', 'month', 'quarter', 'year', 'custom']);
+  if (!allowedRanges.has(rangeType)) {
+    return { code: 400, message: '时间范围类型无效' };
+  }
+  if (rangeType === 'custom' && (!startDate || !endDate)) {
+    return { code: 400, message: '自定义范围请选择开始和结束日期' };
+  }
+  if (rangeType === 'custom' && startDate > endDate) {
+    return { code: 400, message: '开始日期不能晚于结束日期' };
+  }
+
+  try {
+    const bounds = rangeType === 'all'
+      ? null
+      : getOverviewRangeBounds(rangeType, startDate, endDate);
+    if (rangeType !== 'all' && !bounds) return { code: 400, message: '时间范围无效' };
+
+    const allProjects = await fetchAllProjectsForOverview();
+    const currentProjects = rangeType === 'all'
+      ? allProjects.slice()
+      : filterOverviewProjects(allProjects, bounds);
+    const previousProjects = rangeType === 'all'
+      ? []
+      : filterOverviewProjects(allProjects, getPreviousOverviewBounds(bounds));
+    // 最近订单状态：始终按最近一个月返回，不受 rangeType / 自定义筛选影响
+    const recentProjects = filterOverviewProjects(allProjects, getRecentOneMonthBounds())
+      .sort((a, b) => {
+        const timeA = (getOverviewProjectDate(a) || new Date(0)).getTime();
+        const timeB = (getOverviewProjectDate(b) || new Date(0)).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 20)
+      .map((item) => {
+        const statusMeta = getOverviewStatusMeta(item.status);
+        return {
+          id: item._id,
+          name: item.name || '',
+          amount: getOverviewProjectAmount(item),
+          status: item.status || '',
+          statusLabel: statusMeta.label,
+          statusTone: statusMeta.tone,
+          time: item.updateTime || item.createTime || getOverviewProjectDate(item),
+          createTime: item.createTime || null
+        };
+      });
+
+    const currentMetrics = buildOverviewMetrics(currentProjects);
+    const previousMetrics = buildOverviewMetrics(previousProjects);
+    let trendPercent = 0;
+    if (rangeType !== 'all') {
+      if (previousMetrics.profit !== 0) {
+        trendPercent = ((currentMetrics.profit - previousMetrics.profit) / Math.abs(previousMetrics.profit)) * 100;
+      } else if (currentMetrics.profit !== 0) {
+        trendPercent = 100;
+      }
+    }
+
+    return {
+      code: 0,
+      message: '查询成功',
+      data: {
+        rangeType,
+        startDate: rangeType === 'all' ? '' : (startDate || bounds.start.toISOString().slice(0, 10)),
+        endDate: rangeType === 'all' ? '' : (endDate || bounds.end.toISOString().slice(0, 10)),
+        periodLabel: rangeType === 'all'
+          ? '全部'
+          : getOverviewPeriodLabel(rangeType, startDate, endDate, bounds),
+        metrics: {
+          ...currentMetrics,
+          trendPercent: Number(trendPercent.toFixed(2))
+        },
+        recentProjects
+      }
+    };
+  } catch (err) {
+    console.error('查询项目总览失败:', err);
+    return { code: 500, message: '总览查询失败', error: err.message };
   }
 }
 

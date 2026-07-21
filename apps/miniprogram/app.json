@@ -7,7 +7,8 @@
     "pages/project-create-step3/index",
     "pages/project-create-step4/index",
     "pages/project-detail/index",
-    "pages/profile/index"
+    "pages/profile/index",
+    "pages/project-overview/index"
   ],
   "window": {
     "backgroundColor": "#F5F7F6",

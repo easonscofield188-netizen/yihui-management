@@ -1,0 +1,153 @@
+<view class="overview-page">
+  <view class="overview-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">项目总览</view>
+  </view>
+  <view class="overview-nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="overview-content">
+    <view class="filter-row">
+      <scroll-view class="range-scroll" scroll-x show-scrollbar="{{false}}">
+        <view class="range-list">
+          <view
+            wx:for="{{rangeOptions}}"
+            wx:key="value"
+            class="range-tab {{rangeValue === item.value && !customRange.length ? 'active' : ''}}"
+            data-index="{{index}}"
+            bindtap="onRangeTap"
+          >{{item.label}}</view>
+        </view>
+      </scroll-view>
+      <view class="custom-button {{customRange.length ? 'active' : ''}}" bindtap="openCustomRange">
+        <t-icon name="calendar" size="30rpx" color="#002045" />
+        <text>{{customRange.length ? '已选' : '自定义'}}</text>
+      </view>
+    </view>
+
+    <view class="hero-card">
+      <view class="hero-glow hero-glow-top"></view>
+      <view class="hero-glow hero-glow-bottom"></view>
+      <view class="hero-label">总利润金额 (Profit)</view>
+      <view class="hero-profit-row">
+        <text class="hero-profit">¥{{metrics.profitText}}</text>
+        <view class="trend-badge {{metrics.trendPositive ? 'up' : 'down'}}">{{metrics.trendText}}</view>
+      </view>
+      <view class="hero-grid">
+        <view class="hero-metric">
+          <view class="hero-metric-label">总订单金额</view>
+          <view class="hero-metric-value">¥{{metrics.totalAmountText}}</view>
+        </view>
+        <view class="hero-metric">
+          <view class="hero-metric-label">总订单数量</view>
+          <view class="hero-metric-value">{{metrics.orderCountText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="metric-grid">
+      <view class="metric-card unpaid-card">
+        <view class="metric-icon unpaid-icon"><t-icon name="wallet" size="34rpx" color="#9a3412" /></view>
+        <view class="metric-label">总待收金额</view>
+        <view class="metric-value unpaid-value">{{metrics.unpaidText}}</view>
+      </view>
+      <view class="metric-card pending-cost-card">
+        <view class="metric-icon pending-cost-icon"><t-icon name="error-circle" size="34rpx" color="#a16207" /></view>
+        <view class="metric-label">总待付成本</view>
+        <view class="metric-value pending-cost-value">{{metrics.unpaidCostText}}</view>
+      </view>
+      <view class="metric-card cost-card cost-card-full">
+        <view class="metric-icon cost-icon"><t-icon name="bill" size="34rpx" color="#1d4ed8" /></view>
+        <view class="metric-copy">
+          <view class="metric-label">总项目成本</view>
+          <view class="metric-value cost-value">{{metrics.costText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="efficiency-card">
+      <view class="efficiency-head">
+        <view class="efficiency-title">
+          <t-icon name="chart" size="36rpx" color="#002045" />
+          <text>运营效率</text>
+        </view>
+        <text class="period-label">{{periodLabel}}</text>
+      </view>
+
+      <view class="ratio-block">
+        <view class="ratio-row">
+          <text>总利润率 (Margin)</text>
+          <text class="ratio-profit">{{metrics.profitRateText}}</text>
+        </view>
+        <view class="ratio-track">
+          <view class="ratio-bar profit-bar" style="width: {{metrics.profitRateWidth}}%;"></view>
+        </view>
+      </view>
+
+      <view class="ratio-block">
+        <view class="ratio-row">
+          <text>总成本率 (Ratio)</text>
+          <text class="ratio-cost">{{metrics.costRateText}}</text>
+        </view>
+        <view class="ratio-track">
+          <view class="ratio-bar cost-bar" style="width: {{metrics.costRateWidth}}%;"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="recent-section">
+      <view class="recent-title-row">
+        <view class="recent-title">最近订单状态</view>
+        <view class="recent-hint">近一个月</view>
+      </view>
+      <view class="recent-card" wx:for="{{recentProjects}}" wx:key="id" data-id="{{item.id}}" bindtap="openProject">
+        <view class="recent-main">
+          <view class="recent-icon"><t-icon name="{{item.icon}}" size="36rpx" color="#002045" /></view>
+          <view class="recent-info">
+            <view class="recent-name">{{item.name}}</view>
+            <view class="recent-time">{{item.timeText}}</view>
+          </view>
+        </view>
+        <view class="recent-right">
+          <view class="recent-amount">¥{{item.amountText}}</view>
+          <view class="status-tag status-{{item.statusTone}}">{{item.statusLabel}}</view>
+        </view>
+      </view>
+      <view class="empty-recent" wx:if="{{!recentProjects.length}}">当前筛选范围内暂无项目</view>
+    </view>
+  </view>
+
+  <view class="overview-loading-mask" wx:if="{{loading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+    <view class="overview-loading-content">
+      <t-loading size="44rpx" theme="circular" />
+      <text>{{loadingMessage}}</text>
+    </view>
+  </view>
+</view>
+
+<t-popup visible="{{customPopupVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="closeCustomPopup">
+  <view class="custom-popup" catchtap="stopPropagation">
+    <view class="custom-popup-title">自定义时间范围</view>
+    <view class="custom-field-label">开始日期</view>
+    <view class="custom-field" data-field="start" bindtap="openDatePicker">{{customStartDate}}</view>
+    <view class="custom-field-label">结束日期</view>
+    <view class="custom-field" data-field="end" bindtap="openDatePicker">{{customEndDate}}</view>
+    <view class="custom-actions">
+      <view class="custom-cancel" bindtap="closeCustomPopup">取消</view>
+      <view class="custom-confirm" bindtap="confirmCustomRange">确定</view>
+    </view>
+  </view>
+</t-popup>
+
+<t-date-time-picker
+  visible="{{datePickerVisible}}"
+  mode="date"
+  value="{{datePickerValue}}"
+  end="{{today}}"
+  title="选择日期"
+  confirm-btn="确定"
+  bindconfirm="onDateConfirm"
+  bindcancel="closeDatePicker"
+  bindclose="closeDatePicker"
+/>

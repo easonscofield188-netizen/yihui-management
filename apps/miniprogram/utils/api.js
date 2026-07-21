@@ -107,6 +107,10 @@ function getServerDate() {
   return callFunction("projectService", "getServerDate", {});
 }
 
+function getProjectOverview(params) {
+  return callFunction("projectService", "overview", params);
+}
+
 function quickRecord(data) {
   return callFunction("projectService", "quickRecord", data);
 }
@@ -131,6 +135,7 @@ module.exports = {
   createProject,
   getProject,
   getGlobalConfig,
+  getProjectOverview,
   getServerDate,
   getToken,
   getUserInfo,
