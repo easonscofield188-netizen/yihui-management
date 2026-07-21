@@ -1,0 +1,61 @@
+<view class="create-page">
+  <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px; padding-right: {{menuRightInset}}px;">
+    <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#002045" /></view>
+    <view class="nav-title">新建项目</view>
+    <view class="step-count">步骤 1 / 4</view>
+  </view>
+
+  <view class="progress"><view class="progress-current"></view></view>
+
+  <scroll-view class="form-scroll" scroll-y show-scrollbar="{{false}}">
+    <view class="intro"><view class="intro-title">基础与客户信息</view><view>填写核心详情以开启您的项目之旅。</view></view>
+
+    <view class="form-card">
+      <view class="field-label">项目名称</view>
+      <view class="input-shell"><t-input t-class="form-input" borderless value="{{form.name}}" placeholder="例如：西溪湿地动漫展会" bindchange="onNameChange" /></view>
+
+      <view class="field-label">项目状态</view>
+      <view class="status-switch">
+        <t-button t-class="status-option {{form.status === 'completed' ? 'selected' : ''}}" theme="primary" content="已交付" data-value="completed" bindtap="onStatusTap" />
+        <t-button t-class="status-option {{form.status === 'closed' ? 'selected' : ''}}" theme="primary" content="已结清" data-value="closed" bindtap="onStatusTap" />
+      </view>
+
+      <view class="field-label">项目场景</view>
+      <view class="input-shell select-shell" data-field="scene" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{projectScenes[sceneIndex].label}}" suffix-icon="chevron-down" /></view>
+
+      <view class="field-label">交付日期</view>
+      <view class="input-shell select-shell" bindtap="openDatePicker"><t-input t-class="form-input" borderless readonly value="{{form.startDate}}" placeholder="请选择交付日期" suffix-icon="calendar" /></view>
+    </view>
+
+    <view class="form-card client-card">
+      <view class="client-head"><view class="card-title">客户详情</view><view class="new-client"><text>新增客户</text><t-switch value="{{form.createClient}}" bindchange="onCreateClientChange" /></view></view>
+      <view class="field-label">客户名称</view>
+      <view id="client-search" class="input-shell client-shell"><t-input t-class="form-input" borderless prefix-icon="search" value="{{form.client}}" placeholder="点击选择或搜索客户..." adjust-position="{{true}}" cursor-spacing="180" bindchange="onClientInput" bindfocus="showClientSuggestions" bindblur="hideClientSuggestions" /></view>
+      <scroll-view class="client-list" wx:if="{{showClientList && clients.length}}" style="height: {{clients.length > 3 ? 260 : clients.length * 82}}rpx;" scroll-y show-scrollbar="{{false}}" bindtouchstart="onClientListTouchStart" bindtouchend="onClientListTouchEnd" bindtouchcancel="onClientListTouchEnd"><view wx:for="{{clients}}" wx:key="_id" class="client-option" data-client="{{item}}" bindtap="selectClient">{{item.name}}</view></scroll-view>
+
+      <view class="field-label">客户角色</view>
+      <view class="input-shell select-shell" data-field="role" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{clientRoles[roleIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="field-label">来源渠道</view>
+      <view class="input-shell select-shell" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
+    </view>
+  </scroll-view>
+
+  <t-picker t-class-confirm="picker-confirm" visible="{{pickerVisible}}" value="{{pickerValue}}" title="{{pickerTitle}}" bindconfirm="onPickerConfirm" bindcancel="closePicker" bindclose="closePicker"><t-picker-item options="{{pickerOptions}}" /></t-picker>
+  <t-date-time-picker t-class-confirm="picker-confirm" visible="{{datePickerVisible}}" mode="date" value="{{form.startDate}}" end="{{today}}" title="选择交付日期" confirm-btn="确定" bindconfirm="onDateConfirm" bindcancel="closeDatePicker" bindclose="closeDatePicker" />
+
+  <t-popup t-class-content="new-client-popup" visible="{{newClientVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="onNewClientPopupChange">
+    <view class="new-client-dialog">
+      <view class="new-client-title"><text>新增客户</text><t-icon name="close" size="40rpx" color="#43474e" bindclick="closeNewClient" /></view>
+      <view class="popup-field-label">客户姓名</view>
+      <view class="input-shell popup-input-shell"><t-input t-class="form-input" borderless value="{{newClient.name}}" placeholder="输入姓名" data-field="name" bindchange="onNewClientInput" /></view>
+      <view class="popup-field-label">客户角色</view>
+      <view class="input-shell popup-input-shell select-shell" data-field="role" bindtap="openNewClientPicker"><t-input t-class="form-input" borderless readonly value="{{clientRoles[newClientRoleIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="popup-field-label">来源渠道</view>
+      <view class="input-shell popup-input-shell select-shell" data-field="source" bindtap="openNewClientPicker"><t-input t-class="form-input" borderless readonly value="{{clientSources[newClientSourceIndex].label}}" suffix-icon="chevron-down" /></view>
+      <t-button t-class="add-client-button" theme="primary" block content="确认添加" loading="{{creatingClient}}" disabled="{{creatingClient}}" bindtap="submitNewClient" />
+    </view>
+  </t-popup>
+  <t-picker t-class-confirm="picker-confirm" visible="{{newClientPickerVisible}}" value="{{newClientPickerValue}}" title="{{newClientPickerTitle}}" bindconfirm="onNewClientPickerConfirm" bindcancel="closeNewClientPicker" bindclose="closeNewClientPicker"><t-picker-item options="{{newClientPickerOptions}}" /></t-picker>
+
+  <view class="wizard-footer"><t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" /><t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" /><t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled /></view>
+</view>

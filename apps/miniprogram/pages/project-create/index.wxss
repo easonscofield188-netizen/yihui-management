@@ -1,0 +1,39 @@
+page { background: #f9f9ff; }
+.create-page { --td-brand-color: #1a365d; --td-picker-confirm-color: #1a365d; display: flex; height: 100vh; overflow: hidden; flex-direction: column; background: #f9f9ff; color: #121c2c; }
+.create-nav { position: relative; z-index: 2; box-sizing: border-box; display: flex; flex: none; padding-right: 30rpx; padding-left: 30rpx; align-items: center; border-bottom: 2rpx solid #f0f3ff; background: #f9f9ff; }
+.nav-close { display: flex; width: 70rpx; height: 70rpx; align-items: center; justify-content: flex-start; }
+.nav-title { margin-left: 16rpx; color: #002045; font-size: 40rpx; font-weight: 700; }
+.step-count { margin-left: auto; padding: 12rpx 22rpx; border: 2rpx solid #d9e3f9; border-radius: 36rpx; color: #43474e; font-size: 26rpx; }
+.progress { height: 10rpx; margin: 42rpx 32rpx 0; overflow: hidden; flex: none; border-radius: 10rpx; background: #e7eeff; }
+.progress-current { width: 25%; height: 100%; background: #1a365d; }
+.form-scroll { box-sizing: border-box; width: 100%; height: 0; min-height: 0; padding: 42rpx 30rpx 40rpx; flex: 1; }
+.intro { color: #43474e; font-size: 27rpx; line-height: 42rpx; }
+.intro-title { margin-bottom: 12rpx; color: #002045; font-size: 42rpx; font-weight: 700; line-height: 60rpx; }
+.form-card { position: relative; margin-top: 44rpx; padding: 32rpx; border: 2rpx solid #d6e3ff; border-radius: 22rpx; background: #fff; }
+.field-label { margin-top: 34rpx; margin-bottom: 16rpx; color: #242c3a; font-size: 28rpx; }
+.field-label:first-child { margin-top: 0; }
+.input-shell { box-sizing: border-box; width: 100%; min-height: 92rpx; overflow: hidden; border: 2rpx solid #c4c6cf; border-radius: 14rpx; background: #f0f3ff; }
+.input-shell:focus-within { border-color: #1a365d; box-shadow: 0 0 0 2rpx rgba(26,54,93,.12); }
+.form-input { min-height: 88rpx; padding: 0 24rpx; background: transparent !important; color: #121c2c; font-size: 28rpx; line-height: 88rpx; }
+.select-shell { display: flex; align-items: center; }
+.status-switch { display: flex; height: 92rpx; padding: 8rpx; border: 2rpx solid #d9e3f9; border-radius: 22rpx; background: #f0f3ff; }
+.status-option { flex: 1; height: 76rpx !important; margin: 0 !important; border-radius: 14rpx !important; background: transparent !important; color: #242c3a !important; font-size: 28rpx !important; line-height: 76rpx !important; }
+.status-option.selected { background: #1a365d !important; color: #fff !important; box-shadow: 0 4rpx 8rpx rgba(26,54,93,.15); }
+.client-card { margin-top: 34rpx; }
+.client-head { display: flex; align-items: center; justify-content: space-between; }
+.card-title { color: #002045; font-size: 36rpx; font-weight: 700; }
+.new-client { display: flex; align-items: center; gap: 14rpx; color: #43474e; font-size: 26rpx; }
+.client-list { position: relative; z-index: 3; box-sizing: border-box; width: 100%; max-height: 260rpx; margin-top: -2rpx; border: 2rpx solid #d9e3f9; border-radius: 0 0 14rpx 14rpx; background: #fff; box-shadow: 0 10rpx 24rpx rgba(26,54,93,.12); }
+.client-option { padding: 22rpx 28rpx; border-bottom: 2rpx solid #f0f3ff; color: #242c3a; font-size: 27rpx; }
+.wizard-footer { position: relative; z-index: 8; display: flex; box-sizing: border-box; width: 100%; height: calc(142rpx + env(safe-area-inset-bottom)); padding: 18rpx 30rpx calc(18rpx + env(safe-area-inset-bottom)); flex: none; align-items: center; justify-content: space-between; border-top: 2rpx solid #f0f3ff; background: rgba(249,249,255,.98); }
+.footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }
+.disabled-button { color: #989fa6; }
+.next-button { width: 200rpx; height: 100rpx !important; margin: 0; border-radius: 20rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }
+.picker-confirm { color: #1a365d !important; font-weight: 600; }
+.new-client-popup { overflow: hidden; border-radius: 28rpx 28rpx 0 0; background: #f9f9ff; }
+.new-client-dialog { padding: 32rpx 34rpx calc(34rpx + env(safe-area-inset-bottom)); }
+.new-client-title { display: flex; align-items: center; justify-content: space-between; color: #002045; font-size: 36rpx; font-weight: 700; }
+.popup-field-label { margin: 28rpx 0 14rpx; color: #242c3a; font-size: 26rpx; }
+.popup-input-shell { min-height: 84rpx; background: #f0f3ff; }
+.popup-input-shell .form-input { min-height: 80rpx; line-height: 80rpx; }
+.add-client-button { height: 88rpx !important; margin-top: 32rpx; border-radius: 16rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }

@@ -11,7 +11,7 @@ Component({
       wx.switchTab({ url: path });
     },
     createProject() {
-      wx.showToast({ title: "请在电脑端管理后台新建项目", icon: "none" });
+      wx.navigateTo({ url: "/pages/project-create/index" });
     },
   },
 });

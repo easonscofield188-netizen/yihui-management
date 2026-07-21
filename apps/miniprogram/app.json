@@ -2,6 +2,7 @@
   "pages": [
     "pages/login/index",
     "pages/index/index",
+    "pages/project-create/index",
     "pages/project-detail/index",
     "pages/profile/index"
   ],

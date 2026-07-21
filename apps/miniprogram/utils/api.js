@@ -113,6 +113,18 @@ function listProjects(params) {
   });
 }
 
+function queryClients(keyword = "") {
+  return callFunction("clientsService", "", { keyword });
+}
+
+function createProject(data) {
+  return callFunction("projectService", "create", data);
+}
+
+function createClient(data) {
+  return callFunction("clientsService", "createClient", data);
+}
+
 function getProject(id) {
   return callFunction("projectService", "get", { id });
 }
@@ -137,6 +149,8 @@ module.exports = {
   addVoucher,
   callFunction,
   clearSession,
+  createClient,
+  createProject,
   getProject,
   getGlobalConfig,
   getToken,
@@ -146,4 +160,5 @@ module.exports = {
   login,
   logout,
   quickRecord,
+  queryClients,
 };
