@@ -34,3 +34,25 @@ page { background: #f9f9ff; }
 .footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }
 .disabled-button { color: #989fa6; }
 .next-button { width: 200rpx; height: 100rpx !important; margin: 0; border-radius: 20rpx !important; background: #1a365d !important; color: #fff; font-size: 28rpx !important; font-weight: 600; }
+
+/* 分步表单底部操作区 */
+.wizard-footer { justify-content: center; gap: 18rpx; }
+.footer-text-button {
+  width: 170rpx;
+  height: 92rpx !important;
+  margin: 0 !important;
+  border: 2rpx solid #c8cdd6 !important;
+  border-radius: 18rpx !important;
+  background: #ffffff !important;
+  color: #303846 !important;
+  font-size: 24rpx !important;
+}
+.disabled-button {
+  border-color: #e1e4e9 !important;
+  background: #f1f2f4 !important;
+  color: #a1a6ad !important;
+}
+.next-button {
+  height: 92rpx !important;
+  box-shadow: 0 6rpx 14rpx rgba(26, 54, 93, 0.16);
+}

@@ -2,6 +2,24 @@ const api = require("../../utils/api");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const UPLOAD_TIMEOUT_MS = 45000;
+const SAVE_VOUCHER_TIMEOUT_MS = 20000;
+
+function withTimeout(promise, timeout, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeout);
+    Promise.resolve(promise).then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -118,22 +136,54 @@ Page({
     else wx.switchTab({ url: "/pages/index/index" });
   },
 
-  async uploadVouchers(projectId) {
-    for (const file of this.data.files) {
-      const extension = fileExtension(file.tempFilePath);
-      const cloudPath = `bill_voucher/mobile/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
-      const uploadResult = await wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath });
-      const urlResult = await wx.cloud.getTempFileURL({ fileList: [uploadResult.fileID] });
+  async uploadVoucher(projectId, file) {
+    const extension = fileExtension(file.tempFilePath);
+    const cloudPath = `bill_voucher/mobile/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    let fileId = "";
+    try {
+      const uploadResult = await withTimeout(
+        wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
+        UPLOAD_TIMEOUT_MS,
+        `${file.name} 上传超时`
+      );
+      fileId = uploadResult.fileID;
+      const urlResult = await withTimeout(
+        wx.cloud.getTempFileURL({ fileList: [fileId] }),
+        SAVE_VOUCHER_TIMEOUT_MS,
+        `${file.name} 获取地址超时`
+      );
       const fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
-      await api.addVoucher({
-        projectId,
-        fileName: file.name,
-        fileId: uploadResult.fileID,
-        fileUrl,
-        fileSize: file.size,
-        mimeType: file.isImage ? `image/${extension === "jpg" ? "jpeg" : extension}` : "application/pdf",
-      });
+      await withTimeout(
+        api.addVoucher({
+          projectId,
+          fileName: file.name,
+          fileId,
+          fileUrl,
+          fileSize: file.size,
+          mimeType: file.isImage ? `image/${extension === "jpg" ? "jpeg" : extension}` : "application/pdf",
+        }),
+        SAVE_VOUCHER_TIMEOUT_MS,
+        `${file.name} 保存记录超时`
+      );
+      return { success: true, file };
+    } catch (error) {
+      if (fileId) {
+        wx.cloud.deleteFile({ fileList: [fileId] }).catch(() => {});
+      }
+      return { success: false, file, error };
     }
+  },
+
+  async uploadVouchers(projectId) {
+    const results = await Promise.all(
+      this.data.files.map((file) => this.uploadVoucher(projectId, file))
+    );
+    return results.filter((item) => !item.success);
+  },
+
+  goToProjectList() {
+    wx.removeStorageSync(DRAFT_KEY);
+    wx.reLaunch({ url: "/pages/index/index" });
   },
 
   async submit() {
@@ -145,6 +195,7 @@ Page({
     }
     this.setData({ submitting: true });
     wx.showLoading({ title: "正在创建项目", mask: true });
+    let createdProjectId = "";
     try {
       const result = await api.createProject({
         name: draft.name.trim(),
@@ -164,18 +215,43 @@ Page({
         isHistorical: false,
         isHasVoucher: this.data.invoiceEnabled && this.data.files.length ? "是" : "否",
       });
-      const projectId = result.id;
+      createdProjectId = result.id;
+      let failedVouchers = [];
       if (this.data.invoiceEnabled && this.data.files.length) {
         wx.showLoading({ title: "正在上传凭证", mask: true });
-        await this.uploadVouchers(projectId);
+        failedVouchers = await this.uploadVouchers(createdProjectId);
       }
-      wx.removeStorageSync(DRAFT_KEY);
       wx.hideLoading();
+      wx.removeStorageSync(DRAFT_KEY);
+      if (failedVouchers.length) {
+        await new Promise((resolve) => {
+          wx.showModal({
+            title: "项目已创建",
+            content: `${failedVouchers.length} 个凭证上传失败，可进入项目详情重新上传。`,
+            showCancel: false,
+            confirmText: "知道了",
+            complete: resolve,
+          });
+        });
+        this.goToProjectList();
+        return;
+      }
       wx.showToast({ title: "项目创建成功", icon: "success" });
-      setTimeout(() => wx.reLaunch({ url: "/pages/index/index" }), 1200);
+      setTimeout(() => this.goToProjectList(), 900);
     } catch (error) {
       wx.hideLoading();
-      wx.showToast({ title: error.message || "创建项目失败", icon: "none" });
+      if (createdProjectId) {
+        wx.removeStorageSync(DRAFT_KEY);
+        wx.showModal({
+          title: "项目已创建",
+          content: "凭证处理未完成，可进入项目详情重新上传。",
+          showCancel: false,
+          confirmText: "知道了",
+          complete: () => this.goToProjectList(),
+        });
+      } else {
+        wx.showToast({ title: error.message || "创建项目失败", icon: "none" });
+      }
     } finally {
       this.setData({ submitting: false });
     }
