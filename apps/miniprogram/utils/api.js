@@ -103,6 +103,10 @@ function getProject(id) {
   return callFunction("projectService", "get", { id });
 }
 
+function getServerDate() {
+  return callFunction("projectService", "getServerDate", {});
+}
+
 function quickRecord(data) {
   return callFunction("projectService", "quickRecord", data);
 }
@@ -127,6 +131,7 @@ module.exports = {
   createProject,
   getProject,
   getGlobalConfig,
+  getServerDate,
   getToken,
   getUserInfo,
   getVouchers,

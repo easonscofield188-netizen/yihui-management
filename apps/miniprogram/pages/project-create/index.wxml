@@ -39,17 +39,6 @@
       <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
     </view>
 
-    <view class="form-card">
-      <view class="card-title">项目说明</view>
-      <textarea
-        class="description-input"
-        value="{{form.desc}}"
-        placeholder="请输入项目说明"
-        maxlength="500"
-        data-field="desc"
-        bindinput="onTextInput"
-      ></textarea>
-    </view>
   </scroll-view>
 
   <t-picker t-class-confirm="picker-confirm" visible="{{pickerVisible}}" value="{{pickerValue}}" title="{{pickerTitle}}" bindconfirm="onPickerConfirm" bindcancel="closePicker" bindclose="closePicker"><t-picker-item options="{{pickerOptions}}" /></t-picker>

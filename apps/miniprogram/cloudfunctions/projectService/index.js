@@ -20,6 +20,10 @@ const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGE
 const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
 const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
 
+function getServerDateOnly() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 exports.main = async (event, context) => {
   let action, data;
   
@@ -39,6 +43,8 @@ exports.main = async (event, context) => {
       return { code: 403, message: '当前账号无项目访问权限' };
     }
     switch (action) {
+      case 'getServerDate':
+        return { code: 0, message: '查询成功', data: { date: getServerDateOnly() } };
       case 'create':
       case 'createProject':
         if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();

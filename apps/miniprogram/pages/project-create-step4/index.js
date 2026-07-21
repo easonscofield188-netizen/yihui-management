@@ -263,6 +263,7 @@ Page({
     this.setData({ submitting: true });
     const isEditMode = draft._mode === "edit" && Boolean(draft._projectId);
     const isClosedEdit = isEditMode && draft._originalStatus === "closed";
+    const deliveryDate = String(draft.startDate).slice(0, 10);
     const hasVoucher = isEditMode
       ? (this.data.files.length > 0 || draft.invoiceEnabled === true)
       : (this.data.invoiceEnabled && this.data.files.length > 0);
@@ -273,7 +274,7 @@ Page({
       const commonData = {
         name: draft.name.trim(),
         receivedAmount: Number(draft.receivedAmount) || 0,
-        desc: String(draft.desc || "").trim() || `${draft.name.trim()}项目`,
+        desc: isEditMode ? (String(draft.desc || "").trim() || "无") : "无",
         costs: draft.costs,
         status: draft.status || "completed",
         isHasVoucher: hasVoucher ? "是" : "否",
@@ -298,8 +299,8 @@ Page({
         const result = await api.createProject({
           ...commonData,
           type: "normal",
-          startDate: draft.startDate,
-          period: [draft.startDate, draft.startDate],
+          startDate: deliveryDate,
+          period: [deliveryDate, deliveryDate],
           scene: draft.scene || "",
           client: draft.client.trim(),
           clientId: draft.clientId || "",

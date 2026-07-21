@@ -4,6 +4,7 @@
   </view>
   <view class="nav-title">项目详情</view>
 </view>
+<view class="detail-nav-placeholder" style="height: {{navHeight}}px;"></view>
 
 <view class="detail-page" wx:if="{{project}}">
   <view class="project-heading">

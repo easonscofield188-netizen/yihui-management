@@ -27,6 +27,18 @@ function getToday() {
   return `${year}-${month}-${day}`;
 }
 
+function normalizeDateOnly(value) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const matched = String(raw || "").match(/^\d{4}-\d{2}-\d{2}/);
+  if (matched) return matched[0];
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function preferredValue(options, currentValue) {
   if (currentValue && options.some((item) => item.value === currentValue)) return currentValue;
   return options[0] ? options[0].value : "";
@@ -42,6 +54,7 @@ Page({
     isClosedEdit: false,
     isDateLocked: false,
     today: getToday(),
+    serverToday: "",
     projectScenes: FALLBACK_SCENES,
     clientRoles: FALLBACK_ROLES,
     clientSources: FALLBACK_SOURCES,
@@ -80,7 +93,7 @@ Page({
       role: FALLBACK_ROLES[0].value,
       source: FALLBACK_SOURCES[0].value,
       createClient: false,
-      desc: "",
+      desc: "无",
     },
   },
 
@@ -88,16 +101,33 @@ Page({
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const savedDraft = wx.getStorageSync(DRAFT_KEY) || {};
     const isEditMode = savedDraft._mode === "edit";
+    const form = {
+      ...this.data.form,
+      ...savedDraft,
+      desc: isEditMode ? (savedDraft.desc || "无") : "无",
+    };
     this.setData({
       ...getNavMetrics(),
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
       isClosedEdit: isEditMode && (savedDraft._originalStatus || savedDraft.status) === "closed",
       isDateLocked: isEditMode,
-      form: { ...this.data.form, ...savedDraft },
+      form,
     });
+    this.loadServerDate();
     this.loadOptions();
     this.loadClients();
+  },
+
+  async loadServerDate() {
+    try {
+      const result = await api.getServerDate();
+      const serverToday = normalizeDateOnly(result && result.date);
+      if (serverToday) this.setData({ serverToday, today: serverToday });
+      return serverToday;
+    } catch (error) {
+      return this.data.today || getToday();
+    }
   },
 
   async loadOptions() {
@@ -241,12 +271,17 @@ Page({
     this.closePicker();
   },
 
-  openDatePicker() {
+  async openDatePicker() {
     if (this.data.isDateLocked) {
       wx.showToast({ title: "编辑时不可修改交付日期", icon: "none" });
       return;
     }
-    this.setData({ datePickerVisible: true });
+    const serverToday = this.data.serverToday || await this.loadServerDate() || getToday();
+    this.setData({
+      today: serverToday,
+      "form.startDate": normalizeDateOnly(this.data.form.startDate) || serverToday,
+      datePickerVisible: true,
+    });
   },
 
   closeDatePicker() {
@@ -254,7 +289,10 @@ Page({
   },
 
   onDateConfirm(event) {
-    this.setData({ "form.startDate": event.detail.value, datePickerVisible: false });
+    this.setData({
+      "form.startDate": normalizeDateOnly(event.detail.value),
+      datePickerVisible: false,
+    });
   },
 
   onCreateClientChange(event) {
