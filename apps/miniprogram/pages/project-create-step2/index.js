@@ -28,6 +28,9 @@ Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
+    pageTitle: "新建项目",
+    isEditMode: false,
+    isClosedEdit: false,
     form: {
       amount: "",
       receivedAmount: "",
@@ -43,8 +46,12 @@ Page({
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
+    const isEditMode = draft._mode === "edit";
     this.setData({
       ...getNavMetrics(),
+      pageTitle: isEditMode ? "编辑项目" : "新建项目",
+      isEditMode,
+      isClosedEdit: isEditMode && (draft._originalStatus || draft.status) === "closed",
       form: {
         amount: draft.amount === undefined ? "" : String(draft.amount),
         receivedAmount: draft.receivedAmount === undefined ? "" : String(draft.receivedAmount),
@@ -55,16 +62,19 @@ Page({
 
   onMoneyChange(event) {
     const field = event.currentTarget.dataset.field;
+    if (this.data.isClosedEdit && field === "amount") return;
     this.setData({ [`form.${field}`]: cleanMoney(event.detail.value) });
   },
 
   onStaffChange(event) {
+    if (this.data.isClosedEdit) return;
     const raw = String(event.detail.value || "").replace(/\D/g, "");
     const staffCount = Math.min(99, Math.max(1, Number(raw) || 1));
     this.setData({ "form.staffCount": staffCount });
   },
 
   setStaffCount(delta) {
+    if (this.data.isClosedEdit) return;
     const staffCount = Math.min(99, Math.max(1, Number(this.data.form.staffCount) + delta));
     this.setData({ "form.staffCount": staffCount });
   },
@@ -78,6 +88,7 @@ Page({
   },
 
   selectQuickTeam(event) {
+    if (this.data.isClosedEdit) return;
     const staffCount = Number(event.currentTarget.dataset.value) || 1;
     this.setData({ "form.staffCount": staffCount });
   },

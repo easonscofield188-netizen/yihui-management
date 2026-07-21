@@ -1,7 +1,7 @@
 <view class="step2-page">
   <view class="step2-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#242c3a" /></view>
-    <view class="nav-title">新建项目</view>
+    <view class="nav-title">{{pageTitle}}</view>
   </view>
 
   <scroll-view class="step2-scroll" scroll-y show-scrollbar="{{false}}">
@@ -16,7 +16,7 @@
       <view class="card-label">订单金额</view>
       <view class="amount-row">
         <text class="currency amount-currency">¥</text>
-        <t-input t-class="amount-input" borderless type="digit" value="{{form.amount}}" placeholder="0.00" placeholder-style="color: #d8dce4" data-field="amount" bindchange="onMoneyChange" />
+        <t-input t-class="amount-input" borderless disabled="{{isClosedEdit}}" type="digit" value="{{form.amount}}" placeholder="0.00" placeholder-style="color: #d8dce4" data-field="amount" bindchange="onMoneyChange" />
       </view>
       <view class="recommend-row"><text>根据项目规模推荐的基础配置</text><t-icon name="info-circle" size="34rpx" color="#002045" bindtap="showRecommendation" /></view>
     </view>
@@ -29,7 +29,7 @@
       </view>
     </view>
 
-    <view class="staff-card">
+    <view class="staff-card {{isClosedEdit ? 'field-disabled' : ''}}">
       <view class="staff-head">
         <view><view class="card-label">人员总数</view><view class="staff-subtitle">人员分配</view></view>
         <view class="staff-icon"><t-icon name="member" size="48rpx" color="#002045" /></view>
@@ -41,7 +41,7 @@
       </view>
     </view>
 
-    <view class="quick-team-row"><t-button wx:for="{{quickTeams}}" wx:key="value" t-class="quick-team" theme="default" variant="base" content="{{item.label}}" data-value="{{item.value}}" bindtap="selectQuickTeam" /></view>
+    <view class="quick-team-row"><t-button wx:for="{{quickTeams}}" wx:key="value" t-class="quick-team" theme="default" variant="base" disabled="{{isClosedEdit}}" content="{{item.label}}" data-value="{{item.value}}" bindtap="selectQuickTeam" /></view>
   </scroll-view>
 
   <view class="wizard-footer">

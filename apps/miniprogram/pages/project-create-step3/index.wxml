@@ -1,7 +1,7 @@
 <view class="step3-page">
   <view class="step3-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#002045" /></view>
-    <view class="nav-title">新建项目</view>
+    <view class="nav-title">{{pageTitle}}</view>
   </view>
 
   <scroll-view class="step3-scroll" scroll-y show-scrollbar="{{false}}">

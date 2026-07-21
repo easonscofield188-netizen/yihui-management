@@ -48,6 +48,7 @@ function toUploadFile(file) {
     name: file.name || `凭证.${fileExtension(tempFilePath)}`,
     size: Number(file.size) || 0,
     isImage: isImageFile(file),
+    isExisting: false,
   };
 }
 
@@ -55,6 +56,10 @@ Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
+    pageTitle: "新建项目",
+    submitText: "提交",
+    isEditMode: false,
+    projectId: "",
     invoiceEnabled: true,
     files: [],
     submitting: false,
@@ -63,14 +68,59 @@ Page({
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
+    const isEditMode = draft._mode === "edit" && Boolean(draft._projectId);
     this.setData({
       ...getNavMetrics(),
+      pageTitle: isEditMode ? "编辑项目" : "新建项目",
+      submitText: isEditMode ? "保存" : "提交",
+      isEditMode,
+      projectId: isEditMode ? draft._projectId : "",
       invoiceEnabled: draft.invoiceEnabled !== false,
     });
+    if (isEditMode) this.loadExistingVouchers(draft._projectId);
   },
 
   onInvoiceChange(event) {
+    if (this.data.isEditMode && !event.detail.value) {
+      wx.showToast({ title: "编辑时请在项目详情管理凭证", icon: "none" });
+      this.setData({ invoiceEnabled: true });
+      return;
+    }
     this.setData({ invoiceEnabled: event.detail.value });
+  },
+
+  async loadExistingVouchers(projectId) {
+    try {
+      const vouchers = await api.getVouchers(projectId);
+      const list = Array.isArray(vouchers) ? vouchers : [];
+      const fileIds = list.map((item) => item.fileId).filter(Boolean);
+      const urlMap = {};
+      if (fileIds.length) {
+        const result = await wx.cloud.getTempFileURL({ fileList: fileIds });
+        (result.fileList || []).forEach((item) => {
+          urlMap[item.fileID] = item.tempFileURL;
+        });
+      }
+      const files = list.map((item) => {
+        const path = urlMap[item.fileId] || item.fileUrl || "";
+        const name = item.fileName || "已有凭证";
+        return {
+          id: item._id || item.id || item.fileId,
+          fileId: item.fileId,
+          tempFilePath: path,
+          name,
+          size: Number(item.fileSize) || 0,
+          isImage: !/\.pdf$/i.test(name) && item.mimeType !== "application/pdf",
+          isExisting: true,
+        };
+      });
+      this.setData({
+        files,
+        invoiceEnabled: files.length > 0 || this.data.invoiceEnabled,
+      });
+    } catch (error) {
+      wx.showToast({ title: "已有凭证加载失败", icon: "none" });
+    }
   },
 
   chooseFile() {
@@ -117,6 +167,11 @@ Page({
 
   removeFile(event) {
     const id = event.currentTarget.dataset.id;
+    const target = this.data.files.find((item) => item.id === id);
+    if (target && target.isExisting) {
+      wx.showToast({ title: "已有凭证请在项目详情中管理", icon: "none" });
+      return;
+    }
     this.setData({ files: this.data.files.filter((item) => item.id !== id) });
   },
 
@@ -175,14 +230,26 @@ Page({
   },
 
   async uploadVouchers(projectId) {
+    const pendingFiles = this.data.files.filter((file) => !file.isExisting);
     const results = await Promise.all(
-      this.data.files.map((file) => this.uploadVoucher(projectId, file))
+      pendingFiles.map((file) => this.uploadVoucher(projectId, file))
     );
     return results.filter((item) => !item.success);
   },
 
-  goToProjectList() {
+  goToResultPage(projectId, isEditMode) {
     wx.removeStorageSync(DRAFT_KEY);
+    if (isEditMode) {
+      const pages = getCurrentPages();
+      const detailIndex = pages.findIndex((page) => page.route === "pages/project-detail/index");
+      const delta = detailIndex >= 0 ? pages.length - 1 - detailIndex : 0;
+      if (delta > 0) {
+        wx.navigateBack({ delta });
+        return;
+      }
+      wx.reLaunch({ url: `/pages/project-detail/index?id=${projectId}` });
+      return;
+    }
     wx.reLaunch({ url: "/pages/index/index" });
   },
 
@@ -194,63 +261,96 @@ Page({
       return;
     }
     this.setData({ submitting: true });
-    wx.showLoading({ title: "正在创建项目", mask: true });
-    let createdProjectId = "";
+    const isEditMode = draft._mode === "edit" && Boolean(draft._projectId);
+    const isClosedEdit = isEditMode && draft._originalStatus === "closed";
+    const hasVoucher = isEditMode
+      ? (this.data.files.length > 0 || draft.invoiceEnabled === true)
+      : (this.data.invoiceEnabled && this.data.files.length > 0);
+    wx.showLoading({ title: isEditMode ? "正在保存修改" : "正在创建项目", mask: true });
+    let projectId = isEditMode ? draft._projectId : "";
+    let projectSaved = false;
     try {
-      const result = await api.createProject({
+      const commonData = {
         name: draft.name.trim(),
-        type: "normal",
-        startDate: draft.startDate,
-        period: [draft.startDate, draft.startDate],
-        client: draft.client.trim(),
-        clientId: draft.clientId || "",
-        role: draft.role,
-        clientSource: draft.source || "",
-        staffCount: Number(draft.staffCount) || 1,
-        amount: Number(draft.amount),
         receivedAmount: Number(draft.receivedAmount) || 0,
-        desc: `${draft.name.trim()}项目`,
+        desc: String(draft.desc || "").trim() || `${draft.name.trim()}项目`,
         costs: draft.costs,
         status: draft.status || "completed",
-        isHistorical: false,
-        isHasVoucher: this.data.invoiceEnabled && this.data.files.length ? "是" : "否",
-      });
-      createdProjectId = result.id;
+        isHasVoucher: hasVoucher ? "是" : "否",
+      };
+
+      if (isEditMode) {
+        const editableData = isClosedEdit ? {} : {
+          scene: draft.scene || "",
+          client: draft.client.trim(),
+          clientId: draft.clientId || "",
+          role: draft.role,
+          clientSource: draft.source || "",
+          staffCount: Number(draft.staffCount) || 1,
+          amount: Number(draft.amount),
+        };
+        await api.updateProject({
+          id: projectId,
+          ...commonData,
+          ...editableData,
+        });
+      } else {
+        const result = await api.createProject({
+          ...commonData,
+          type: "normal",
+          startDate: draft.startDate,
+          period: [draft.startDate, draft.startDate],
+          scene: draft.scene || "",
+          client: draft.client.trim(),
+          clientId: draft.clientId || "",
+          role: draft.role,
+          clientSource: draft.source || "",
+          staffCount: Number(draft.staffCount) || 1,
+          amount: Number(draft.amount),
+          isHistorical: false,
+        });
+        projectId = result.id;
+      }
+      projectSaved = true;
+
       let failedVouchers = [];
-      if (this.data.invoiceEnabled && this.data.files.length) {
+      if (this.data.invoiceEnabled && this.data.files.some((file) => !file.isExisting)) {
         wx.showLoading({ title: "正在上传凭证", mask: true });
-        failedVouchers = await this.uploadVouchers(createdProjectId);
+        failedVouchers = await this.uploadVouchers(projectId);
       }
       wx.hideLoading();
       wx.removeStorageSync(DRAFT_KEY);
       if (failedVouchers.length) {
         await new Promise((resolve) => {
           wx.showModal({
-            title: "项目已创建",
+            title: isEditMode ? "修改已保存" : "项目已创建",
             content: `${failedVouchers.length} 个凭证上传失败，可进入项目详情重新上传。`,
             showCancel: false,
             confirmText: "知道了",
             complete: resolve,
           });
         });
-        this.goToProjectList();
+        this.goToResultPage(projectId, isEditMode);
         return;
       }
-      wx.showToast({ title: "项目创建成功", icon: "success" });
-      setTimeout(() => this.goToProjectList(), 900);
+      wx.showToast({ title: isEditMode ? "修改保存成功" : "项目创建成功", icon: "success" });
+      setTimeout(() => this.goToResultPage(projectId, isEditMode), 900);
     } catch (error) {
       wx.hideLoading();
-      if (createdProjectId) {
+      if (projectSaved) {
         wx.removeStorageSync(DRAFT_KEY);
         wx.showModal({
-          title: "项目已创建",
+          title: isEditMode ? "修改已保存" : "项目已创建",
           content: "凭证处理未完成，可进入项目详情重新上传。",
           showCancel: false,
           confirmText: "知道了",
-          complete: () => this.goToProjectList(),
+          complete: () => this.goToResultPage(projectId, isEditMode),
         });
       } else {
-        wx.showToast({ title: error.message || "创建项目失败", icon: "none" });
+        wx.showToast({
+          title: error.message || (isEditMode ? "保存修改失败" : "创建项目失败"),
+          icon: "none",
+        });
       }
     } finally {
       this.setData({ submitting: false });

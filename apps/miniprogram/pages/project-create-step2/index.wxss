@@ -30,6 +30,7 @@ page { background: #f9f9ff; }
 .staff-value { display: flex; min-width: 0; height: 100rpx; flex: 1; align-items: center; justify-content: center; color: #002045; font-size: 54rpx; font-weight: 700; }
 .quick-team-row { display: flex; justify-content: space-between; gap: 14rpx; padding: 8rpx 0 30rpx; }
 .quick-team { min-width: 0; flex: 1; height: 72rpx !important; margin: 0 !important; padding: 0 12rpx !important; border: 0 !important; border-radius: 40rpx !important; background: #e7eeff !important; color: #43474e !important; font-size: 23rpx !important; }
+.field-disabled { opacity: .58; }
 .wizard-footer { position: relative; z-index: 8; display: flex; box-sizing: border-box; width: 100%; height: calc(142rpx + env(safe-area-inset-bottom)); padding: 18rpx 30rpx calc(18rpx + env(safe-area-inset-bottom)); flex: none; align-items: center; justify-content: space-between; border-top: 2rpx solid #f0f3ff; background: rgba(249, 249, 255, .98); }
 .footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }
 .disabled-button { color: #989fa6; }

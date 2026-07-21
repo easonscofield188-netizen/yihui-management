@@ -44,6 +44,8 @@ Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
+    pageTitle: "新建项目",
+    isEditMode: false,
     windowHeight: 667,
     keyboardHeight: 0,
     costScrollTarget: "",
@@ -62,9 +64,12 @@ Page({
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const systemInfo = wx.getSystemInfoSync();
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
+    const isEditMode = draft._mode === "edit";
     const costs = normalizeCosts(draft.costs);
     this.setData({
       ...getNavMetrics(),
+      pageTitle: isEditMode ? "编辑项目" : "新建项目",
+      isEditMode,
       windowHeight: systemInfo.windowHeight || systemInfo.screenHeight || 667,
       costs,
     }, () => this.updateSummary());

@@ -121,6 +121,10 @@ function createProject(data) {
   return callFunction("projectService", "create", data);
 }
 
+function updateProject(data) {
+  return callFunction("projectService", "update", data);
+}
+
 function createClient(data) {
   return callFunction("clientsService", "createClient", data);
 }
@@ -161,4 +165,5 @@ module.exports = {
   logout,
   quickRecord,
   queryClients,
+  updateProject,
 };

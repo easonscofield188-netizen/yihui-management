@@ -1,84 +1,112 @@
-<view class="page detail-page" wx:if="{{project}}">
-  <view class="project-summary card">
-    <view class="summary-head">
-      <view>
-        <view class="project-name">{{project.name}}</view>
-        <view class="client muted">{{project.client || '未填写客户'}}</view>
-      </view>
-      <view class="status">{{project.statusLabel}}</view>
-    </view>
-    <view class="amount-main">
-      <view class="amount-label">订单金额</view>
-      <view class="amount-value">¥{{project.amountText}}</view>
-    </view>
-    <view class="financial-grid">
-      <view>
-        <view class="financial-label">已收</view>
-        <view class="financial-value positive">¥{{project.receivedText}}</view>
-      </view>
-      <view>
-        <view class="financial-label">待收</view>
-        <view class="financial-value warning">¥{{project.unreceivedText}}</view>
-      </view>
-      <view>
-        <view class="financial-label">总成本</view>
-        <view class="financial-value">¥{{project.payableText}}</view>
-      </view>
-      <view>
-        <view class="financial-label">已付成本</view>
-        <view class="financial-value">¥{{project.paidText}}</view>
-      </view>
+<view class="detail-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+  <view class="nav-back" bindtap="goBack">
+    <t-icon name="chevron-left" size="48rpx" color="#002045" />
+  </view>
+  <view class="nav-title">项目详情</view>
+</view>
+
+<view class="detail-page" wx:if="{{project}}">
+  <view class="project-heading">
+    <view class="project-name">{{project.name}}</view>
+    <view class="status status-{{project.status}}">
+      <view class="status-dot"></view>
+      <text>{{project.statusLabel}}</text>
     </view>
   </view>
 
-  <view class="actions" wx:if="{{canWrite}}">
-    <button class="action-button receipt-button" bindtap="openReceipt">+ 登记收款</button>
-    <button class="action-button cost-button" bindtap="openCost">+ 登记支出</button>
+  <view class="finance-card">
+    <view class="finance-glow finance-glow-top"></view>
+    <view class="finance-glow finance-glow-bottom"></view>
+    <view class="finance-label">订单总金额</view>
+    <view class="order-amount">¥{{project.amountText}}</view>
+
+    <view class="finance-columns">
+      <view class="finance-column">
+        <view class="finance-sub-label"><t-icon name="wallet" size="26rpx" color="rgba(255,255,255,.7)" />已收金额</view>
+        <view class="finance-sub-value">¥{{project.receivedText}}</view>
+      </view>
+      <view class="finance-column pending-column">
+        <view class="finance-sub-label"><t-icon name="time" size="26rpx" color="#ffd166" />待收金额</view>
+        <view class="finance-sub-value">¥{{project.unreceivedText}}</view>
+      </view>
+    </view>
+
+    <view class="profit-panel">
+      <view>
+        <view class="profit-label">项目利润</view>
+        <view class="profit-value {{project.profitPositive ? '' : 'profit-negative'}}">¥{{project.profitText}}</view>
+      </view>
+      <view class="profit-icon"><t-icon name="chart-line" size="38rpx" color="#55e391" /></view>
+    </view>
   </view>
 
-  <view class="section card">
-    <view class="section-head">
-      <view class="section-title">成本明细</view>
-      <view class="muted">{{project.costs.length || 0}} 笔</view>
+  <view class="detail-card customer-card">
+    <view class="card-header">
+      <view class="card-heading">
+        <view class="heading-icon customer-icon"><t-icon name="user" size="34rpx" color="#002045" /></view>
+        <view class="card-title">基础信息</view>
+      </view>
     </view>
-    <view class="cost-row" wx:for="{{project.costs}}" wx:key="id">
-      <view>
-        <view class="cost-category">{{item.category || '其他'}}</view>
-        <view class="cost-supplier muted">{{item.supplier || '无供应商'}}</view>
+    <view class="info-list">
+      <view class="info-row"><text>客户名称</text><text class="info-value strong">{{project.client || '未填写'}}</text></view>
+      <view class="info-row"><text>角色</text><text class="role-badge">{{project.roleText}}</text></view>
+      <view class="info-row"><text>来源</text><text class="info-value">{{project.sourceText}}</text></view>
+      <view class="info-row"><text>项目场景</text><text class="info-value">{{project.sceneText}}</text></view>
+      <view class="info-row"><text>人员数量</text><text class="info-value">{{project.staffCountText}} 人</text></view>
+      <view class="info-row"><text>交付时间</text><text class="info-value">{{project.deliveryDateText}}</text></view>
+    </view>
+  </view>
+
+  <view class="detail-card cost-card">
+    <view class="card-header">
+      <view class="card-heading">
+        <view class="heading-icon cost-icon"><t-icon name="bill" size="36rpx" color="#002045" /></view>
+        <view class="card-title">成本支出</view>
+      </view>
+      <view class="cost-total">
+        <view>总预计成本</view>
+        <text>¥{{project.payableText}}</text>
+      </view>
+    </view>
+    <view class="cost-item" wx:for="{{project.costs}}" wx:key="id">
+      <view class="cost-symbol"><t-icon name="vehicle" size="34rpx" color="#002045" /></view>
+      <view class="cost-info">
+        <view class="cost-name">{{item.displayName}}</view>
+        <view class="cost-category">{{item.subText}}</view>
       </view>
       <view class="cost-right">
-        <view class="cost-amount">¥{{item.amount}}</view>
-        <view class="settled {{item.isSettled === true || item.isSettled === '是' ? 'yes' : ''}}">
-          {{item.isSettled === true || item.isSettled === '是' ? '已支付' : '未支付'}}
+        <view class="cost-amount">¥{{item.amountText}}</view>
+        <view class="settled {{item.settled ? 'yes' : ''}}">
+          {{item.settled ? '已支付' : '待支付'}}
         </view>
       </view>
     </view>
-    <view class="empty-row muted" wx:if="{{!project.costs || project.costs.length === 0}}">暂无成本记录</view>
+    <view class="empty-row" wx:if="{{!project.costs.length}}">暂无成本记录</view>
   </view>
 
-  <view class="section card">
-    <view class="section-head">
-      <view class="section-title">项目凭证</view>
-      <button class="upload-button" wx:if="{{canWrite}}" loading="{{uploading}}" bindtap="chooseVoucher">拍照上传</button>
+  <view class="detail-card voucher-card">
+    <view class="card-header">
+      <view class="card-heading">
+        <view class="heading-icon voucher-icon"><t-icon name="bill" size="36rpx" color="#8e43c7" /></view>
+        <view class="card-title">项目凭证</view>
+      </view>
     </view>
-    <view class="voucher-grid" wx:if="{{vouchers.length}}">
-      <image
-        class="voucher"
-        wx:for="{{vouchers}}"
-        wx:key="_id"
-        src="{{item.displayUrl || item.fileUrl}}"
-        mode="aspectFill"
-        data-url="{{item.displayUrl || item.fileUrl}}"
-        bindtap="previewVoucher"
-      />
+    <view class="voucher-grid">
+      <view class="voucher-item" wx:for="{{vouchers}}" wx:key="_id">
+        <image
+          wx:if="{{item.isImage !== false}}"
+          class="voucher-image"
+          src="{{item.displayUrl || item.fileUrl}}"
+          mode="aspectFill"
+          data-url="{{item.displayUrl || item.fileUrl}}"
+          bindtap="previewVoucher"
+        />
+        <view wx:else class="pdf-voucher">PDF</view>
+      </view>
     </view>
-    <view class="empty-row muted" wx:else>暂无凭证</view>
+    <view class="empty-row" wx:if="{{!vouchers.length}}">暂无凭证</view>
   </view>
 
-  <view class="section card">
-    <view class="section-title">项目说明</view>
-    <view class="description">{{project.desc || '暂无说明'}}</view>
-  </view>
 </view>
 
 <view class="page loading-page muted" wx:if="{{loading && !project}}">正在加载项目…</view>

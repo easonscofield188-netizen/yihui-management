@@ -37,6 +37,10 @@ Page({
     statusBarHeight: 0,
     navHeight: 88,
     menuRightInset: 16,
+    pageTitle: "新建项目",
+    isEditMode: false,
+    isClosedEdit: false,
+    isDateLocked: false,
     today: getToday(),
     projectScenes: FALLBACK_SCENES,
     clientRoles: FALLBACK_ROLES,
@@ -76,13 +80,22 @@ Page({
       role: FALLBACK_ROLES[0].value,
       source: FALLBACK_SOURCES[0].value,
       createClient: false,
+      desc: "",
     },
   },
 
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const savedDraft = wx.getStorageSync(DRAFT_KEY) || {};
-    this.setData({ ...getNavMetrics(), form: { ...this.data.form, ...savedDraft } });
+    const isEditMode = savedDraft._mode === "edit";
+    this.setData({
+      ...getNavMetrics(),
+      pageTitle: isEditMode ? "编辑项目" : "新建项目",
+      isEditMode,
+      isClosedEdit: isEditMode && (savedDraft._originalStatus || savedDraft.status) === "closed",
+      isDateLocked: isEditMode,
+      form: { ...this.data.form, ...savedDraft },
+    });
     this.loadOptions();
     this.loadClients();
   },
@@ -132,6 +145,7 @@ Page({
   },
 
   onClientInput(event) {
+    if (this.data.isClosedEdit) return;
     const value = event.detail.value;
     this.setData({ "form.client": value, "form.clientId": "", showClientList: !this.data.form.createClient });
     clearTimeout(this.clientSearchTimer);
@@ -139,7 +153,7 @@ Page({
   },
 
   showClientSuggestions() {
-    if (!this.data.form.createClient) {
+    if (!this.data.isClosedEdit && !this.data.form.createClient) {
       this.setData({ showClientList: true });
     }
   },
@@ -165,6 +179,7 @@ Page({
   },
 
   selectClient(event) {
+    if (this.data.isClosedEdit) return;
     clearTimeout(this.clientBlurTimer);
     this.clientListInteracting = false;
     const client = event.currentTarget.dataset.client;
@@ -193,6 +208,7 @@ Page({
 
   openPicker(event) {
     const field = event.currentTarget.dataset.field;
+    if (this.data.isClosedEdit && ["scene", "role", "source"].includes(field)) return;
     const config = {
       scene: { title: "项目场景", options: this.data.projectScenes, value: this.data.form.scene },
       role: { title: "客户角色", options: this.data.clientRoles, value: this.data.form.role },
@@ -226,6 +242,10 @@ Page({
   },
 
   openDatePicker() {
+    if (this.data.isDateLocked) {
+      wx.showToast({ title: "编辑时不可修改交付日期", icon: "none" });
+      return;
+    }
     this.setData({ datePickerVisible: true });
   },
 
@@ -238,6 +258,7 @@ Page({
   },
 
   onCreateClientChange(event) {
+    if (this.data.isClosedEdit) return;
     const createClient = event.detail.value;
     this.setData({ "form.createClient": createClient, showClientList: false, newClientVisible: createClient });
   },

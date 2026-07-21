@@ -11,6 +11,7 @@ Component({
       wx.switchTab({ url: path });
     },
     createProject() {
+      wx.removeStorageSync("projectCreateDraft");
       wx.navigateTo({ url: "/pages/project-create/index" });
     },
   },

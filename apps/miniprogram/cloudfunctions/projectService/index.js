@@ -268,7 +268,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, type, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, clientSource, subProjects } = params;
+  const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -299,7 +299,7 @@ async function updateProject(params) {
     } else {
       // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
       const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
-      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
+      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && !['id', 'authToken'].includes(key));
       const illegalChanges = incomingFields.filter(field => {
         if (!lockedFields.includes(field)) return false;
         const newValue = params[field];
@@ -343,6 +343,7 @@ async function updateProject(params) {
         'desc',
         'costs',
         'vouchers',
+        'isHasVoucher',
         'receivedAmount',
         'status',
         'negotiatingTime',
@@ -351,7 +352,7 @@ async function updateProject(params) {
         'settlingTime',
         'settledTime'
       ];
-      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && key !== 'id');
+      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && !['id', 'authToken'].includes(key));
       
       // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
       const illegalChanges = incomingFields.filter(field => {
@@ -397,7 +398,9 @@ async function updateProject(params) {
     if (type) updateDataFinal.type = type;
     if (period) updateDataFinal.period = period;
     if (client) updateDataFinal.client = client;
+    if (clientId !== undefined) updateDataFinal.clientId = clientId;
     if (role) updateDataFinal.role = role;
+    if (scene !== undefined) updateDataFinal.scene = scene;
     if (staffCount !== undefined) updateDataFinal.staffCount = staffCount;
     if (amount !== undefined) updateDataFinal.amount = amount;
     if (receivedAmount !== undefined) {
@@ -448,6 +451,7 @@ async function updateProject(params) {
     
     if (isHasContract !== undefined) updateDataFinal.isHasContract = isHasContract;
     if (isHasPreview !== undefined) updateDataFinal.isHasPreview = isHasPreview;
+    if (isHasVoucher !== undefined) updateDataFinal.isHasVoucher = isHasVoucher;
 
     // 时间节点显式更新
     if (negotiatingTime) updateDataFinal.negotiatingTime = negotiatingTime;

@@ -1,7 +1,7 @@
 <view class="create-page">
   <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px; padding-right: {{menuRightInset}}px;">
     <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#002045" /></view>
-    <view class="nav-title">新建项目</view>
+    <view class="nav-title">{{pageTitle}}</view>
     <view class="step-count">步骤 1 / 4</view>
   </view>
 
@@ -21,22 +21,34 @@
       </view>
 
       <view class="field-label">项目场景</view>
-      <view class="input-shell select-shell" data-field="scene" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{projectScenes[sceneIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="scene" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{projectScenes[sceneIndex].label}}" suffix-icon="chevron-down" /></view>
 
       <view class="field-label">交付日期</view>
-      <view class="input-shell select-shell" bindtap="openDatePicker"><t-input t-class="form-input" borderless readonly value="{{form.startDate}}" placeholder="请选择交付日期" suffix-icon="calendar" /></view>
+      <view class="input-shell select-shell {{isDateLocked ? 'field-disabled' : ''}}" bindtap="openDatePicker"><t-input t-class="form-input" borderless readonly disabled="{{isDateLocked}}" value="{{form.startDate}}" placeholder="请选择交付日期" suffix-icon="calendar" /></view>
     </view>
 
     <view class="form-card client-card">
-      <view class="client-head"><view class="card-title">客户详情</view><view class="new-client"><text>新增客户</text><t-switch value="{{form.createClient}}" bindchange="onCreateClientChange" /></view></view>
+      <view class="client-head"><view class="card-title">客户详情</view><view class="new-client" wx:if="{{!isClosedEdit}}"><text>新增客户</text><t-switch value="{{form.createClient}}" bindchange="onCreateClientChange" /></view></view>
       <view class="field-label">客户名称</view>
-      <view id="client-search" class="input-shell client-shell"><t-input t-class="form-input" borderless prefix-icon="search" value="{{form.client}}" placeholder="点击选择或搜索客户..." adjust-position="{{true}}" cursor-spacing="180" bindchange="onClientInput" bindfocus="showClientSuggestions" bindblur="hideClientSuggestions" /></view>
+      <view id="client-search" class="input-shell client-shell {{isClosedEdit ? 'field-disabled' : ''}}"><t-input t-class="form-input" borderless disabled="{{isClosedEdit}}" prefix-icon="search" value="{{form.client}}" placeholder="点击选择或搜索客户..." adjust-position="{{true}}" cursor-spacing="180" bindchange="onClientInput" bindfocus="showClientSuggestions" bindblur="hideClientSuggestions" /></view>
       <scroll-view class="client-list" wx:if="{{showClientList && clients.length}}" style="height: {{clients.length > 3 ? 260 : clients.length * 82}}rpx;" scroll-y show-scrollbar="{{false}}" bindtouchstart="onClientListTouchStart" bindtouchend="onClientListTouchEnd" bindtouchcancel="onClientListTouchEnd"><view wx:for="{{clients}}" wx:key="_id" class="client-option" data-client="{{item}}" bindtap="selectClient">{{item.name}}</view></scroll-view>
 
       <view class="field-label">客户角色</view>
-      <view class="input-shell select-shell" data-field="role" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{clientRoles[roleIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="role" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{clientRoles[roleIndex].label}}" suffix-icon="chevron-down" /></view>
       <view class="field-label">来源渠道</view>
-      <view class="input-shell select-shell" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
+    </view>
+
+    <view class="form-card">
+      <view class="card-title">项目说明</view>
+      <textarea
+        class="description-input"
+        value="{{form.desc}}"
+        placeholder="请输入项目说明"
+        maxlength="500"
+        data-field="desc"
+        bindinput="onTextInput"
+      ></textarea>
     </view>
   </scroll-view>
 

@@ -23,3 +23,13 @@ page { background: #f9f9ff; }.step4-page { --td-brand-color: #1a365d; display: f
   height: 92rpx !important;
   box-shadow: 0 6rpx 14rpx rgba(26, 54, 93, 0.16);
 }
+.existing-badge {
+  position: absolute;
+  right: 8rpx;
+  bottom: 8rpx;
+  padding: 4rpx 10rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 32, 69, .78);
+  color: #fff;
+  font-size: 19rpx;
+}
