@@ -32,6 +32,13 @@ page { background: #f9f9ff; }
 .picker-confirm { color: #1a365d !important; font-weight: 600; }
 .new-client-popup { overflow: hidden; border-radius: 28rpx 28rpx 0 0; background: #f9f9ff; }
 .new-client-dialog { padding: 32rpx 34rpx calc(34rpx + env(safe-area-inset-bottom)); }
+.nested-popup-mask {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.38);
+}
 .new-client-title { display: flex; align-items: center; justify-content: space-between; color: #002045; font-size: 36rpx; font-weight: 700; }
 .popup-field-label { margin: 28rpx 0 14rpx; color: #242c3a; font-size: 26rpx; }
 .popup-input-shell { min-height: 84rpx; background: #f0f3ff; }

@@ -89,6 +89,10 @@
         </view>
       </scroll-view>
     </view>
+    <view
+      wx:if="{{categoryPickerVisible}}"
+      class="nested-popup-mask"
+    ></view>
   </t-popup>
   <t-picker visible="{{categoryPickerVisible}}" value="{{categoryPickerValue}}" title="选择成本类别" bindconfirm="onCategoryConfirm" bindcancel="closeCategoryPicker" bindclose="closeCategoryPicker"><t-picker-item options="{{costCategories}}" /></t-picker>
 </view>

@@ -54,6 +54,10 @@
       <view class="input-shell popup-input-shell select-shell" data-field="source" bindtap="openNewClientPicker"><t-input t-class="form-input" borderless readonly value="{{clientSources[newClientSourceIndex].label}}" suffix-icon="chevron-down" /></view>
       <t-button t-class="add-client-button" theme="primary" block content="确认添加" loading="{{creatingClient}}" disabled="{{creatingClient}}" bindtap="submitNewClient" />
     </view>
+    <view
+      wx:if="{{newClientPickerVisible}}"
+      class="nested-popup-mask"
+    ></view>
   </t-popup>
   <t-picker t-class-confirm="picker-confirm" visible="{{newClientPickerVisible}}" value="{{newClientPickerValue}}" title="{{newClientPickerTitle}}" bindconfirm="onNewClientPickerConfirm" bindcancel="closeNewClientPicker" bindclose="closeNewClientPicker"><t-picker-item options="{{newClientPickerOptions}}" /></t-picker>
 
