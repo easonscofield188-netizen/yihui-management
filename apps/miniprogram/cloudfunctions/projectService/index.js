@@ -811,20 +811,52 @@ async function listProjects(params) {
     keyword = '',
     status = ''
   } = params || {};
-  const usePagination = page !== undefined || pageSize !== undefined || keyword || status;
+  const allowedStatuses = new Set([
+    'negotiating',
+    'constructing',
+    'completed',
+    'settling',
+    'closed',
+    'in_cooperation',
+    'terminated'
+  ]);
+  const normalizedStatus = String(status || '').trim();
+  const normalizedKeyword = String(keyword || '').trim().slice(0, 50);
+  if (normalizedStatus && !allowedStatuses.has(normalizedStatus)) {
+    return { code: 400, message: '项目状态筛选值无效' };
+  }
+
+  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus;
   const currentPage = Math.max(1, Number(page) || 1);
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   try {
     let query = db.collection('projects');
-    const conditions = {};
-    if (status) conditions.status = status;
-    if (keyword) {
-      conditions.name = db.RegExp({
-        regexp: String(keyword).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    const _ = db.command;
+    const conditions = [];
+
+    if (normalizedStatus) {
+      conditions.push({ status: normalizedStatus });
+    }
+    if (normalizedKeyword) {
+      const regexp = db.RegExp({
+        regexp: normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
         options: 'i'
       });
+      conditions.push(_.or([
+        { name: regexp },
+        { client: regexp },
+        { projectCode: regexp },
+        { code: regexp },
+        { projectNo: regexp }
+      ]));
     }
-    if (Object.keys(conditions).length) query = query.where(conditions);
+
+    if (conditions.length === 1) {
+      query = query.where(conditions[0]);
+    } else if (conditions.length > 1) {
+      query = query.where(_.and(conditions));
+    }
+
     const countResult = usePagination ? await query.count() : null;
     let orderedQuery = query.orderBy('createTime', 'desc');
     if (usePagination) {

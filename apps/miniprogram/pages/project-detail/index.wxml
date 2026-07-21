@@ -109,7 +109,12 @@
 
 </view>
 
-<view class="page loading-page muted" wx:if="{{loading && !project}}">正在加载项目…</view>
+<view class="detail-loading-mask" wx:if="{{loading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+  <view class="detail-loading-content">
+    <t-loading size="44rpx" theme="circular" />
+    <text>正在加载项目详情...</text>
+  </view>
+</view>
 
 <view class="overlay" wx:if="{{formMode}}" bindtap="closeForm">
   <view

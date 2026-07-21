@@ -4,12 +4,18 @@
   </view>
   <view class="filter-panel">
     <view class="search-box">
-      <t-icon name="search" size="42rpx" color="#74777f" />
+      <t-icon name="search" size="42rpx" color="#74777f" bindclick="onSearch" />
       <input class="search-input" placeholder="搜索项目名称..." placeholder-class="search-placeholder" value="{{keyword}}" confirm-type="search" bindinput="onKeywordInput" bindconfirm="onSearch" />
       <t-icon wx:if="{{keyword}}" name="close-circle" size="34rpx" color="#989fa6" bindclick="clearKeyword" />
     </view>
     <view class="status-tabs">
       <view wx:for="{{statusOptions}}" wx:key="value" class="status-tab {{statusIndex === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onStatusTap">{{item.label}}</view>
+    </view>
+  </view>
+  <view class="query-loading-mask" wx:if="{{queryLoading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+    <view class="query-loading-content">
+      <t-loading size="44rpx" theme="circular" />
+      <text>{{loadingMessage}}</text>
     </view>
   </view>
   <view class="project-list">
@@ -25,6 +31,7 @@
         </view>
         <view class="project-name">{{item.name}}</view>
         <view class="client-row"><t-icon name="building-1" size="30rpx" color="#43474e" /><text>{{item.client || '未填写客户'}}</text></view>
+        <view class="delivery-row"><t-icon name="calendar" size="29rpx" color="#74777f" /><text>交付日期</text><text class="delivery-date">{{item.deliveryDateText}}</text></view>
         <view class="divider"></view>
         <view class="amount-main"><text>{{item.amountLabel}}</text><text class="amount-main-value">￥{{item.amountText}}</text></view>
         <view class="amount-grid">
@@ -36,6 +43,10 @@
             <view class="amount-label"><t-icon wx:if="{{!item.isClosed}}" name="arrow-up" size="28rpx" color="#43474e" /><text>项目成本</text></view>
             <text class="amount-value">￥{{item.costText}}</text>
           </view>
+          <view class="amount-cell profit">
+            <view class="amount-label"><t-icon name="chart-line" size="28rpx" color="{{item.profitPositive ? '#137047' : '#ba1a1a'}}" /><text>项目利润</text></view>
+            <text class="amount-value {{item.profitPositive ? 'profit-positive' : 'profit-negative'}}">￥{{item.profitText}}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -43,7 +54,7 @@
       <t-icon name="folder-open" size="80rpx" color="#989fa6" />
       <view class="empty-title">暂无匹配项目</view><view>可更换关键词或状态后重试</view>
     </view>
-    <view class="loading" wx:if="{{loading}}"><t-loading size="36rpx" theme="circular" /><text>加载更多...</text></view>
+    <view class="loading" wx:if="{{loading && !queryLoading}}"><t-loading size="36rpx" theme="circular" /><text>正在加载项目...</text></view>
     <view class="loading" wx:if="{{!loading && projects.length && !hasMore}}">没有更多项目了</view>
   </view>
 </view>

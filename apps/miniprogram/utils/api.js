@@ -1,6 +1,5 @@
 const TOKEN_KEY = "authToken";
 const USER_KEY = "userInfo";
-const PROJECT_SERVICE_HTTP_URL = "https://welfare-management-8dbfp80560715-1303226929.ap-shanghai.app.tcloudbase.com/projectService";
 
 function getToken() {
   return wx.getStorageSync(TOKEN_KEY) || "";
@@ -80,37 +79,8 @@ function logout() {
   return callFunction("loginService", "logout").finally(clearSession);
 }
 
-function listProjectsByHttp(params) {
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: PROJECT_SERVICE_HTTP_URL,
-      method: "POST",
-      header: {
-        "content-type": "application/json",
-        Authorization: `Bearer ${getToken()}`,
-      },
-      data: { action: "list", data: params },
-      success(response) {
-        const result = response.data || {};
-        if (result.code !== 0) {
-          reject(new Error(result.message || "项目查询失败"));
-          return;
-        }
-        resolve(normalizeProjectList(result.data));
-      },
-      fail(error) {
-        reject(error);
-      },
-    });
-  });
-}
-
 function listProjects(params) {
-  return callFunction("projectService", "list", params).then((result) => {
-    const normalized = normalizeProjectList(result);
-    if (normalized.list.length > 0) return normalized;
-    return listProjectsByHttp(params).catch(() => normalized);
-  });
+  return callFunction("projectService", "list", params).then(normalizeProjectList);
 }
 
 function queryClients(keyword = "") {

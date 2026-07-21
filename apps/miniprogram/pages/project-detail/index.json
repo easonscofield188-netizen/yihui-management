@@ -4,6 +4,7 @@
   "navigationBarTextStyle": "black",
   "navigationBarBackgroundColor": "#ffffff",
   "usingComponents": {
-    "t-icon": "tdesign-miniprogram/icon/icon"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-loading": "tdesign-miniprogram/loading/loading"
   }
 }

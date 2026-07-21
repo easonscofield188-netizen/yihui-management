@@ -16,8 +16,18 @@ function money(value, digits = 2) {
     : digits ? "0.00" : "0";
 }
 
+function dateText(value) {
+  if (!value) return "未设置";
+  const raw = value.$date || value;
+  const directDate = String(raw).match(/^\d{4}-\d{2}-\d{2}/);
+  if (directDate) return directDate[0];
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? "未设置" : date.toISOString().slice(0, 10);
+}
+
 function decorateProject(project) {
   const isClosed = project.status === "closed";
+  const profit = Number(project.amount || 0) - Number(project.payableAmount || 0);
   return {
     ...project,
     projectCode: project.projectCode || project.code || project.projectNo ||
@@ -28,6 +38,13 @@ function decorateProject(project) {
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount, 0),
     costText: money(project.payableAmount, 0),
+    profitText: money(profit, 0),
+    profitPositive: profit >= 0,
+    deliveryDateText: dateText(
+      project.startDate
+      || project.completionTime
+      || (project.period && project.period[1])
+    ),
   };
 }
 
@@ -35,6 +52,7 @@ Page({
   data: {
     projects: [], keyword: "", statusIndex: 0, statusOptions: STATUS_OPTIONS,
     page: 1, loading: false, hasMore: true, total: 0,
+    queryLoading: false, loadingMessage: "正在加载项目...",
     statusBarHeight: 0, navHeight: 88,
   },
   onLoad() {
@@ -66,33 +84,69 @@ Page({
   onReachBottom() {
     if (this.data.hasMore) this.loadProjects(false);
   },
+  onUnload() {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+  },
   onKeywordInput(event) {
-    this.setData({ keyword: event.detail.value });
+    const keyword = event.detail.value;
+    this.setData({ keyword });
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = null;
+      const message = keyword.trim()
+        ? `正在搜索“${keyword.trim()}”...`
+        : "正在加载全部项目...";
+      this.loadProjects(true, message);
+    }, 350);
   },
   onSearch() {
-    this.loadProjects(true);
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    if (typeof wx.hideKeyboard === "function") wx.hideKeyboard();
+    const keyword = this.data.keyword.trim();
+    this.loadProjects(true, keyword ? `正在搜索“${keyword}”...` : "正在加载全部项目...");
   },
   clearKeyword() {
-    this.setData({ keyword: "" }, () => this.loadProjects(true));
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    this.setData({ keyword: "" }, () => this.loadProjects(true, "正在加载全部项目..."));
   },
   onStatusTap(event) {
     const statusIndex = Number(event.currentTarget.dataset.index);
     if (statusIndex === this.data.statusIndex) return;
-    this.setData({ statusIndex }, () => this.loadProjects(true));
+    const statusLabel = this.data.statusOptions[statusIndex].label;
+    this.setData({ statusIndex }, () => {
+      this.loadProjects(true, `正在筛选“${statusLabel}”项目...`);
+    });
   },
   openProject(event) {
     wx.navigateTo({ url: `/pages/project-detail/index?id=${event.currentTarget.dataset.id}` });
   },
-  async loadProjects(reset) {
-    if (this.data.loading) return;
+  stopPropagation() {},
+  async loadProjects(reset, loadingMessage = "") {
+    if (!reset && this.data.loading) return;
+    const requestId = (this.projectRequestId || 0) + 1;
+    this.projectRequestId = requestId;
     const page = reset ? 1 : this.data.page;
-    this.setData({ loading: true });
+    this.setData({
+      loading: true,
+      queryLoading: Boolean(loadingMessage),
+      loadingMessage: loadingMessage || "正在加载项目...",
+    });
     try {
       const status = this.data.statusOptions[this.data.statusIndex].value;
       const result = await api.listProjects({
-        page, pageSize: 20, keyword: this.data.keyword.trim(), status,
+        page,
+        pageSize: 20,
+        keyword: this.data.keyword.trim(),
+        status,
       });
       const incoming = (result.list || []).map(decorateProject);
+      if (requestId !== this.projectRequestId) return;
       this.setData({
         projects: reset ? incoming : this.data.projects.concat(incoming),
         total: result.total || 0,
@@ -100,9 +154,12 @@ Page({
         hasMore: Boolean(result.hasMore),
       });
     } catch (error) {
+      if (requestId !== this.projectRequestId) return;
       wx.showToast({ title: error.message || "项目加载失败", icon: "none" });
     } finally {
-      this.setData({ loading: false });
+      if (requestId === this.projectRequestId) {
+        this.setData({ loading: false, queryLoading: false });
+      }
     }
   },
 });
