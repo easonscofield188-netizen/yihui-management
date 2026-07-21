@@ -2,7 +2,7 @@ Component({
   data: {
     selected: 0,
     color: "#5b5f61",
-    selectedColor: "#002045",
+    selectedColor: "#adc7f7",
   },
   methods: {
     switchTab(event) {

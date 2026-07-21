@@ -1,22 +1,54 @@
-<view class="page profile-page">
-  <view class="profile-card card" wx:if="{{userInfo}}">
-    <view class="avatar">{{userInfo.avatarText}}</view>
-    <view class="name">{{userInfo.nickname || userInfo.username}}</view>
-    <view class="username">@{{userInfo.username}}</view>
-    <view class="role">{{userInfo.roleName || userInfo.role}}</view>
+<view class="profile-page">
+  <view class="profile-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-wallet"><t-icon name="wallet" size="40rpx" color="#002045" /></view>
+    <view class="nav-title">亿辉记</view>
   </view>
 
-  <view class="info-card card" wx:if="{{userInfo}}">
-    <view class="info-row">
-      <view class="muted">员工编号</view>
-      <view>{{userInfo.employeeNo || '未设置'}}</view>
+  <view class="profile-content" wx:if="{{userInfo}}">
+    <view class="user-card">
+      <view class="user-card-glow"></view>
+      <view class="avatar-wrap">
+        <image wx:if="{{userInfo.hasCustomAvatar}}" class="avatar-image" src="{{userInfo.avatarDisplayUrl}}" mode="aspectFill" binderror="onAvatarError" />
+        <image wx:else class="avatar-image" src="../../images/default-user-avatar.png" mode="aspectFill" />
+      </view>
+      <view class="user-main">
+        <view class="user-name">{{userInfo.displayName}}</view>
+        <view class="role-badge">
+          <t-icon name="check-circle" size="24rpx" color="#002045" />
+          <text>{{userInfo.roleDisplayName}}</text>
+        </view>
+        <view class="employee-no">工号: {{userInfo.employeeDisplayNo}}</view>
+      </view>
     </view>
-    <view class="info-row">
-      <view class="muted">数据同步</view>
-      <view class="sync">已连接电脑端</view>
+
+    <view class="function-card">
+      <view class="function-row" bindtap="openSecurity">
+        <view class="function-main">
+          <view class="function-icon"><t-icon name="lock-on" size="38rpx" color="#002045" /></view>
+          <text>账号安全</text>
+        </view>
+        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+      </view>
+      <view class="function-divider"></view>
+      <view class="function-row" bindtap="openProjects">
+        <view class="function-main">
+          <view class="function-icon"><t-icon name="catalog" size="38rpx" color="#002045" /></view>
+          <text>项目总览</text>
+        </view>
+        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+      </view>
     </view>
+
+    <button class="logout-button" bindtap="logout">
+      <t-icon name="logout" size="34rpx" color="#ba1a1a" />
+      <text>退出登录</text>
+    </button>
   </view>
 
-  <button class="logout-button" bindtap="logout">退出登录</button>
-  <view class="version muted">亿辉记 · MVP 1.0</view>
+  <view class="profile-loading-mask" wx:if="{{loading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+    <view class="profile-loading-content">
+      <t-loading size="44rpx" theme="circular" />
+      <text>{{loadingMessage}}</text>
+    </view>
+  </view>
 </view>
