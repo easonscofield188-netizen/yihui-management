@@ -98,7 +98,8 @@ Page({
   },
 
   close() {
-    wx.navigateBack();
+    if (this.data.isEditMode) wx.navigateBack();
+    else wx.switchTab({ url: "/pages/index/index" });
   },
 
   previous() {

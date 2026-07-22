@@ -310,7 +310,8 @@ async function addVoucher(params) {
     fileUrl, 
     uploadTime = Date.now(),
     fileSize,
-    mimeType
+    mimeType,
+    clientUploadId
   } = params;
 
   if (!fileId || !fileUrl) {
@@ -323,20 +324,31 @@ async function addVoucher(params) {
   try {
     const projectResult = await db.collection('projects').doc(projectId).get();
     if (!projectResult.data) return { code: 404, message: '项目不存在' };
-    const res = await db.collection('project_vouchers').add({
+    const idempotencySource = `${projectId}:${clientUploadId || fileId}`;
+    const voucherId = crypto.createHash('sha256').update(idempotencySource).digest('hex');
+    const voucherRef = db.collection('project_vouchers').doc(voucherId);
+    let existingData = null;
+    try {
+      const existing = await voucherRef.get();
+      existingData = existing.data || null;
+    } catch (error) {
+      existingData = null;
+    }
+    await voucherRef.set({
       data: {
         projectId,
         fileName,
         fileId,
         fileUrl,
+        clientUploadId: clientUploadId || '',
         uploadTime,
         fileSize,
         mimeType,
-        createTime: db.serverDate(),
+        createTime: existingData && existingData.createTime ? existingData.createTime : db.serverDate(),
         updateTime: db.serverDate()
       }
     });
-    return { code: 0, message: 'success', data: { id: res._id } };
+    return { code: 0, message: 'success', data: { id: voucherId, existed: Boolean(existingData) } };
   } catch (err) {
     console.error('添加凭证失败:', err);
     return { code: 500, message: '添加失败', error: err.message };

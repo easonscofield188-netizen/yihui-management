@@ -239,6 +239,10 @@ Page({
   openPicker(event) {
     const field = event.currentTarget.dataset.field;
     if (this.data.isClosedEdit && ["scene", "role", "source"].includes(field)) return;
+    if (this.data.form.clientId && ["role", "source"].includes(field)) {
+      wx.showToast({ title: "已有客户的角色和来源不可修改", icon: "none" });
+      return;
+    }
     const config = {
       scene: { title: "项目场景", options: this.data.projectScenes, value: this.data.form.scene },
       role: { title: "客户角色", options: this.data.clientRoles, value: this.data.form.role },
@@ -372,8 +376,7 @@ Page({
   },
 
   close() {
-    const pages = getCurrentPages();
-    if (pages.length > 1) wx.navigateBack();
+    if (this.data.isEditMode) wx.navigateBack();
     else wx.switchTab({ url: "/pages/index/index" });
   },
 

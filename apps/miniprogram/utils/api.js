@@ -127,12 +127,17 @@ function addVoucher(data) {
   return callFunction("voucherService", "add", data);
 }
 
+function deleteVoucher(data) {
+  return callFunction("voucherService", "delete", data);
+}
+
 module.exports = {
   addVoucher,
   callFunction,
   clearSession,
   createClient,
   createProject,
+  deleteVoucher,
   getProject,
   getGlobalConfig,
   getProjectOverview,

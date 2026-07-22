@@ -16,7 +16,12 @@ page { background: #f9f9ff; }
 .input-shell:focus-within { border-color: #1a365d; box-shadow: 0 0 0 2rpx rgba(26,54,93,.12); }
 .form-input { min-height: 88rpx; padding: 0 24rpx; background: transparent !important; color: #121c2c; font-size: 28rpx; line-height: 88rpx; }
 .select-shell { display: flex; align-items: center; }
-.field-disabled { opacity: .58; background: #eceff3; }
+.field-disabled {
+  opacity: 1;
+  background: #eceff3;
+  --td-input-disabled-text-color: #121c2c;
+  --td-input-suffix-icon-color: #5f6365;
+}
 .description-input {
   box-sizing: border-box;
   width: 100%;

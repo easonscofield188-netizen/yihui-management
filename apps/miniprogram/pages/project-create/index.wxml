@@ -34,9 +34,9 @@
       <scroll-view class="client-list" wx:if="{{showClientList && clients.length}}" style="height: {{clients.length > 3 ? 260 : clients.length * 82}}rpx;" scroll-y show-scrollbar="{{false}}" bindtouchstart="onClientListTouchStart" bindtouchend="onClientListTouchEnd" bindtouchcancel="onClientListTouchEnd"><view wx:for="{{clients}}" wx:key="_id" class="client-option" data-client="{{item}}" bindtap="selectClient">{{item.name}}</view></scroll-view>
 
       <view class="field-label">客户角色</view>
-      <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="role" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{clientRoles[roleIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="input-shell select-shell {{isClosedEdit || form.clientId ? 'field-disabled' : ''}}" data-field="role" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit || form.clientId}}" value="{{clientRoles[roleIndex].label}}" suffix-icon="chevron-down" /></view>
       <view class="field-label">来源渠道</view>
-      <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
+      <view class="input-shell select-shell {{isClosedEdit || form.clientId ? 'field-disabled' : ''}}" data-field="source" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit || form.clientId}}" value="{{clientSources[sourceIndex].label}}" suffix-icon="chevron-down" /></view>
     </view>
 
   </scroll-view>

@@ -56,12 +56,8 @@
           <t-input
             t-class="form-input"
             borderless
+            readonly
             value="{{costForm.supplier}}"
-            placeholder="请输入供应商"
-            data-field="supplier"
-            adjust-position="{{false}}"
-            cursor-spacing="120"
-            bindchange="onCostInput"
           />
         </view>
         <view id="cost-amount-anchor" class="field-label">成本金额</view>

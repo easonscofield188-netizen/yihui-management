@@ -2,6 +2,7 @@ const api = require("../../utils/api");
 
 const DRAFT_KEY = "projectCreateDraft";
 const FALLBACK_CATEGORIES = [{ label: "物流", value: "logistics" }];
+const FIXED_SUPPLIER = "第三方商户";
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -44,11 +45,10 @@ Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
-    pageTitle: "新建项目",
-    isEditMode: false,
     windowHeight: 667,
     keyboardHeight: 0,
     costScrollTarget: "",
+    isEditMode: false,
     costCategories: FALLBACK_CATEGORIES,
     categoryIndex: 0,
     costs: [],
@@ -57,20 +57,18 @@ Page({
     addCostVisible: false,
     categoryPickerVisible: false,
     categoryPickerValue: [FALLBACK_CATEGORIES[0].value],
-    costForm: { categoryCode: FALLBACK_CATEGORIES[0].value, supplier: "第三方商户", amount: "", isSettled: true },
+    costForm: { categoryCode: FALLBACK_CATEGORIES[0].value, supplier: FIXED_SUPPLIER, amount: "", isSettled: true },
   },
 
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const systemInfo = wx.getSystemInfoSync();
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
-    const isEditMode = draft._mode === "edit";
     const costs = normalizeCosts(draft.costs);
     this.setData({
       ...getNavMetrics(),
-      pageTitle: isEditMode ? "编辑项目" : "新建项目",
-      isEditMode,
       windowHeight: systemInfo.windowHeight || systemInfo.screenHeight || 667,
+      isEditMode: draft._mode === "edit",
       costs,
     }, () => this.updateSummary());
     this.loadCategories();
@@ -133,7 +131,7 @@ Page({
       addCostVisible: true,
       categoryIndex: 0,
       categoryPickerValue: [firstCategory.value],
-      costForm: { categoryCode: firstCategory.value, supplier: "第三方商户", amount: "", isSettled: true },
+      costForm: { categoryCode: firstCategory.value, supplier: FIXED_SUPPLIER, amount: "", isSettled: true },
     });
   },
 
@@ -189,10 +187,10 @@ Page({
   },
 
   saveCost() {
-    const { categoryCode, supplier, amount, isSettled } = this.data.costForm;
+    const { categoryCode, amount, isSettled } = this.data.costForm;
     const numericAmount = Number(amount);
-    if (!supplier.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) {
-      wx.showToast({ title: "请填写供应商和成本金额", icon: "none" });
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      wx.showToast({ title: "请填写成本金额", icon: "none" });
       return;
     }
     const category = this.data.costCategories.find((item) => item.value === categoryCode) || FALLBACK_CATEGORIES[0];
@@ -200,7 +198,7 @@ Page({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       category: category.label,
       categoryCode,
-      supplier: supplier.trim(),
+      supplier: FIXED_SUPPLIER,
       amount: numericAmount,
       isSettled: Boolean(isSettled),
     }];
@@ -220,7 +218,8 @@ Page({
   },
 
   close() {
-    wx.navigateBack();
+    if (this.data.isEditMode) wx.navigateBack();
+    else wx.switchTab({ url: "/pages/index/index" });
   },
 
   previous() {

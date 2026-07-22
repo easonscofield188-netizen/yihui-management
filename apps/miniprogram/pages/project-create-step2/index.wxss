@@ -14,7 +14,7 @@ page { background: #f9f9ff; }
 .card-label { color: #43474e; font-size: 27rpx; line-height: 40rpx; }
 .amount-row { display: flex; min-height: 146rpx; align-items: center; }
 .currency { margin-right: 22rpx; color: #343943; font-size: 42rpx; font-weight: 700; }
-.amount-currency { color: #b4becc; font-size: 58rpx; }
+.amount-currency { color: #343943; font-size: 58rpx; }
 .amount-input { flex: 1; min-height: 130rpx; color: #002045; font-size: 58rpx; font-weight: 700; line-height: 130rpx; }
 .recommend-row { display: flex; padding-top: 24rpx; align-items: center; justify-content: space-between; border-top: 2rpx solid #c4c6cf; color: #43474e; font-size: 25rpx; }
 .received-card { padding-bottom: 28rpx; }
