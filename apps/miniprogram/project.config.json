@@ -62,7 +62,36 @@
   "compileType": "miniprogram",
   "srcMiniprogramRoot": "miniprogram/",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "pages/example"
+      },
+      {
+        "type": "folder",
+        "value": "components/cloudTipModal"
+      },
+      {
+        "type": "file",
+        "value": "images/ai_example2.png"
+      },
+      {
+        "type": "file",
+        "value": "images/create_cbr.png"
+      },
+      {
+        "type": "file",
+        "value": "images/database.png"
+      },
+      {
+        "type": "file",
+        "value": "images/arrow.svg"
+      },
+      {
+        "type": "file",
+        "value": "images/copy.svg"
+      }
+    ],
     "include": []
   },
   "editorSetting": {
