@@ -9,7 +9,9 @@ function getRuntimeEnvironment() {
     const envVersion = accountInfo.miniProgram.envVersion;
     return {
       envVersion,
-      cloudEnv: envVersion === "release" ? CLOUD_ENV.production : CLOUD_ENV.development,
+      cloudEnv: ["trial", "release"].includes(envVersion)
+        ? CLOUD_ENV.production
+        : CLOUD_ENV.development,
     };
   } catch (error) {
     console.warn("读取小程序运行版本失败，默认使用测试云环境", error);
