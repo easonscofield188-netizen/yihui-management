@@ -192,7 +192,7 @@ function getRoleName(role) {
     ADMIN_COM: '系统管理员',
     ADMIN: '系统管理员',
     PROJECT_MANAGER: '项目经理',
-    FINANCE_MANAGER: '财务主管',
+    FINANCE_MANAGER: '项目主管',
     VISITOR: '普通访客',
     user: '普通用户'
   };

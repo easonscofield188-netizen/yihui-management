@@ -4,8 +4,8 @@
       <view class="brand-mark">
         <t-icon name="building-1" size="64rpx" color="#86a0cd" />
       </view>
-      <view class="brand-name">「亿辉记」财务管理</view>
-      <view class="brand-tip">专业、高效的财务协作平台</view>
+      <view class="brand-name">「亿辉记」项目管理</view>
+      <view class="brand-tip">专业、高效的项目协作平台</view>
     </view>
 
     <view class="login-form">
