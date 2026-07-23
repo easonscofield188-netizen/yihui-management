@@ -9,11 +9,11 @@ const STATUS_LABELS = {
   settling: "结算中", closed: "已结清", in_cooperation: "合作中", terminated: "已终止",
 };
 
-function money(value, digits = 2) {
-  const amount = Number(value || 0);
+function money(value) {
+  const amount = Number(value);
   return Number.isFinite(amount)
-    ? amount.toLocaleString("zh-CN", { minimumFractionDigits: digits, maximumFractionDigits: digits })
-    : digits ? "0.00" : "0";
+    ? amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0.00";
 }
 
 function dateText(value) {
@@ -27,7 +27,8 @@ function dateText(value) {
 
 function decorateProject(project) {
   const isClosed = project.status === "closed";
-  const profit = Number(project.amount || 0) - Number(project.payableAmount || 0);
+  // 金额字段由后端 calculateFinancials 计算，前端仅做展示格式化
+  const profitAmount = Number(project.profitAmount);
   return {
     ...project,
     projectCode: project.projectCode || project.code || project.projectNo ||
@@ -36,10 +37,10 @@ function decorateProject(project) {
     isClosed,
     amountLabel: isClosed ? "结算金额" : "订单金额",
     amountText: money(project.amount),
-    unreceivedText: money(project.unreceivedAmount, 0),
-    costText: money(project.payableAmount, 0),
-    profitText: money(profit, 0),
-    profitPositive: profit >= 0,
+    unreceivedText: money(project.unreceivedAmount),
+    costText: money(project.payableAmount),
+    profitText: money(project.profitAmount),
+    profitPositive: Number.isFinite(profitAmount) ? profitAmount >= 0 : true,
     deliveryDateText: dateText(
       project.startDate
       || project.completionTime

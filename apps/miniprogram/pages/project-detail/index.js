@@ -78,8 +78,8 @@ function dateText(value) {
 }
 
 function decorateProject(project, config) {
-  const payableAmount = Number(project.payableAmount || 0);
-  const profit = Number(project.amount || 0) - payableAmount;
+  // 金额字段由后端 calculateFinancials 计算，前端仅做展示格式化
+  const profitAmount = Number(project.profitAmount);
   return {
     ...project,
     costs: (project.costs || []).map((item, index) => {
@@ -98,10 +98,10 @@ function decorateProject(project, config) {
     amountText: money(project.amount),
     receivedText: money(project.receivedAmount),
     unreceivedText: money(project.unreceivedAmount),
-    payableText: money(payableAmount),
+    payableText: money(project.payableAmount),
     paidText: money(project.paidAmount),
-    profitText: money(profit),
-    profitPositive: profit >= 0,
+    profitText: money(project.profitAmount),
+    profitPositive: Number.isFinite(profitAmount) ? profitAmount >= 0 : true,
     staffCountText: Number(project.staffCount || 0),
     roleText: configLabel(config, "CLIENT_ROLE", project.role),
     sourceText: configLabel(config, "CLIENT_SOURCE", project.clientSource || project.source),

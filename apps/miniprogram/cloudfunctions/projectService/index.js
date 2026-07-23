@@ -107,45 +107,73 @@ async function authenticate(event, data) {
   return { user: { ...userResult.data, id: session.userId } };
 }
 
-// 计算资金相关字段
+// 金额转分（整数），避免 JS 浮点误差
+function moneyToCents(value) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return 0;
+  return Math.round(numberValue * 100);
+}
+
+function centsToMoney(cents) {
+  return Math.round(Number(cents) || 0) / 100;
+}
+
+// 计算资金相关字段（统一在后端用分位整数计算）
 function calculateFinancials(amount, receivedAmount, costs, subProjects) {
-  const totalAmount = parseFloat(amount) || 0;
-  const received = parseFloat(receivedAmount) || 0;
-  const unreceived = Math.max(0, totalAmount - received);
-  
-  let payable = 0;
-  let paid = 0;
-  
+  const totalCents = moneyToCents(amount);
+  const receivedCents = moneyToCents(receivedAmount);
+  const unreceivedCents = Math.max(0, totalCents - receivedCents);
+
+  let payableCents = 0;
+  let paidCents = 0;
+
   // 主项目成本
   if (costs && Array.isArray(costs)) {
-    costs.forEach(cost => {
-      const costAmount = parseFloat(cost.amount) || 0;
-      payable += costAmount;
+    costs.forEach((cost) => {
+      const costCents = moneyToCents(cost.amount);
+      payableCents += costCents;
       if (cost.isSettled === true || cost.isSettled === '是') {
-        paid += costAmount;
+        paidCents += costCents;
       }
     });
   }
 
   // 子项目成本
   if (subProjects && Array.isArray(subProjects)) {
-    subProjects.forEach(sp => {
+    subProjects.forEach((sp) => {
       if (sp.costs && Array.isArray(sp.costs)) {
-        sp.costs.forEach(cost => {
-          const costAmount = parseFloat(cost.amount) || 0;
-          payable += costAmount;
+        sp.costs.forEach((cost) => {
+          const costCents = moneyToCents(cost.amount);
+          payableCents += costCents;
           if (cost.isSettled === true || cost.isSettled === '是') {
-            paid += costAmount;
+            paidCents += costCents;
           }
         });
       }
     });
   }
-  
+
+  const profitCents = totalCents - payableCents;
+
   return {
-    unreceivedAmount: parseFloat(unreceived.toFixed(2)),
-    payableAmount: parseFloat(payable.toFixed(2)),
-    paidAmount: parseFloat(paid.toFixed(2))
+    unreceivedAmount: centsToMoney(unreceivedCents),
+    payableAmount: centsToMoney(payableCents),
+    paidAmount: centsToMoney(paidCents),
+    profitAmount: centsToMoney(profitCents),
+  };
+}
+
+function enrichProjectFinancials(project) {
+  if (!project) return project;
+  const financials = calculateFinancials(
+    project.amount,
+    project.receivedAmount,
+    project.costs,
+    project.subProjects
+  );
+  return {
+    ...project,
+    ...financials,
   };
 }
 
@@ -715,7 +743,7 @@ async function getProject(params) {
   try {
     const result = await db.collection('projects').doc(id).get();
     if (!result.data) return { code: 404, message: '项目不存在' };
-    return { code: 0, message: '查询成功', data: result.data };
+    return { code: 0, message: '查询成功', data: enrichProjectFinancials(result.data) };
   } catch (err) {
     console.error('查询项目详情失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
@@ -872,13 +900,14 @@ async function listProjects(params) {
       orderedQuery = orderedQuery.skip((currentPage - 1) * currentPageSize).limit(currentPageSize);
     }
     const res = await orderedQuery.get();
-    if (!usePagination) return { code: 0, message: '查询成功', data: res.data };
+    const list = (res.data || []).map(enrichProjectFinancials);
+    if (!usePagination) return { code: 0, message: '查询成功', data: list };
     const total = countResult.total || 0;
     return {
       code: 0,
       message: '查询成功',
       data: {
-        list: res.data,
+        list,
         total,
         page: currentPage,
         pageSize: currentPageSize,
