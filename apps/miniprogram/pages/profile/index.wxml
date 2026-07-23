@@ -37,6 +37,16 @@
         </view>
         <t-icon name="chevron-right" size="38rpx" color="#74777f" />
       </view>
+      <block wx:if="{{userInfo.role === 'ADMIN_SUPER'}}">
+        <view class="function-divider"></view>
+        <view class="function-row" bindtap="openCreateAccount">
+          <view class="function-main">
+            <view class="function-icon"><t-icon name="user-add" size="38rpx" color="#002045" /></view>
+            <text>创建账号</text>
+          </view>
+          <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+        </view>
+      </block>
     </view>
 
     <button class="logout-button" bindtap="logout">

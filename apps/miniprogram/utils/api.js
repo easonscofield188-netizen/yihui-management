@@ -75,6 +75,14 @@ function getUserInfo() {
   return callFunction("loginService", "getUserInfo");
 }
 
+function createAccount(data) {
+  return callFunction("loginService", "createAccount", data);
+}
+
+function getNextEmployeeNo(role) {
+  return callFunction("loginService", "getNextEmployeeNo", { role });
+}
+
 function logout() {
   return callFunction("loginService", "logout").finally(clearSession);
 }
@@ -135,11 +143,13 @@ module.exports = {
   addVoucher,
   callFunction,
   clearSession,
+  createAccount,
   createClient,
   createProject,
   deleteVoucher,
   getProject,
   getGlobalConfig,
+  getNextEmployeeNo,
   getProjectOverview,
   getServerDate,
   getToken,

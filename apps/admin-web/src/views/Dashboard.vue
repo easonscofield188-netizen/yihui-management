@@ -2859,13 +2859,23 @@
                     </div>
                   </div>
                 </div>
-                <button
-                  class="flex items-center justify-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-white/10 rounded-lg transition-all duration-300"
-                  @click="openUserDialog"
-                >
-                  <span class="material-symbols-outlined text-lg">edit_square</span>
-                  <span class="text-sm font-medium">编辑个人资料</span>
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    v-if="isSuperAdmin"
+                    class="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary hover:brightness-110 text-black rounded-lg transition-all duration-300 font-bold"
+                    @click="openCreateAccountDialog"
+                  >
+                    <span class="material-symbols-outlined text-lg">person_add</span>
+                    <span class="text-sm">创建账号</span>
+                  </button>
+                  <button
+                    class="flex items-center justify-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-white/10 rounded-lg transition-all duration-300"
+                    @click="openUserDialog"
+                  >
+                    <span class="material-symbols-outlined text-lg">edit_square</span>
+                    <span class="text-sm font-medium">编辑个人资料</span>
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -3171,6 +3181,66 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="createAccountDialog.visible"
+      title="创建登录账号"
+      width="560px"
+      class="custom-message-box"
+      append-to-body
+      destroy-on-close
+    >
+      <el-form label-position="top" class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+        <el-form-item label="登录账号" required>
+          <el-input v-model="createAccountDialog.form.username" maxlength="32" placeholder="3-32 位字母、数字或 ._-" />
+        </el-form-item>
+        <el-form-item label="账户昵称" required>
+          <el-input v-model="createAccountDialog.form.nickname" maxlength="30" placeholder="请输入账户昵称" />
+        </el-form-item>
+        <el-form-item label="初始密码" required>
+          <el-input v-model="createAccountDialog.form.password" type="password" show-password maxlength="64" placeholder="请输入 6-64 位密码" />
+        </el-form-item>
+        <el-form-item label="确认密码" required>
+          <el-input v-model="createAccountDialog.form.confirmPassword" type="password" show-password maxlength="64" placeholder="请再次输入密码" />
+        </el-form-item>
+        <el-form-item label="账号角色" required>
+          <el-select
+            v-model="createAccountDialog.form.role"
+            class="w-full custom-select"
+            popper-class="custom-dropdown"
+            placeholder="请选择账号角色"
+            @change="refreshNextEmployeeNo"
+          >
+            <el-option v-for="item in accountRoleOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="工号">
+          <el-input v-model="createAccountDialog.employeeNo" readonly :placeholder="createAccountDialog.employeeNoLoading ? '正在生成...' : '选择角色后自动生成'" />
+          <div class="mt-1 text-[11px] text-zinc-500">按所选角色自动生成，不可修改</div>
+        </el-form-item>
+        <el-form-item label="邮箱" class="md:col-span-2">
+          <el-input v-model="createAccountDialog.form.email" maxlength="80" placeholder="选填，用于找回密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <el-button
+            class="!bg-neutral-800 !border-white/10 !text-on-surface-variant"
+            @click="createAccountDialog.visible = false"
+          >
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            class="!bg-primary !border-primary !text-black !font-bold"
+            :loading="createAccountDialog.submitting"
+            @click="handleCreateAccount"
+          >
+            创建账号
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -3180,7 +3250,7 @@ import { useRouter } from 'vue-router'
 import { queryClients, createClient, queryConfig, getGlobalConfig, createConfig, updateConfigStatus, addVoucher, getVouchers, deleteVoucher, deleteProject, deleteVouchersByProject, renameProjectVouchers, renameProjectFiles, createProject, updateProject, updateVouchersProject, listProjects, getContracts, getPreviews, deleteContract, deletePreview, updateContractsProject, updatePreviewsProject, listOperationLogs, recordOperationLog } from '../api/common'
 import axios from 'axios'
 import Compressor from 'compressorjs'
-import { getInfo, updateInfo, uploadAvatar } from '../api/user'
+import { createAccount, getInfo, getNextEmployeeNo, updateInfo, uploadAvatar } from '../api/user'
 import { 
   DataBoard, 
   User, 
@@ -3267,6 +3337,31 @@ const userDialog = reactive({
   }
 })
 
+const accountRoleOptions = [
+  { label: '超级系统管理员', value: 'ADMIN_SUPER' },
+  { label: '系统管理员', value: 'ADMIN_COM' },
+  { label: '项目经理', value: 'PROJECT_MANAGER' },
+  { label: '财务主管', value: 'FINANCE_MANAGER' },
+  { label: '普通访客', value: 'VISITOR' }
+]
+
+const createEmptyAccountForm = () => ({
+  username: '',
+  nickname: '',
+  password: '',
+  confirmPassword: '',
+  role: 'ADMIN_COM',
+  email: ''
+})
+
+const createAccountDialog = reactive({
+  visible: false,
+  submitting: false,
+  employeeNo: '',
+  employeeNoLoading: false,
+  form: createEmptyAccountForm()
+})
+
 const roleNameMap = {
   ADMIN_SUPER: '超级系统管理员',
   ADMIN_COM: '系统管理员',
@@ -3282,6 +3377,72 @@ const currentUserRoleText = computed(() => {
 })
 
 const isSuperAdmin = computed(() => currentUser.role === 'ADMIN_SUPER')
+
+const openCreateAccountDialog = () => {
+  if (!isSuperAdmin.value) return
+  createAccountDialog.form = createEmptyAccountForm()
+  createAccountDialog.employeeNo = ''
+  createAccountDialog.visible = true
+  refreshNextEmployeeNo()
+}
+
+const refreshNextEmployeeNo = async () => {
+  createAccountDialog.employeeNoLoading = true
+  createAccountDialog.employeeNo = ''
+  try {
+    const res = await getNextEmployeeNo(createAccountDialog.form.role)
+    createAccountDialog.employeeNo = res.data?.employeeNo || ''
+  } catch (error) {
+    createAccountDialog.employeeNo = '获取失败，请重试'
+  } finally {
+    createAccountDialog.employeeNoLoading = false
+  }
+}
+
+const handleCreateAccount = async () => {
+  const form = createAccountDialog.form
+  const username = form.username.trim()
+  const nickname = form.nickname.trim()
+  if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) {
+    const { ElMessage } = await import('element-plus')
+    ElMessage.warning('登录账号须为 3-32 位字母、数字、点、下划线或短横线')
+    return
+  }
+  if (form.password.length < 6 || form.password.length > 64) {
+    const { ElMessage } = await import('element-plus')
+    ElMessage.warning('初始密码长度须为 6-64 位')
+    return
+  }
+  if (form.password !== form.confirmPassword) {
+    const { ElMessage } = await import('element-plus')
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  if (!nickname) {
+    const { ElMessage } = await import('element-plus')
+    ElMessage.warning('请输入账户昵称')
+    return
+  }
+
+  createAccountDialog.submitting = true
+  try {
+    const res = await createAccount({
+      username,
+      passwordPlain: form.password,
+      nickname,
+      email: form.email.trim(),
+      role: form.role
+    })
+    createAccountDialog.visible = false
+    const { ElMessage } = await import('element-plus')
+    ElMessage.success(`账号 ${username} 创建成功，工号：${res.data?.employeeNo || '-'}`)
+  } catch (error) {
+    const { ElMessage } = await import('element-plus')
+    ElMessage.error(error.message || '账号创建失败')
+  } finally {
+    createAccountDialog.submitting = false
+  }
+}
 
 // 打开用户信息编辑弹窗
 const openUserProfileEdit = () => {

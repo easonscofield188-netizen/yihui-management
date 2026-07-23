@@ -7,6 +7,7 @@
     "pages/project-create-step3/index",
     "pages/project-create-step4/index",
     "pages/project-detail/index",
+    "pages/account-create/index",
     "pages/profile/index",
     "pages/project-overview/index"
   ],

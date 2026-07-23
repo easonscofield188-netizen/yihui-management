@@ -70,3 +70,29 @@ export function uploadAvatar(data) {
     }
   });
 }
+
+/**
+ * 超级系统管理员创建登录账号
+ * @param {Object} data - { username, passwordPlain, nickname, email, role }
+ */
+export function createAccount(data) {
+  return request({
+    url: '/loginService',
+    method: 'post',
+    data: {
+      action: 'createAccount',
+      data
+    }
+  });
+}
+
+export function getNextEmployeeNo(role) {
+  return request({
+    url: '/loginService',
+    method: 'post',
+    data: {
+      action: 'getNextEmployeeNo',
+      data: { role }
+    }
+  });
+}

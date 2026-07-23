@@ -1,0 +1,75 @@
+<view class="account-page">
+  <view class="navbar-wrap">
+    <t-navbar t-class="account-navbar" title="创建账号" fixed="{{false}}">
+      <view slot="left" class="nav-back" bindtap="close">‹</view>
+    </t-navbar>
+  </view>
+
+  <scroll-view class="form-scroll" scroll-y show-scrollbar="{{false}}">
+    <view class="intro">
+      <view class="intro-title">新建登录账号</view>
+      <view>账号创建后立即启用，请将初始密码安全地交给使用人。</view>
+    </view>
+
+    <view class="form-card">
+      <view class="field-label required">登录账号</view>
+      <view class="input-shell">
+        <t-input t-class="form-input" borderless clearable value="{{form.username}}" placeholder="3-32 位字母、数字或 ._-" maxlength="32" data-field="username" bindchange="onInput" />
+      </view>
+
+      <view class="field-label required">账户昵称</view>
+      <view class="input-shell">
+        <t-input t-class="form-input" borderless clearable value="{{form.nickname}}" placeholder="请输入账户昵称" maxlength="30" data-field="nickname" bindchange="onInput" />
+      </view>
+
+      <view class="field-label required">初始密码</view>
+      <view class="input-shell">
+        <t-input t-class="form-input" borderless type="password" value="{{form.password}}" placeholder="请输入 6-64 位密码" maxlength="64" data-field="password" bindchange="onInput" />
+      </view>
+
+      <view class="field-label required">确认密码</view>
+      <view class="input-shell">
+        <t-input t-class="form-input" borderless type="password" value="{{form.confirmPassword}}" placeholder="请再次输入初始密码" maxlength="64" data-field="confirmPassword" bindchange="onInput" />
+      </view>
+
+      <view class="field-label required">账号角色</view>
+      <view class="input-shell select-shell" bindtap="openRolePicker">
+        <t-input t-class="form-input" borderless readonly value="{{roleOptions[roleIndex].label}}">
+          <view slot="suffix" class="select-chevron"></view>
+        </t-input>
+      </view>
+
+      <view class="field-label">工号</view>
+      <view class="input-shell readonly-shell">
+        <t-input t-class="form-input" borderless readonly value="{{employeeNo}}" placeholder="{{employeeNoLoading ? '正在生成...' : '选择角色后自动生成'}}" />
+      </view>
+      <view class="field-help">工号按所选角色自动生成，不可修改</view>
+
+      <view class="field-label">邮箱</view>
+      <view class="input-shell">
+        <t-input t-class="form-input" borderless clearable value="{{form.email}}" placeholder="选填，用于找回密码" maxlength="80" data-field="email" bindchange="onInput" />
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="footer">
+    <view class="cancel-action">
+      <t-button t-class="cancel-button" block theme="default" variant="outline" content="取消" disabled="{{submitting}}" bindtap="close" />
+    </view>
+    <view class="submit-action">
+      <t-button t-class="submit-button" block theme="primary" content="创建账号" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit" />
+    </view>
+  </view>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{rolePickerVisible}}"
+    value="{{rolePickerValue}}"
+    title="选择账号角色"
+    bindconfirm="onRoleConfirm"
+    bindcancel="closeRolePicker"
+    bindclose="closeRolePicker"
+  >
+    <t-picker-item options="{{roleOptions}}" />
+  </t-picker>
+</view>

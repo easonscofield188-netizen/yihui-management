@@ -125,6 +125,15 @@ Page({
     wx.navigateTo({ url: "/pages/project-overview/index" });
   },
 
+  openCreateAccount() {
+    const userInfo = this.data.userInfo || {};
+    if (userInfo.role !== "ADMIN_SUPER") {
+      wx.showToast({ title: "仅超级系统管理员可以创建账号", icon: "none" });
+      return;
+    }
+    wx.navigateTo({ url: "/pages/account-create/index" });
+  },
+
   logout() {
     wx.showModal({
       title: "退出登录",

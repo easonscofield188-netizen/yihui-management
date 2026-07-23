@@ -44,6 +44,10 @@ exports.main = async (event, context) => {
           return await updateUserInfo(data, event);
         case 'uploadAvatar':
           return await uploadAvatar(data, event);
+        case 'createAccount':
+          return await createAccount(data, event);
+        case 'getNextEmployeeNo':
+          return await getNextEmployeeNo(data, event);
         case 'logout':
           return await logout(data, event);
         default:
@@ -396,6 +400,162 @@ async function uploadAvatar(data, event) {
       avatarUrl,
       avatarFileId: uploadRes.fileID
     }
+  };
+}
+
+async function generateEmployeeNo(role) {
+  const prefix = `YH-${role}-`;
+  const result = await db.collection('users')
+    .where({
+      employeeNo: db.RegExp({
+        regexp: `^${prefix}\\d+$`,
+        options: ''
+      })
+    })
+    .field({ employeeNo: true })
+    .limit(1000)
+    .get();
+  const maxSequence = (result.data || []).reduce((max, user) => {
+    const matched = String(user.employeeNo || '').match(/-(\d+)$/);
+    const sequence = matched ? Number(matched[1]) : 0;
+    return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
+  }, 0);
+  return `${prefix}${String(maxSequence + 1).padStart(3, '0')}`;
+}
+
+async function createAccount(data, event) {
+  const current = await getCurrentUserDoc(data, event);
+  if (current.error) return current.error;
+  if (current.user.role !== 'ADMIN_SUPER') {
+    return { code: 403, message: '仅超级系统管理员可以创建账号' };
+  }
+
+  const username = String(data.username || '').trim();
+  const passwordPlain = String(data.passwordPlain || '');
+  const nickname = String(data.nickname || '').trim();
+  const email = String(data.email || '').trim().toLowerCase();
+  const role = String(data.role || '').trim();
+  const allowedRoles = new Set([
+    'ADMIN_SUPER',
+    'ADMIN_COM',
+    'PROJECT_MANAGER',
+    'FINANCE_MANAGER',
+    'VISITOR'
+  ]);
+
+  if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) {
+    return { code: 400, message: '登录账号须为 3-32 位字母、数字、点、下划线或短横线' };
+  }
+  if (passwordPlain.length < 6 || passwordPlain.length > 64) {
+    return { code: 400, message: '初始密码长度须为 6-64 位' };
+  }
+  if (!nickname || nickname.length > 30 || !isSafeInput(nickname)) {
+    return { code: 400, message: '请输入 1-30 位有效账户昵称' };
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { code: 400, message: '邮箱格式不正确' };
+  }
+  if (!allowedRoles.has(role)) {
+    return { code: 400, message: '账号角色无效' };
+  }
+
+  const duplicateUsername = await db.collection('users').where({ username }).limit(1).get();
+  if ((duplicateUsername.data || []).length) {
+    return { code: 409, message: '登录账号已存在' };
+  }
+  if (email) {
+    const duplicateEmail = await db.collection('users').where({ email }).limit(1).get();
+    if ((duplicateEmail.data || []).length) {
+      return { code: 409, message: '邮箱已被其他账号使用' };
+    }
+  }
+  const now = Date.now();
+  const createdAt = new Date(now).toISOString();
+  const roleName = getRoleName(role);
+  const employeeNo = await generateEmployeeNo(role);
+  const createResult = await db.collection('users').add({
+    data: {
+      username,
+      email,
+      password: '',
+      passwordHash: crypto.createHash('sha256').update(passwordPlain).digest('hex'),
+      status: 'active',
+      role,
+      roleName,
+      employeeNo,
+      nickname,
+      avatarUrl: '',
+      avatarFileId: '',
+      lastLoginTime: '',
+      last_login_ip: '',
+      common_login_ips: [],
+      login_ip_stats: [],
+      created_at: createdAt,
+      createdAt: db.serverDate(),
+      updateTime: db.serverDate(),
+      updatedAt: now
+    }
+  });
+
+  try {
+    await db.collection(OPERATION_LOG_COLLECTION).add({
+      data: {
+        uid: current.userId,
+        un: String(current.user.nickname || current.user.username || '').slice(0, 20),
+        username: current.user.username || '',
+        m: '账号管理',
+        a: 'create',
+        c: `创建账号 ${username}（${roleName}）`,
+        s: '成功',
+        ip: getClientIp(event),
+        user_agent: getUserAgent(event),
+        ts: now,
+        create_time: createdAt,
+        create_timestamp: now,
+        createdAt
+      }
+    });
+  } catch (error) {
+    console.warn('创建账号操作日志写入失败，已忽略', error.message || error);
+  }
+
+  return {
+    code: 0,
+    message: '账号创建成功',
+    data: {
+      id: createResult._id,
+      username,
+      nickname,
+      email,
+      employeeNo,
+      role,
+      roleName,
+      status: 'active'
+    }
+  };
+}
+
+async function getNextEmployeeNo(data, event) {
+  const current = await getCurrentUserDoc(data, event);
+  if (current.error) return current.error;
+  if (current.user.role !== 'ADMIN_SUPER') {
+    return { code: 403, message: '仅超级系统管理员可以查看待分配工号' };
+  }
+  const role = String(data.role || '').trim();
+  const allowedRoles = new Set([
+    'ADMIN_SUPER',
+    'ADMIN_COM',
+    'PROJECT_MANAGER',
+    'FINANCE_MANAGER',
+    'VISITOR'
+  ]);
+  if (!allowedRoles.has(role)) {
+    return { code: 400, message: '账号角色无效' };
+  }
+  return {
+    code: 0,
+    message: '查询成功',
+    data: { employeeNo: await generateEmployeeNo(role) }
   };
 }
 
