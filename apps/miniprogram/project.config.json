@@ -60,7 +60,7 @@
     }
   },
   "compileType": "miniprogram",
-  "srcMiniprogramRoot": "miniprogram/",
+  "srcMiniprogramRoot": "/",
   "packOptions": {
     "ignore": [
       {
