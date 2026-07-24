@@ -9,6 +9,7 @@ const needed = new Set([
   "behaviors",
   "button",
   "common",
+  "config-provider",
   "date-time-picker",
   "helpers",
   "icon",

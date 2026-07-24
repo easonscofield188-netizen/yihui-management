@@ -862,7 +862,8 @@ async function listProjects(params) {
     page,
     pageSize,
     keyword = '',
-    status = ''
+    status = '',
+    year
   } = params || {};
   const allowedStatuses = new Set([
     'negotiating',
@@ -875,11 +876,13 @@ async function listProjects(params) {
   ]);
   const normalizedStatus = String(status || '').trim();
   const normalizedKeyword = String(keyword || '').trim().slice(0, 50);
+  const normalizedYear = Number(year);
+  const hasYear = Number.isInteger(normalizedYear) && normalizedYear >= 2000 && normalizedYear <= 2100;
   if (normalizedStatus && !allowedStatuses.has(normalizedStatus)) {
     return { code: 400, message: '项目状态筛选值无效' };
   }
 
-  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus;
+  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus || hasYear;
   const currentPage = Math.max(1, Number(page) || 1);
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   try {
@@ -901,6 +904,29 @@ async function listProjects(params) {
         { projectCode: regexp },
         { code: regexp },
         { projectNo: regexp }
+      ]));
+    }
+    // 按「交付日期」年份筛选（与列表展示字段一致：startDate / completionTime / period[1]）
+    if (hasYear) {
+      const yearPrefix = db.RegExp({
+        regexp: `^${normalizedYear}-`,
+        options: 'i'
+      });
+      const dateStart = new Date(`${normalizedYear}-01-01T00:00:00.000+08:00`);
+      const dateEnd = new Date(`${normalizedYear}-12-31T23:59:59.999+08:00`);
+      conditions.push(_.or([
+        { startDate: yearPrefix },
+        {
+          startDate: _.and(
+            _.gte(`${normalizedYear}-01-01`),
+            _.lte(`${normalizedYear}-12-31`)
+          )
+        },
+        {
+          completionTime: _.and(_.gte(dateStart), _.lte(dateEnd))
+        },
+        { 'period.1': yearPrefix },
+        { 'period.0': yearPrefix }
       ]));
     }
 

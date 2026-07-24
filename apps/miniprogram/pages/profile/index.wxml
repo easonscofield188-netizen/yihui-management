@@ -53,6 +53,8 @@
       <t-icon name="logout" size="34rpx" color="#ba1a1a" />
       <text>退出登录</text>
     </button>
+
+    <view class="app-version">当前版本 {{versionText}}</view>
   </view>
 
   <view class="profile-loading-mask" wx:if="{{loading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">

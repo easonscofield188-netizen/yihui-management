@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const { getRuntimeVersion } = require("../../utils/app-version");
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -43,12 +44,15 @@ Page({
     userInfo: null,
     loading: false,
     loadingMessage: "正在加载账户信息...",
+    versionText: "",
   },
 
   onLoad() {
     const cachedUser = wx.getStorageSync("userInfo");
+    const runtimeVersion = getRuntimeVersion();
     this.setData({
       ...getNavMetrics(),
+      versionText: runtimeVersion.displayText,
       userInfo: cachedUser
         ? decorateUser(
           cachedUser,

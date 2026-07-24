@@ -1,0 +1,21 @@
+---
+description: 月辉记微信小程序 UI 与 TDesign 约定
+globs: apps/miniprogram/**/*.{js,wxml,wxss,json}
+alwaysApply: false
+---
+
+# 月辉记小程序 UI 规则
+
+做 `apps/miniprogram` 页面时必须遵守：
+
+1. **优先使用 TDesign 组件**（`tdesign-miniprogram`），不要用原生 `picker`、简陋自定义弹窗替代已有 TDesign 能力。
+   - 选择器：`t-picker` + `t-picker-item`
+   - 日期：`t-date-time-picker`
+   - 按钮 / 输入 / 开关 / 图标 / 加载：`t-button`、`t-input`、`t-switch`、`t-icon`、`t-loading` 等
+2. **样式对齐现有整体风格**，不要另起一套视觉：
+   - 主色：`#1a365d` / `#002045`
+   - 页面底：`#f9f9ff`
+   - 卡片边框：`#d9e3f9` / `#e7eeff`
+   - 确认色：设置 `--td-brand-color`、`--td-picker-confirm-color: #1a365d`，并用 `t-class-confirm="picker-confirm"`
+3. 新增交互前先对照现有页（如 `project-create`、`account-create`、`profile`）的组件用法与间距，保持一致。
+4. 金额展示统一两位小数；金额计算放后端，前端只做格式化。
