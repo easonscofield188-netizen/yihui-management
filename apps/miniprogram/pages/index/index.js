@@ -35,7 +35,7 @@ function decorateProject(project) {
       `PRJ-${String(project._id || "").slice(-8).toUpperCase()}`,
     statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
     isClosed,
-    amountLabel: isClosed ? "结算金额" : "订单金额",
+    amountLabel: "订单金额",
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount),
     costText: money(project.payableAmount),

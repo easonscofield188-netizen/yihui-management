@@ -16,6 +16,8 @@ const db = cloud.database();
 const _ = db.command;
 const OPERATION_LOG_COLLECTION = 'operation_logs';
 const SESSION_COLLECTION = 'auth_sessions';
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const VIEW_OPERATION_LOGS = 'VIEW_OPERATION_LOGS';
 const WRITE_ACTIONS = new Set(['create', 'add', 'insert', 'update', 'edit', 'modify', 'delete', 'remove']);
 const WRITE_STATUS = new Set(['成功', '失败', '警告']);
@@ -158,7 +160,21 @@ async function getCurrentUser(event) {
   const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
   const session = (sessionResult.data || [])[0];
   if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    if (session && session._id) {
+      db.collection(SESSION_COLLECTION).doc(session._id).remove().catch(() => {});
+    }
     return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const now = Date.now();
+  const lastActiveAt = Number(session.lastActiveAt || 0);
+  if (!lastActiveAt || now - lastActiveAt >= SESSION_TOUCH_INTERVAL_MS) {
+    db.collection(SESSION_COLLECTION).doc(session._id).update({
+      data: {
+        lastActiveAt: now,
+        expiresAt: now + SESSION_TTL_MS,
+        updateTime: db.serverDate()
+      }
+    }).catch(() => {});
   }
   const userId = session.userId;
 

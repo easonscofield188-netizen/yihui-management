@@ -1,8 +1,31 @@
 const TOKEN_KEY = "authToken";
 const USER_KEY = "userInfo";
+const EXPIRES_KEY = "sessionExpiresAt";
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+function getStoredExpiresAt() {
+  return Number(wx.getStorageSync(EXPIRES_KEY) || 0);
+}
+
+function touchLocalSession(expiresAt) {
+  const nextExpiresAt = Number(expiresAt) || (Date.now() + SESSION_TTL_MS);
+  wx.setStorageSync(EXPIRES_KEY, nextExpiresAt);
+  return nextExpiresAt;
+}
 
 function getToken() {
-  return wx.getStorageSync(TOKEN_KEY) || "";
+  const token = wx.getStorageSync(TOKEN_KEY) || "";
+  if (!token) return "";
+  const expiresAt = getStoredExpiresAt();
+  if (expiresAt && Date.now() > expiresAt) {
+    clearSession();
+    return "";
+  }
+  // 兼容旧登录态：无过期时间时补写 24 小时
+  if (!expiresAt) {
+    touchLocalSession(Date.now() + SESSION_TTL_MS);
+  }
+  return token;
 }
 
 function normalizeProjectList(result) {
@@ -20,13 +43,19 @@ function normalizeProjectList(result) {
 function saveSession(data) {
   wx.setStorageSync(TOKEN_KEY, data.token);
   wx.setStorageSync(USER_KEY, data.userInfo);
+  touchLocalSession(data.expiresAt || (Date.now() + SESSION_TTL_MS));
   getApp().globalData.userInfo = data.userInfo;
 }
 
 function clearSession() {
   wx.removeStorageSync(TOKEN_KEY);
   wx.removeStorageSync(USER_KEY);
-  getApp().globalData.userInfo = null;
+  wx.removeStorageSync(EXPIRES_KEY);
+  try {
+    getApp().globalData.userInfo = null;
+  } catch (error) {
+    // App 尚未初始化时忽略
+  }
 }
 
 function redirectToLogin() {
@@ -38,8 +67,28 @@ function redirectToLogin() {
   }
 }
 
+/** 冷启动 / 切回前台时校验登录态，超时则跳转登录页 */
+function ensureAuthOnShow() {
+  const pages = getCurrentPages();
+  const current = pages[pages.length - 1];
+  const onLoginPage = current && current.route === "pages/login/index";
+  const token = wx.getStorageSync(TOKEN_KEY) || "";
+  if (!token) return false;
+  const expiresAt = getStoredExpiresAt();
+  if (expiresAt && Date.now() > expiresAt) {
+    if (!onLoginPage) redirectToLogin();
+    else clearSession();
+    return false;
+  }
+  return Boolean(getToken());
+}
+
 function callFunction(name, action, data = {}, options = {}) {
   const token = getToken();
+  if (!token && !options.skipAuthRedirect && action) {
+    redirectToLogin();
+    return Promise.reject(Object.assign(new Error("登录状态已失效，请重新登录"), { code: 401 }));
+  }
   const payload = action
     ? { action, data: { ...data, authToken: token } }
     : data;
@@ -54,6 +103,10 @@ function callFunction(name, action, data = {}, options = {}) {
       error.code = response.code;
       error.response = response;
       throw error;
+    }
+    // 有操作则本地滑动续期 24 小时，与后端保持一致
+    if (token) {
+      touchLocalSession(Date.now() + SESSION_TTL_MS);
     }
     return response.data;
   });
@@ -147,6 +200,7 @@ module.exports = {
   createClient,
   createProject,
   deleteVoucher,
+  ensureAuthOnShow,
   getProject,
   getGlobalConfig,
   getNextEmployeeNo,

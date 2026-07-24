@@ -16,6 +16,8 @@ const db = cloud.database();
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
 const SESSION_COLLECTION = 'auth_sessions';
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
 const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
 const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
@@ -97,7 +99,21 @@ async function authenticate(event, data) {
   const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
   const session = (sessionResult.data || [])[0];
   if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    if (session && session._id) {
+      db.collection(SESSION_COLLECTION).doc(session._id).remove().catch(() => {});
+    }
     return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const now = Date.now();
+  const lastActiveAt = Number(session.lastActiveAt || 0);
+  if (!lastActiveAt || now - lastActiveAt >= SESSION_TOUCH_INTERVAL_MS) {
+    db.collection(SESSION_COLLECTION).doc(session._id).update({
+      data: {
+        lastActiveAt: now,
+        expiresAt: now + SESSION_TTL_MS,
+        updateTime: db.serverDate()
+      }
+    }).catch(() => {});
   }
   const userResult = await db.collection('users').doc(session.userId).get();
   if (!userResult.data) return { error: { code: 401, message: '用户不存在或已停用' } };

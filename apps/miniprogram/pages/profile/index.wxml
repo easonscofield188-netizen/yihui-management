@@ -1,7 +1,7 @@
 <view class="profile-page">
   <view class="profile-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-wallet"><t-icon name="wallet" size="40rpx" color="#002045" /></view>
-    <view class="nav-title">亿辉记</view>
+    <view class="nav-title">月辉记</view>
   </view>
 
   <view class="profile-content" wx:if="{{userInfo}}">
