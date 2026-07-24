@@ -1,6 +1,6 @@
 <view class="projects-page">
   <view class="top-bar" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
-    <view class="brand"><t-icon name="wallet" size="48rpx" color="#002045" /><text>亿辉记</text></view>
+    <view class="brand"><t-icon name="wallet" size="48rpx" color="#002045" /><text>月辉记</text></view>
   </view>
   <view class="filter-panel">
     <view class="search-box">
@@ -25,7 +25,7 @@
         <view class="project-meta">
           <text class="project-code">{{item.projectCode}}</text>
           <view class="status-badge status-{{item.status}}">
-            <t-icon wx:if="{{item.isClosed}}" name="check-circle" size="25rpx" />
+            <t-icon wx:if="{{item.isClosed}}" name="check-circle" size="25rpx" color="#0f7a45" />
             <view wx:else class="status-dot"></view><text>{{item.statusLabel}}</text>
           </view>
         </view>

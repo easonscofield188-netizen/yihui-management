@@ -46,5 +46,19 @@ App({
     }
 
     this.globalData.userInfo = wx.getStorageSync("userInfo") || null;
+    this.checkSession();
   },
-}); 
+
+  onShow() {
+    this.checkSession();
+  },
+
+  checkSession() {
+    try {
+      const api = require("./utils/api");
+      api.ensureAuthOnShow();
+    } catch (error) {
+      console.warn("登录态校验失败", error);
+    }
+  },
+});

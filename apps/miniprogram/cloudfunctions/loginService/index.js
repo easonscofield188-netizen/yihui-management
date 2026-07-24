@@ -16,7 +16,9 @@ cloud.init({
 const db = cloud.database();
 const OPERATION_LOG_COLLECTION = 'operation_logs';
 const SESSION_COLLECTION = 'auth_sessions';
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// 24 小时无操作自动失效（有操作则滑动续期）
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const COMMON_IP_LOGIN_THRESHOLD = 2;
 const MAX_LOGIN_IP_STATS = 20;
 
@@ -151,12 +153,14 @@ function getAuthToken(data, event) {
 }
 
 async function createSession(userId, event) {
+  const now = Date.now();
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + SESSION_TTL_MS;
+  const expiresAt = now + SESSION_TTL_MS;
   const sessionData = {
     tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
     userId,
     expiresAt,
+    lastActiveAt: now,
     clientIp: getClientIp(event),
     createTime: db.serverDate()
   };
@@ -174,13 +178,41 @@ async function createSession(userId, event) {
   return { token, expiresAt };
 }
 
+async function touchSession(session) {
+  if (!session || !session._id) return Number(session && session.expiresAt) || 0;
+  const now = Date.now();
+  const lastActiveAt = Number(session.lastActiveAt || 0);
+  if (lastActiveAt && now - lastActiveAt < SESSION_TOUCH_INTERVAL_MS) {
+    return Number(session.expiresAt || 0);
+  }
+  const expiresAt = now + SESSION_TTL_MS;
+  try {
+    await db.collection(SESSION_COLLECTION).doc(session._id).update({
+      data: {
+        lastActiveAt: now,
+        expiresAt,
+        updateTime: db.serverDate()
+      }
+    });
+  } catch (error) {
+    console.warn('会话续期失败:', error.message || error);
+  }
+  return expiresAt;
+}
+
 async function getSessionUserId(data, event) {
   const token = getAuthToken(data, event);
   if (!token) return '';
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const result = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
   const session = (result.data || [])[0];
-  if (!session || Number(session.expiresAt || 0) <= Date.now()) return '';
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    if (session && session._id) {
+      db.collection(SESSION_COLLECTION).doc(session._id).remove().catch(() => {});
+    }
+    return '';
+  }
+  await touchSession(session);
   return session.userId || '';
 }
 
