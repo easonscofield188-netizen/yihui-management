@@ -1,6 +1,5 @@
 const api = require("../../utils/api");
 
-const PROJECT_DRAFT_KEY = "projectCreateDraft";
 const WRITE_ROLES = ["ADMIN_SUPER", "ADMIN_COM", "ADMIN", "PROJECT_MANAGER", "FINANCE_MANAGER"];
 const STATUS_LABELS = {
   negotiating: "洽谈中",
@@ -250,39 +249,7 @@ Page({
   editProject() {
     const project = this.data.project;
     if (!project || !this.data.canEdit) return;
-    const rawDeliveryDate = project.startDate
-      || project.completionTime
-      || (project.period && project.period[0])
-      || "";
-    const deliveryDate = String(rawDeliveryDate).slice(0, 10);
-    wx.setStorageSync(PROJECT_DRAFT_KEY, {
-      _mode: "edit",
-      _projectId: this.data.projectId,
-      _originalStatus: project.status || "",
-      name: project.name || "",
-      status: project.status || "completed",
-      scene: project.scene || "",
-      startDate: deliveryDate,
-      client: project.client || "",
-      clientId: project.clientId || "",
-      role: project.role || "",
-      source: project.clientSource || project.source || "",
-      createClient: false,
-      amount: Number(project.amount) || 0,
-      receivedAmount: Number(project.receivedAmount) || 0,
-      staffCount: Number(project.staffCount) || 1,
-      desc: project.desc || "",
-      costs: (project.costs || []).map((item) => ({
-        id: item.id,
-        category: item.category || "",
-        categoryCode: item.categoryCode || "",
-        supplier: item.supplier || "无",
-        amount: Number(item.amount) || 0,
-        isSettled: item.isSettled === true || item.isSettled === "是",
-      })),
-      invoiceEnabled: this.data.vouchers.length > 0 || project.isHasVoucher === "是",
-    });
-    wx.navigateTo({ url: `/pages/project-create/index?mode=edit&id=${this.data.projectId}` });
+    wx.navigateTo({ url: `/pages/project-edit/index?id=${this.data.projectId}` });
   },
 
   openCost() {

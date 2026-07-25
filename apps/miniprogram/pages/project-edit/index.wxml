@@ -1,0 +1,281 @@
+<page-meta page-style="{{scenePickerVisible || addCostVisible || categoryPickerVisible ? 'overflow: hidden;' : ''}}" />
+<view class="edit-page">
+  <view class="edit-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-close" bindtap="discard"><t-icon name="close" size="44rpx" color="#43474e" /></view>
+    <view class="nav-title">编辑项目</view>
+  </view>
+
+  <scroll-view
+    class="edit-scroll"
+    scroll-y
+    scroll-with-animation
+    scroll-top="{{editScrollTop}}"
+    show-scrollbar="{{false}}"
+    enhanced
+    bindscroll="onEditScroll"
+  >
+    <!-- 基本信息 -->
+    <view class="section-card">
+      <view class="section-head">
+        <t-icon name="info-circle-filled" size="36rpx" color="#002045" />
+        <text class="section-title">基本信息</text>
+      </view>
+
+      <view class="field-block">
+        <view class="field-label">项目名称</view>
+        <view class="input-shell">
+          <t-input t-class="form-input" borderless value="{{form.name}}" placeholder="请输入项目名称" data-field="name" bindchange="onFieldChange" />
+        </view>
+      </view>
+
+      <view class="field-block">
+        <view class="field-label">应用场景</view>
+        <view class="input-shell select-shell {{isClosedEdit ? 'disabled' : ''}}" bindtap="openScenePicker">
+          <text class="select-text">{{sceneLabel || '请选择应用场景'}}</text>
+          <t-icon name="chevron-down" size="34rpx" color="#74777f" />
+        </view>
+      </view>
+
+      <view class="field-block">
+        <view class="field-label">交付日期</view>
+        <view class="input-shell select-shell disabled">
+          <text class="select-text">{{form.startDate || '未设置'}}</text>
+          <t-icon name="calendar" size="32rpx" color="#74777f" />
+        </view>
+      </view>
+    </view>
+
+    <!-- 财务概况 -->
+    <view class="section-card">
+      <view class="section-head">
+        <t-icon name="wallet" size="36rpx" color="#002045" />
+        <text class="section-title">财务概况</text>
+      </view>
+
+      <view id="money-amount" class="money-card amount-card">
+        <view class="field-label primary-label">订单总额 (CNY)</view>
+        <view
+          class="money-row"
+          data-field="amount"
+          data-anchor="money-amount"
+          bindtap="activateMoneyField"
+        >
+          <text class="money-prefix primary">¥</text>
+          <input
+            class="money-input primary {{isClosedEdit ? 'disabled' : ''}}"
+            type="digit"
+            disabled="{{isClosedEdit}}"
+            focus="{{moneyFocusAnchor === 'money-amount'}}"
+            always-embed
+            value="{{form.amount}}"
+            placeholder="0.00"
+            data-field="amount"
+            data-anchor="money-amount"
+            adjust-position="{{false}}"
+            bindfocus="onMoneyFocus"
+            bindblur="onMoneyBlur"
+            bindinput="onMoneyInput"
+          />
+        </view>
+      </view>
+
+      <view id="money-received" class="money-card">
+        <view class="field-label">已收金额 (CNY)</view>
+        <view
+          class="money-row"
+          data-field="receivedAmount"
+          data-anchor="money-received"
+          bindtap="activateMoneyField"
+        >
+          <text class="money-prefix">¥</text>
+          <input
+            class="money-input"
+            type="digit"
+            focus="{{moneyFocusAnchor === 'money-received'}}"
+            always-embed
+            value="{{form.receivedAmount}}"
+            placeholder="0.00"
+            data-field="receivedAmount"
+            data-anchor="money-received"
+            adjust-position="{{false}}"
+            bindfocus="onMoneyFocus"
+            bindblur="onMoneyBlur"
+            bindinput="onMoneyInput"
+          />
+        </view>
+      </view>
+
+      <view class="profit-card">
+        <view>
+          <view class="profit-label">当前利润 (预估)</view>
+          <view class="profit-value">¥ {{profitText}}</view>
+        </view>
+        <view class="profit-rate">{{profitRateText}} 盈利率</view>
+      </view>
+    </view>
+
+    <!-- 成本支出 -->
+    <view class="section-card">
+      <view class="section-head between">
+        <view class="section-head-left">
+          <t-icon name="view-list" size="36rpx" color="#002045" />
+          <text class="section-title">成本支出</text>
+        </view>
+        <view class="add-link" bindtap="openAddCost">
+          <t-icon name="add-circle" size="32rpx" color="#002045" />
+          <text>添加明细</text>
+        </view>
+      </view>
+
+      <view wx:if="{{costs.length}}">
+        <view class="cost-item {{item.isSettled ? 'paid' : 'pending'}}" wx:for="{{costs}}" wx:key="id">
+          <view class="cost-main">
+            <view class="cost-title-row">
+              <text class="cost-name">{{item.category}}</text>
+              <text class="cost-tag {{item.isSettled ? 'tag-paid' : 'tag-pending'}}">{{item.isSettled ? '已付' : '待结'}}</text>
+            </view>
+            <view class="cost-sub">
+              <t-icon name="user" size="24rpx" color="#74777f" />
+              <text>{{item.supplier}}</text>
+            </view>
+          </view>
+          <view class="cost-side">
+            <text class="cost-amount">¥ {{item.amountText}}</text>
+            <text class="cost-remove" data-id="{{item.id}}" bindtap="removeCost">移除</text>
+          </view>
+        </view>
+      </view>
+      <view class="empty-cost" wx:else>
+        <t-icon name="folder-open" size="64rpx" color="#989fa6" />
+        <text>暂未添加成本明细</text>
+      </view>
+    </view>
+
+    <!-- 凭证附件 -->
+    <view class="section-card">
+      <view class="section-head">
+        <t-icon name="file" size="36rpx" color="#002045" />
+        <text class="section-title">凭证附件</text>
+      </view>
+      <view class="voucher-grid">
+        <view class="voucher-item" wx:for="{{vouchers}}" wx:key="id">
+          <image wx:if="{{item.isImage}}" class="voucher-image" src="{{item.tempFilePath}}" mode="aspectFill" data-path="{{item.tempFilePath}}" bindtap="previewVoucher" />
+          <view wx:else class="voucher-pdf">
+            <t-icon name="file-pdf" size="48rpx" color="#ba1a1a" />
+            <text>PDF</text>
+          </view>
+          <view class="voucher-remove" data-id="{{item.id}}" data-existing="{{item.isExisting}}" data-file-id="{{item.fileId}}" bindtap="removeVoucher">
+            <t-icon name="close" size="24rpx" color="#ffffff" />
+          </view>
+        </view>
+        <view wx:if="{{vouchers.length < 9}}" class="voucher-add" bindtap="chooseVoucher">
+          <view class="voucher-add-inner">
+            <t-icon name="camera" size="48rpx" color="#74777f" />
+            <text>上传凭证</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="scroll-spacer" style="padding-bottom: {{formKeyboardPadding}}px;"></view>
+  </scroll-view>
+
+  <view class="edit-footer">
+    <view class="footer-cancel" bindtap="discard">放弃修改</view>
+    <view class="footer-save {{saving ? 'disabled' : ''}}" bindtap="save">{{saving ? '保存中...' : '保存并更新'}}</view>
+  </view>
+
+  <view class="edit-loading-mask" wx:if="{{loading || saving}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+    <view class="edit-loading-content">
+      <t-loading size="44rpx" theme="circular" />
+      <text>{{loadingMessage}}</text>
+    </view>
+  </view>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{scenePickerVisible}}"
+    value="{{scenePickerValue}}"
+    title="选择应用场景"
+    confirm-btn="确定"
+    cancel-btn="取消"
+    bindconfirm="onSceneConfirm"
+    bindcancel="closeScenePicker"
+    bindclose="closeScenePicker"
+  >
+    <t-picker-item options="{{sceneOptions}}" />
+  </t-picker>
+
+  <t-popup
+    t-class-content="add-cost-popup"
+    visible="{{addCostVisible}}"
+    placement="bottom"
+    close-on-overlay-click
+    bindvisible-change="onAddCostVisibleChange"
+  >
+    <view
+      class="add-cost-dialog"
+      style="transform: translateY(-{{keyboardHeight}}px); max-height: {{keyboardHeight > 0 ? (windowHeight - keyboardHeight - 16) : (windowHeight * 0.78)}}px;"
+      catchtap="stopPropagation"
+    >
+      <view class="popup-title">
+        <text>添加明细</text>
+        <t-icon name="close" size="40rpx" color="#43474e" bindtap="closeAddCost" />
+      </view>
+      <scroll-view
+        class="add-cost-scroll"
+        scroll-y
+        scroll-into-view="{{costScrollTarget}}"
+        scroll-with-animation
+        show-scrollbar="{{false}}"
+        enhanced
+      >
+        <view class="field-label">成本类别</view>
+        <view class="input-shell select-shell" bindtap="openCategoryPicker">
+          <text class="select-text">{{costCategories[categoryIndex].label}}</text>
+          <t-icon name="chevron-down" size="34rpx" color="#74777f" />
+        </view>
+        <view class="field-label">供应商</view>
+        <view class="input-shell">
+          <t-input t-class="form-input" borderless readonly value="{{costForm.supplier}}" />
+        </view>
+        <view id="cost-amount-anchor" class="field-label">成本金额</view>
+        <view class="input-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            type="digit"
+            value="{{costForm.amount}}"
+            placeholder="请输入金额"
+            data-field="amount"
+            adjust-position="{{false}}"
+            cursor-spacing="160"
+            bindfocus="onCostAmountFocus"
+            bindblur="onCostAmountBlur"
+            bindchange="onCostFormChange"
+          />
+        </view>
+        <view class="settled-row">
+          <text>已支付</text>
+          <t-switch value="{{costForm.isSettled}}" bindchange="onSettledChange" />
+        </view>
+        <view class="save-cost-action">
+          <t-button t-class="save-cost-button" theme="primary" block content="确认添加" bindtap="saveCost" />
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{categoryPickerVisible}}"
+    value="{{categoryPickerValue}}"
+    title="选择成本类别"
+    confirm-btn="确定"
+    cancel-btn="取消"
+    bindconfirm="onCategoryConfirm"
+    bindcancel="closeCategoryPicker"
+    bindclose="closeCategoryPicker"
+  >
+    <t-picker-item options="{{costCategories}}" />
+  </t-picker>
+</view>

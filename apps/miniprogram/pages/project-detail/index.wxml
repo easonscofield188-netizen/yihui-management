@@ -8,10 +8,16 @@
 
 <view class="detail-page" wx:if="{{project}}">
   <view class="project-heading">
-    <view class="project-name">{{project.name}}</view>
-    <view class="status status-{{project.status}}">
-      <view class="status-dot"></view>
-      <text>{{project.statusLabel}}</text>
+    <view class="project-heading-main">
+      <view class="project-name">{{project.name}}</view>
+      <view class="status status-{{project.status}}">
+        <view class="status-dot"></view>
+        <text>{{project.statusLabel}}</text>
+      </view>
+    </view>
+    <view class="heading-edit" wx:if="{{canEdit}}" bindtap="editProject">
+      <t-icon name="edit-1" size="34rpx" color="#ffffff" />
+      <text>编辑</text>
     </view>
   </view>
 
