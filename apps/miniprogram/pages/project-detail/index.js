@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const { openPdfFile } = require("../../utils/file-preview");
 
 const WRITE_ROLES = ["ADMIN_SUPER", "ADMIN_COM", "ADMIN", "PROJECT_MANAGER", "FINANCE_MANAGER"];
 const STATUS_LABELS = {
@@ -370,13 +371,34 @@ Page({
     }
   },
 
-  previewVoucher(event) {
-    const current = event.currentTarget.dataset.url;
-    const urls = this.data.vouchers
-      .filter((item) => item.isImage !== false)
-      .map((item) => item.displayUrl || item.fileUrl)
-      .filter(Boolean);
-    if (!current || !urls.includes(current)) return;
-    wx.previewImage({ current, urls });
+  async previewVoucher(event) {
+    const id = event.currentTarget.dataset.id;
+    const target = this.data.vouchers.find((item) => String(item._id || item.id) === String(id));
+    if (!target) return;
+
+    if (target.isImage !== false) {
+      const current = target.displayUrl || target.fileUrl;
+      const urls = this.data.vouchers
+        .filter((item) => item.isImage !== false)
+        .map((item) => item.displayUrl || item.fileUrl)
+        .filter(Boolean);
+      if (current && urls.includes(current)) {
+        wx.previewImage({ current, urls });
+      }
+      return;
+    }
+
+    wx.showLoading({ title: "打开中...", mask: true });
+    try {
+      await openPdfFile({
+        filePath: target.displayUrl || target.fileUrl,
+        fileId: target.fileId,
+        fileUrl: target.displayUrl || target.fileUrl,
+      });
+    } catch (error) {
+      wx.showToast({ title: (error && error.message) || "无法打开 PDF", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
   },
 });

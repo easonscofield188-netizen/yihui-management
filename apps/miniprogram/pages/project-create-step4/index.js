@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const { openPdfFile } = require("../../utils/file-preview");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -375,10 +376,34 @@ Page({
     });
   },
 
-  previewFile(event) {
-    const current = event.currentTarget.dataset.path;
-    const images = this.data.files.filter((item) => item.isImage).map((item) => item.tempFilePath);
-    if (images.includes(current)) wx.previewImage({ current, urls: images });
+  async previewFile(event) {
+    const id = event.currentTarget.dataset.id;
+    const target = this.data.files.find((item) => item.id === id);
+    if (!target) return;
+
+    if (target.isImage) {
+      const current = target.tempFilePath;
+      const images = this.data.files
+        .filter((item) => item.isImage && item.tempFilePath)
+        .map((item) => item.tempFilePath);
+      if (current && images.includes(current)) {
+        wx.previewImage({ current, urls: images });
+      }
+      return;
+    }
+
+    wx.showLoading({ title: "打开中...", mask: true });
+    try {
+      await openPdfFile({
+        filePath: target.tempFilePath,
+        fileId: target.fileId,
+        fileUrl: target.tempFilePath,
+      });
+    } catch (error) {
+      wx.showToast({ title: (error && error.message) || "无法打开 PDF", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   previous() {

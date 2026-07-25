@@ -159,8 +159,8 @@
       </view>
       <view class="voucher-grid">
         <view class="voucher-item" wx:for="{{vouchers}}" wx:key="id">
-          <image wx:if="{{item.isImage}}" class="voucher-image" src="{{item.tempFilePath}}" mode="aspectFill" data-path="{{item.tempFilePath}}" bindtap="previewVoucher" />
-          <view wx:else class="voucher-pdf">
+          <image wx:if="{{item.isImage}}" class="voucher-image" src="{{item.tempFilePath}}" mode="aspectFill" data-id="{{item.id}}" bindtap="previewVoucher" />
+          <view wx:else class="voucher-pdf" data-id="{{item.id}}" bindtap="previewVoucher">
             <t-icon name="file-pdf" size="48rpx" color="#ba1a1a" />
             <text>PDF</text>
           </view>

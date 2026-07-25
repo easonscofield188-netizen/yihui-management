@@ -105,10 +105,15 @@
           class="voucher-image"
           src="{{item.displayUrl || item.fileUrl}}"
           mode="aspectFill"
-          data-url="{{item.displayUrl || item.fileUrl}}"
+          data-id="{{item._id || item.id}}"
           bindtap="previewVoucher"
         />
-        <view wx:else class="pdf-voucher">PDF</view>
+        <view
+          wx:else
+          class="pdf-voucher"
+          data-id="{{item._id || item.id}}"
+          bindtap="previewVoucher"
+        >PDF</view>
       </view>
     </view>
     <view class="empty-row" wx:if="{{!vouchers.length}}">暂无凭证</view>
