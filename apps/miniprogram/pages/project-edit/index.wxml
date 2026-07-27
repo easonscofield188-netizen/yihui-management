@@ -45,75 +45,6 @@
       </view>
     </view>
 
-    <!-- 财务概况 -->
-    <view class="section-card">
-      <view class="section-head">
-        <t-icon name="wallet" size="36rpx" color="#002045" />
-        <text class="section-title">财务概况</text>
-      </view>
-
-      <view id="money-amount" class="money-card amount-card">
-        <view class="field-label primary-label">订单总额 (CNY)</view>
-        <view
-          class="money-row"
-          data-field="amount"
-          data-anchor="money-amount"
-          bindtap="activateMoneyField"
-        >
-          <text class="money-prefix primary">¥</text>
-          <input
-            class="money-input primary {{isClosedEdit ? 'disabled' : ''}}"
-            type="digit"
-            disabled="{{isClosedEdit}}"
-            focus="{{moneyFocusAnchor === 'money-amount'}}"
-            always-embed
-            value="{{form.amount}}"
-            placeholder="0.00"
-            data-field="amount"
-            data-anchor="money-amount"
-            adjust-position="{{false}}"
-            bindfocus="onMoneyFocus"
-            bindblur="onMoneyBlur"
-            bindinput="onMoneyInput"
-          />
-        </view>
-      </view>
-
-      <view id="money-received" class="money-card">
-        <view class="field-label">已收金额 (CNY)</view>
-        <view
-          class="money-row"
-          data-field="receivedAmount"
-          data-anchor="money-received"
-          bindtap="activateMoneyField"
-        >
-          <text class="money-prefix">¥</text>
-          <input
-            class="money-input"
-            type="digit"
-            focus="{{moneyFocusAnchor === 'money-received'}}"
-            always-embed
-            value="{{form.receivedAmount}}"
-            placeholder="0.00"
-            data-field="receivedAmount"
-            data-anchor="money-received"
-            adjust-position="{{false}}"
-            bindfocus="onMoneyFocus"
-            bindblur="onMoneyBlur"
-            bindinput="onMoneyInput"
-          />
-        </view>
-      </view>
-
-      <view class="profit-card">
-        <view>
-          <view class="profit-label">当前利润 (预估)</view>
-          <view class="profit-value">¥ {{profitText}}</view>
-        </view>
-        <view class="profit-rate">{{profitRateText}} 盈利率</view>
-      </view>
-    </view>
-
     <!-- 成本支出 -->
     <view class="section-card">
       <view class="section-head between">
@@ -148,6 +79,92 @@
       <view class="empty-cost" wx:else>
         <t-icon name="folder-open" size="64rpx" color="#989fa6" />
         <text>暂未添加成本明细</text>
+      </view>
+    </view>
+
+    <!-- 项目概况 -->
+    <view class="section-card">
+      <view class="section-head">
+        <t-icon name="wallet" size="36rpx" color="#002045" />
+        <text class="section-title">项目概况</text>
+      </view>
+
+      <view id="money-amount" class="money-card amount-card">
+        <view class="field-label primary-label">订单总额 (CNY)</view>
+        <view
+          class="money-row"
+          data-field="amount"
+          data-anchor="money-amount"
+          bindtap="activateMoneyField"
+        >
+          <text class="money-prefix primary">¥</text>
+          <input
+            class="money-input primary {{isClosedEdit ? 'disabled' : ''}}"
+            type="digit"
+            disabled="{{isClosedEdit}}"
+            focus="{{moneyFocusAnchor === 'money-amount'}}"
+            always-embed
+            hold-keyboard
+            value="{{form.amount}}"
+            placeholder="0.00"
+            data-field="amount"
+            data-anchor="money-amount"
+            adjust-position="{{false}}"
+            bindfocus="onMoneyFocus"
+            bindblur="onMoneyBlur"
+            bindinput="onMoneyInput"
+          />
+        </view>
+      </view>
+
+      <view id="money-received" class="money-card">
+        <view class="money-label-row">
+          <view class="field-label">已收金额 (CNY)</view>
+          <view class="settled-control">
+            <text class="settled-text">已结清</text>
+            <t-switch size="small" value="{{isFullySettled}}" bindchange="onFullySettledChange" />
+          </view>
+        </view>
+        <view
+          class="money-row"
+          data-field="receivedAmount"
+          data-anchor="money-received"
+          bindtap="activateMoneyField"
+        >
+          <text class="money-prefix">¥</text>
+          <input
+            class="money-input {{isFullySettled ? 'disabled' : ''}}"
+            type="digit"
+            disabled="{{isFullySettled}}"
+            focus="{{moneyFocusAnchor === 'money-received'}}"
+            always-embed
+            hold-keyboard
+            value="{{form.receivedAmount}}"
+            placeholder="0.00"
+            data-field="receivedAmount"
+            data-anchor="money-received"
+            adjust-position="{{false}}"
+            bindfocus="onMoneyFocus"
+            bindblur="onMoneyBlur"
+            bindinput="onMoneyInput"
+          />
+        </view>
+      </view>
+
+      <view class="money-card cost-total-card">
+        <view class="field-label">订单成本 (CNY)</view>
+        <view class="money-row">
+          <text class="money-prefix cost-total-prefix">¥</text>
+          <text class="money-value cost-total-value">{{orderCostText}}</text>
+        </view>
+      </view>
+
+      <view class="profit-card">
+        <view>
+          <view class="profit-label">当前利润 (预估)</view>
+          <view class="profit-value">¥ {{profitText}}</view>
+        </view>
+        <view class="profit-rate">{{profitRateText}} 盈利率</view>
       </view>
     </view>
 

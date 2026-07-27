@@ -111,6 +111,30 @@ page { background: #f9f9ff; }
   border-color: rgba(173, 199, 247, 0.35);
   background: rgba(0, 32, 69, 0.04);
 }
+.money-label-row {
+  display: flex;
+  min-height: 44rpx;
+  margin-bottom: 10rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+.money-label-row .field-label { margin-bottom: 0; }
+.settled-control {
+  --td-switch-small-width: 68rpx;
+  --td-switch-small-height: 40rpx;
+  --td-switch-dot-small-size: 30rpx;
+  --td-switch-dot-horizontal-margin: 5rpx;
+  display: flex;
+  flex: none;
+  min-height: 56rpx;
+  align-items: center;
+  gap: 12rpx;
+}
+.settled-text {
+  color: #43474e;
+  font-size: 24rpx;
+}
 .money-row {
   display: flex;
   min-height: 88rpx;
@@ -143,7 +167,26 @@ page { background: #f9f9ff; }
   text-overflow: ellipsis;
 }
 .money-input.primary { color: #002045; }
-.money-input.disabled { opacity: 0.7; }
+.money-input.disabled {
+  opacity: 1;
+  color: #2d476f;
+  -webkit-text-fill-color: #2d476f;
+}
+.cost-total-card {
+  border-color: rgba(180, 83, 9, 0.16);
+  background: rgba(255, 247, 237, 0.82);
+}
+.money-value {
+  display: flex;
+  height: 88rpx;
+  flex: 1;
+  align-items: center;
+  color: #7c3f00;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 88rpx;
+}
+.cost-total-prefix { color: #7c3f00; }
 .profit-card {
   display: flex;
   padding: 24rpx;

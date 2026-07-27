@@ -120,6 +120,7 @@ Page({
     costScrollTarget: "",
     formKeyboardPadding: 0,
     moneyFocusAnchor: "",
+    isFullySettled: false,
     editScrollTop: 0,
     loading: true,
     saving: false,
@@ -147,6 +148,7 @@ Page({
     datePickerVisible: false,
     today: getToday(),
     costs: [],
+    orderCostText: "0.00",
     profitText: "0.00",
     profitRateText: "0%",
     vouchers: [],
@@ -184,6 +186,10 @@ Page({
   },
 
   onUnload() {
+    if (this._moneyBlurTimer) {
+      clearTimeout(this._moneyBlurTimer);
+      this._moneyBlurTimer = null;
+    }
     this.unbindKeyboardListener();
   },
 
@@ -196,6 +202,16 @@ Page({
           costScrollTarget: keyboardHeight > 0 ? "cost-amount-anchor" : "",
           formKeyboardPadding: 0,
         });
+        return;
+      }
+
+      // 两个金额输入框交接焦点时，部分真机会短暂上报高度 0。
+      // 忽略这次过渡事件，避免清除底部避让后触发滚动并关闭新键盘。
+      if (
+        keyboardHeight === 0
+        && this.data.moneyFocusAnchor
+        && Date.now() < (this._moneyFocusSwitchingUntil || 0)
+      ) {
         return;
       }
 
@@ -227,6 +243,8 @@ Page({
     this._editScrollTop = (event.detail && event.detail.scrollTop) || 0;
     // 程序化避让滚动不收起键盘；用户手势滑动才收起，避免原生 input 叠字
     if (this._programmaticScroll) return;
+    // 点击另一个金额输入框时也可能产生轻微滚动，不能在焦点交接阶段关闭键盘。
+    if (Date.now() < (this._moneyFocusSwitchingUntil || 0)) return;
     if (this.data.moneyFocusAnchor && !this._moneyScrollBlurring) {
       this._moneyScrollBlurring = true;
       if (this._moneyBlurTimer) {
@@ -330,9 +348,12 @@ Page({
         isExisting: true,
       };
     });
+    const projectAmount = Number(project.amount) || 0;
+    const projectReceivedAmount = Number(project.receivedAmount) || 0;
 
     this.setData({
       isClosedEdit: project.status === "closed",
+      isFullySettled: projectAmount > 0 && toCents(projectAmount) === toCents(projectReceivedAmount),
       sceneOptions: scenes,
       sceneLabel: (sceneMatched && sceneMatched.label) || scene || "",
       scenePickerValue: scene ? [scene] : (scenes[0] ? [scenes[0].value] : []),
@@ -349,8 +370,8 @@ Page({
         name: project.name || "",
         scene,
         startDate: dateOnly(project.startDate || project.completionTime || (project.period && project.period[0])),
-        amount: String(Number(project.amount) || 0),
-        receivedAmount: String(Number(project.receivedAmount) || 0),
+        amount: String(projectAmount),
+        receivedAmount: String(projectReceivedAmount),
         status: project.status || "completed",
         client: project.client || "",
         clientId: project.clientId || "",
@@ -394,6 +415,7 @@ Page({
     const profitCents = amountCents - costCents;
     const rate = amountCents > 0 ? (profitCents / amountCents) * 100 : 0;
     this.setData({
+      orderCostText: money(costCents / 100),
       profitText: money(profitCents / 100),
       profitRateText: `${Math.round(rate)}%`,
     });
@@ -410,11 +432,13 @@ Page({
     const moneyFocusAnchor = event.currentTarget.dataset.anchor || "";
     if (this.data.saving) return;
     if (this.data.isClosedEdit && field === "amount") return;
+    if (this.data.isFullySettled && field === "receivedAmount") return;
     if (this.data.moneyFocusAnchor === moneyFocusAnchor) return;
     if (this._moneyBlurTimer) {
       clearTimeout(this._moneyBlurTimer);
       this._moneyBlurTimer = null;
     }
+    this._moneyFocusSwitchingUntil = Date.now() + 500;
     // 直接切换焦点，避免先清空再聚焦导致键盘闪断
     this.setData({ moneyFocusAnchor });
   },
@@ -424,6 +448,7 @@ Page({
       clearTimeout(this._moneyBlurTimer);
       this._moneyBlurTimer = null;
     }
+    this._moneyFocusSwitchingUntil = Date.now() + 500;
     const moneyFocusAnchor = event.currentTarget.dataset.anchor || "";
     if (this.data.moneyFocusAnchor !== moneyFocusAnchor) {
       this.setData({ moneyFocusAnchor });
@@ -446,14 +471,50 @@ Page({
         moneyFocusAnchor: "",
         formKeyboardPadding: 0,
       });
-    }, 80);
+    }, 220);
   },
 
   onMoneyInput(event) {
     const field = event.currentTarget.dataset.field;
     if (this.data.isClosedEdit && field === "amount") return;
+    if (this.data.isFullySettled && field === "receivedAmount") return;
     const value = cleanMoney(event.detail.value);
-    this.setData({ [`form.${field}`]: value }, () => this.refreshProfit());
+    const patch = { [`form.${field}`]: value };
+    if (
+      field === "amount"
+      && this.data.isFullySettled
+      && toCents(value) !== toCents(this.data.form.receivedAmount)
+    ) {
+      patch.isFullySettled = false;
+    }
+    this.setData(patch, () => this.refreshProfit());
+  },
+
+  onFullySettledChange(event) {
+    const isFullySettled = Boolean(event.detail && event.detail.value);
+    if (!isFullySettled) {
+      this.setData({ isFullySettled: false });
+      return;
+    }
+
+    const amount = cleanMoney(this.data.form.amount);
+    if (toCents(amount) <= 0) {
+      this.setData({ isFullySettled: false });
+      wx.showToast({ title: "请先填写订单总额", icon: "none" });
+      return;
+    }
+
+    if (this._moneyBlurTimer) {
+      clearTimeout(this._moneyBlurTimer);
+      this._moneyBlurTimer = null;
+    }
+    wx.hideKeyboard();
+    this.setData({
+      isFullySettled: true,
+      "form.receivedAmount": amount,
+      moneyFocusAnchor: "",
+      formKeyboardPadding: 0,
+    }, () => this.refreshProfit());
   },
 
   openScenePicker() {
