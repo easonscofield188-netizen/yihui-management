@@ -50,6 +50,26 @@ function dateOnly(value) {
   return matched ? matched[0] : "";
 }
 
+function normalizeDateOnly(value) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const matched = String(raw || "").match(/^\d{4}-\d{2}-\d{2}/);
+  if (matched) return matched[0];
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getToday() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function isSettledCost(value) {
   if (value === undefined || value === null || value === "") return true;
   return value === true || value === 1 || ["是", "true", "已支付", "已结清"].includes(String(value).toLowerCase());
@@ -124,6 +144,8 @@ Page({
     sceneLabel: "",
     scenePickerVisible: false,
     scenePickerValue: [],
+    datePickerVisible: false,
+    today: getToday(),
     costs: [],
     profitText: "0.00",
     profitRateText: "0%",
@@ -458,6 +480,41 @@ Page({
     });
   },
 
+  async loadServerDate() {
+    try {
+      const result = await api.getServerDate();
+      const serverToday = normalizeDateOnly(result && result.date);
+      if (serverToday) {
+        this.setData({ today: serverToday });
+        return serverToday;
+      }
+    } catch (error) {
+      // fallback to local today
+    }
+    return this.data.today || getToday();
+  },
+
+  async openDatePicker() {
+    if (this.data.saving) return;
+    const serverToday = await this.loadServerDate();
+    this.setData({
+      today: serverToday,
+      "form.startDate": normalizeDateOnly(this.data.form.startDate) || serverToday,
+      datePickerVisible: true,
+    });
+  },
+
+  closeDatePicker() {
+    this.setData({ datePickerVisible: false });
+  },
+
+  onDateConfirm(event) {
+    this.setData({
+      "form.startDate": normalizeDateOnly(event.detail.value),
+      datePickerVisible: false,
+    });
+  },
+
   openAddCost() {
     if (this.data.saving) return;
     const categories = this.data.costCategories;
@@ -722,6 +779,11 @@ Page({
       wx.showToast({ title: "请填写项目名称", icon: "none" });
       return;
     }
+    const startDate = normalizeDateOnly(form.startDate);
+    if (!startDate) {
+      wx.showToast({ title: "请选择交付日期", icon: "none" });
+      return;
+    }
     if (!amount || amount <= 0) {
       wx.showToast({ title: "请填写有效订单总额", icon: "none" });
       return;
@@ -743,6 +805,7 @@ Page({
       const payload = {
         id: this.data.projectId,
         name,
+        startDate,
         receivedAmount,
         desc: form.desc || "无",
         costs,

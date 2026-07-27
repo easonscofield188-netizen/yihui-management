@@ -650,7 +650,9 @@ Page({
 
       if (!projectId) {
         if (isEditMode) {
-          const editableData = isClosedEdit ? {} : {
+          const editableData = isClosedEdit ? {
+            startDate: deliveryDate,
+          } : {
             scene: draft.scene || "",
             client: draft.client.trim(),
             clientId: draft.clientId || "",
@@ -658,6 +660,7 @@ Page({
             clientSource: draft.source || "",
             staffCount: Number(draft.staffCount) || 1,
             amount: Number(draft.amount),
+            startDate: deliveryDate,
           };
           await api.updateProject({
             id: draft._projectId,

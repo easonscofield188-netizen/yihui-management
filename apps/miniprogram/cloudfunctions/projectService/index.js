@@ -321,7 +321,7 @@ async function deleteProject(params) {
 }
 
 async function updateProject(params) {
-  const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
+  const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, startDate, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -399,6 +399,8 @@ async function updateProject(params) {
         'isHasVoucher',
         'receivedAmount',
         'status',
+        'startDate',
+        'completionTime',
         'negotiatingTime',
         'constructingTime',
         'completedTime',
@@ -501,7 +503,23 @@ async function updateProject(params) {
     if (constructionPeriod !== undefined) updateDataFinal.constructionPeriod = constructionPeriod;
     if (collectionPeriod !== undefined) updateDataFinal.collectionPeriod = collectionPeriod;
     if (completionTime !== undefined) updateDataFinal.completionTime = completionTime;
-    
+
+    // 允许编辑交付日期：同步 startDate / completionTime，常规项目同步 period 便于列表年份筛选
+    if (startDate !== undefined && startDate !== null && startDate !== '') {
+      const normalizedStartDate = String(startDate).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedStartDate)) {
+        return { code: 400, message: '交付日期格式不正确' };
+      }
+      if (isFutureDateValue(normalizedStartDate)) {
+        return { code: 400, message: '交付日期不能晚于当前日期' };
+      }
+      updateDataFinal.startDate = normalizedStartDate;
+      updateDataFinal.completionTime = normalizedStartDate;
+      if (oldProject.type !== 'long_term') {
+        updateDataFinal.period = [normalizedStartDate, normalizedStartDate];
+      }
+    }
+
     if (isHasContract !== undefined) updateDataFinal.isHasContract = isHasContract;
     if (isHasPreview !== undefined) updateDataFinal.isHasPreview = isHasPreview;
     if (isHasVoucher !== undefined) updateDataFinal.isHasVoucher = isHasVoucher;

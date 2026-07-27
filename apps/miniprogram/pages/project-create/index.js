@@ -111,7 +111,7 @@ Page({
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
       isClosedEdit: isEditMode && (savedDraft._originalStatus || savedDraft.status) === "closed",
-      isDateLocked: isEditMode,
+      isDateLocked: false,
       form,
     });
     this.loadServerDate();
@@ -277,7 +277,7 @@ Page({
 
   async openDatePicker() {
     if (this.data.isDateLocked) {
-      wx.showToast({ title: "编辑时不可修改交付日期", icon: "none" });
+      wx.showToast({ title: "当前不可修改交付日期", icon: "none" });
       return;
     }
     const serverToday = this.data.serverToday || await this.loadServerDate() || getToday();

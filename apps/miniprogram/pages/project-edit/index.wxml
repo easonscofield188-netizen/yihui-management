@@ -1,4 +1,4 @@
-<page-meta page-style="{{scenePickerVisible || addCostVisible || categoryPickerVisible ? 'overflow: hidden;' : ''}}" />
+<page-meta page-style="{{scenePickerVisible || addCostVisible || categoryPickerVisible || datePickerVisible ? 'overflow: hidden;' : ''}}" />
 <view class="edit-page">
   <view class="edit-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-close" bindtap="discard"><t-icon name="close" size="44rpx" color="#43474e" /></view>
@@ -38,8 +38,8 @@
 
       <view class="field-block">
         <view class="field-label">交付日期</view>
-        <view class="input-shell select-shell disabled">
-          <text class="select-text">{{form.startDate || '未设置'}}</text>
+        <view class="input-shell select-shell" bindtap="openDatePicker">
+          <text class="select-text">{{form.startDate || '请选择交付日期'}}</text>
           <t-icon name="calendar" size="32rpx" color="#74777f" />
         </view>
       </view>
@@ -278,4 +278,18 @@
   >
     <t-picker-item options="{{costCategories}}" />
   </t-picker>
+
+  <t-date-time-picker
+    t-class-confirm="picker-confirm"
+    visible="{{datePickerVisible}}"
+    mode="date"
+    value="{{form.startDate}}"
+    end="{{today}}"
+    title="选择交付日期"
+    confirm-btn="确定"
+    cancel-btn="取消"
+    bindconfirm="onDateConfirm"
+    bindcancel="closeDatePicker"
+    bindclose="closeDatePicker"
+  />
 </view>
