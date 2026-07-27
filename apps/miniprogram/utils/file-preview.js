@@ -10,6 +10,15 @@ function isCloudFileId(fileId) {
   return /^cloud:\/\//i.test(String(fileId || ""));
 }
 
+function getPdfDisplayName(fileName, maxLength = 8) {
+  const rawName = String(fileName || "PDF文件").trim();
+  const name = rawName.replace(/\.pdf$/i, "") || "PDF文件";
+  const characters = Array.from(name);
+  return characters.length > maxLength
+    ? `${characters.slice(0, maxLength).join("")}...`
+    : name;
+}
+
 function isLocalFilePath(path) {
   const value = String(path || "");
   if (!value) return false;
@@ -69,6 +78,7 @@ async function openPdfFile(options = {}) {
 }
 
 module.exports = {
+  getPdfDisplayName,
   openPdfFile,
   resolvePdfLocalPath,
 };

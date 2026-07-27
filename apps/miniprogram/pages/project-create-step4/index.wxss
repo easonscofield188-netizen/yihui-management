@@ -23,6 +23,15 @@ page { background: #f9f9ff; }.step4-page { --td-brand-color: #1a365d; display: f
   height: 92rpx !important;
   box-shadow: 0 6rpx 14rpx rgba(26, 54, 93, 0.16);
 }
+.pdf-file-name {
+  width: 100%;
+  overflow: hidden;
+  color: #343943;
+  text-align: center;
+  font-size: 19rpx;
+  line-height: 26rpx;
+  white-space: nowrap;
+}
 .existing-badge {
   position: absolute;
   right: 8rpx;

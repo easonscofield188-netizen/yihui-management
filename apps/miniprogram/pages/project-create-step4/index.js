@@ -1,5 +1,5 @@
 const api = require("../../utils/api");
-const { openPdfFile } = require("../../utils/file-preview");
+const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -53,6 +53,7 @@ function toUploadFile(file) {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     tempFilePath,
     name: file.name || `凭证.${fileExtension(tempFilePath)}`,
+    pdfDisplayName: getPdfDisplayName(file.name || `凭证.${fileExtension(tempFilePath)}`),
     size: Number(file.size) || 0,
     isImage: isImageFile(file),
     isExisting: false,
@@ -185,6 +186,7 @@ Page({
       invoiceEnabled: draft.invoiceEnabled !== false,
       files: Array.isArray(savedQueue) ? savedQueue.map((item) => ({
         ...item,
+        pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
         uploadStatus: item.uploadStatus === "uploading" ? "pending" : (item.uploadStatus || "pending"),
         uploadError: item.uploadError || "",
         isExisting: false,
@@ -200,6 +202,7 @@ Page({
         id: item.id,
         tempFilePath: item.tempFilePath,
         name: item.name,
+        pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
         size: item.size,
         isImage: item.isImage,
         isSavedFile: item.isSavedFile,
@@ -251,6 +254,7 @@ Page({
           fileId: item.fileId,
           tempFilePath: path,
           name,
+          pdfDisplayName: getPdfDisplayName(name),
           size: Number(item.fileSize) || 0,
           isImage: !/\.pdf$/i.test(name) && item.mimeType !== "application/pdf",
           isExisting: true,

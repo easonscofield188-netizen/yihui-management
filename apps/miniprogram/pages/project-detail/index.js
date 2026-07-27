@@ -1,5 +1,5 @@
 const api = require("../../utils/api");
-const { openPdfFile } = require("../../utils/file-preview");
+const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
 
 const WRITE_ROLES = ["ADMIN_SUPER", "ADMIN_COM", "ADMIN", "PROJECT_MANAGER", "FINANCE_MANAGER"];
 const STATUS_LABELS = {
@@ -215,6 +215,7 @@ Page({
       return vouchers.map((item) => ({
         ...item,
         displayUrl: item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     }
@@ -227,12 +228,14 @@ Page({
       return vouchers.map((item) => ({
         ...item,
         displayUrl: urlMap[item.fileId] || item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     } catch (error) {
       return vouchers.map((item) => ({
         ...item,
         displayUrl: item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     }

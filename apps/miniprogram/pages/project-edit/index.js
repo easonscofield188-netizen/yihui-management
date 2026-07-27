@@ -1,5 +1,5 @@
 const api = require("../../utils/api");
-const { openPdfFile } = require("../../utils/file-preview");
+const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
 
 const FALLBACK_SCENES = [
   { label: "内部项目", value: "internal" },
@@ -343,6 +343,7 @@ Page({
         fileId: item.fileId,
         tempFilePath: item.fileUrl || "",
         name,
+        pdfDisplayName: getPdfDisplayName(name),
         size: Number(item.fileSize) || 0,
         isImage: !/\.pdf$/i.test(name) && item.mimeType !== "application/pdf",
         isExisting: true,
@@ -719,10 +720,12 @@ Page({
       .filter((file) => Number(file.size || 0) <= MAX_FILE_SIZE)
       .map((file) => {
         const tempFilePath = file.tempFilePath || file.path;
+        const name = file.name || `凭证.${fileExtension(tempFilePath)}`;
         return {
           id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           tempFilePath,
-          name: file.name || `凭证.${fileExtension(tempFilePath)}`,
+          name,
+          pdfDisplayName: getPdfDisplayName(name),
           size: Number(file.size) || 0,
           isImage: isImageFile(file),
           isExisting: false,

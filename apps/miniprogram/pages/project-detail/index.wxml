@@ -113,7 +113,10 @@
           class="pdf-voucher"
           data-id="{{item._id || item.id}}"
           bindtap="previewVoucher"
-        >PDF</view>
+        >
+          <t-icon name="file-pdf" size="54rpx" color="#ba1a1a" />
+          <text class="pdf-voucher-name">{{item.pdfDisplayName}}</text>
+        </view>
       </view>
     </view>
     <view class="empty-row" wx:if="{{!vouchers.length}}">暂无凭证</view>

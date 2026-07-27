@@ -317,7 +317,21 @@ page { background: #f9f9ff; }
   justify-content: center;
   gap: 10rpx;
 }
-.voucher-pdf { color: #ba1a1a; font-size: 22rpx; }
+.voucher-pdf {
+  box-sizing: border-box;
+  padding: 16rpx 10rpx;
+  color: #ba1a1a;
+  font-size: 22rpx;
+}
+.voucher-pdf-name {
+  width: 100%;
+  overflow: hidden;
+  color: #343943;
+  text-align: center;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  white-space: nowrap;
+}
 .voucher-add {
   border: 2rpx dashed #c4c6cf;
   background: #ffffff;

@@ -179,7 +179,7 @@
           <image wx:if="{{item.isImage}}" class="voucher-image" src="{{item.tempFilePath}}" mode="aspectFill" data-id="{{item.id}}" bindtap="previewVoucher" />
           <view wx:else class="voucher-pdf" data-id="{{item.id}}" bindtap="previewVoucher">
             <t-icon name="file-pdf" size="48rpx" color="#ba1a1a" />
-            <text>PDF</text>
+            <text class="voucher-pdf-name">{{item.pdfDisplayName}}</text>
           </view>
           <view class="voucher-remove" data-id="{{item.id}}" data-existing="{{item.isExisting}}" data-file-id="{{item.fileId}}" bindtap="removeVoucher">
             <t-icon name="close" size="24rpx" color="#ffffff" />
