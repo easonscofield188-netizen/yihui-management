@@ -1,5 +1,7 @@
 const api = require("../../utils/api");
 const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
+const { buildVoucherCloudPath } = require("../../utils/voucher-path");
+const { isSettled, YES_NO } = require("../../utils/dictionary");
 
 const FALLBACK_SCENES = [
   { label: "内部项目", value: "internal" },
@@ -71,8 +73,7 @@ function getToday() {
 }
 
 function isSettledCost(value) {
-  if (value === undefined || value === null || value === "") return true;
-  return value === true || value === 1 || ["是", "true", "已支付", "已结清"].includes(String(value).toLowerCase());
+  return isSettled(value);
 }
 
 function costCategoryLabel(config, item) {
@@ -828,7 +829,7 @@ Page({
 
   async uploadOneVoucher(projectId, file) {
     const extension = fileExtension(file.tempFilePath);
-    const cloudPath = `bill_voucher/mobile/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    const cloudPath = buildVoucherCloudPath(this.data.form.name, extension).cloudPath;
     let fileId = "";
     const uploadResult = await withTimeout(
       wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
@@ -901,7 +902,7 @@ Page({
         status: amountsFullySettled
           ? "closed"
           : (form.status === "closed" ? (this._statusBeforeFullySettled || "completed") : (form.status || "completed")),
-        isHasVoucher: this.data.vouchers.length > 0 ? "是" : "否",
+        isHasVoucher: this.data.vouchers.length > 0 ? YES_NO.YES : YES_NO.NO,
       };
       if (!this.data.isClosedEdit) {
         payload.scene = form.scene || "";

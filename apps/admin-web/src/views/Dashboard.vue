@@ -502,9 +502,9 @@
                   class="operation-log-control"
                 >
                   <option value="">全部状态</option>
-                  <option value="成功">成功</option>
-                  <option value="警告">警告</option>
-                  <option value="失败">失败</option>
+                  <option :value="LOG_STATUS.SUCCESS">成功</option>
+                  <option :value="LOG_STATUS.WARNING">警告</option>
+                  <option :value="LOG_STATUS.FAILED">失败</option>
                 </select>
               </div>
             </section>
@@ -566,7 +566,7 @@
                           :class="operationLogStatusClass(log.status)"
                         >
                           <span class="w-1.5 h-1.5 rounded-full" :class="operationLogDotClass(log.status)"></span>
-                          <span class="text-xs font-bold">{{ log.status }}</span>
+                          <span class="text-xs font-bold">{{ log.statusLabel }}</span>
                         </div>
                       </td>
                     </tr>
@@ -935,6 +935,23 @@
                     class="text-sm truncate block"
                     :class="row.id === selectedProjectId ? 'text-on-surface font-medium' : 'text-on-surface-variant'"
                   >{{ row.client }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="creationChannel"
+                label="创建渠道"
+                min-width="120"
+              >
+                <template #default="{ row }">
+                  <el-tag
+                    size="small"
+                    effect="plain"
+                    :class="row.creationChannel === CREATION_CHANNEL.MINIPROGRAM
+                      ? '!border-emerald-500/30 !bg-emerald-500/10 !text-emerald-400'
+                      : '!border-sky-500/30 !bg-sky-500/10 !text-sky-400'"
+                  >
+                    {{ row.creationChannelLabel || getCreationChannelLabel(row.creationChannel) }}
+                  </el-tag>
                 </template>
               </el-table-column>
               <el-table-column
@@ -2959,7 +2976,7 @@
                   :key="card.title"
                   class="p-8 rounded-xl bg-surface-container-high border-b-2 border-transparent transition-all duration-300 group"
                   :class="card.hoverBorder"
-                  v-show="!(card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE'))"
+                  v-show="!(card.key === 'PROJECT_SCENE' && !hasPermission('MANAGE_PROJECT_SCENE'))"
                 >
                   <div class="flex justify-between items-start mb-6">
                     <div
@@ -2974,7 +2991,7 @@
                     <button
                       class="text-zinc-600 hover:text-zinc-300"
                       @click="openConfigDialog(card)"
-                      :disabled="card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE')"
+                      :disabled="card.key === 'PROJECT_SCENE' && !hasPermission('MANAGE_PROJECT_SCENE')"
                     >
                       <span class="material-symbols-outlined">settings</span>
                     </button>
@@ -3287,14 +3304,42 @@ const YES_NO_VALUE = {
   YES: 'yes',
   NO: 'no'
 }
-const LEGACY_YES_NO_VALUE = {
-  YES: '是',
-  NO: '否'
+const YES_NO_DICTIONARY = {
+  [YES_NO_VALUE.YES]: { value: YES_NO_VALUE.YES, label: '是' },
+  [YES_NO_VALUE.NO]: { value: YES_NO_VALUE.NO, label: '否' }
 }
+const CREATION_CHANNEL = Object.freeze({
+  MINIPROGRAM: 'mini_program',
+  ADMIN_WEB: 'admin_web'
+})
+const CREATION_CHANNEL_DICTIONARY = Object.freeze({
+  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '小程序' },
+  [CREATION_CHANNEL.ADMIN_WEB]: { value: CREATION_CHANNEL.ADMIN_WEB, label: '后台管理系统' }
+})
+const LOG_STATUS = Object.freeze({
+  SUCCESS: 'success',
+  FAILED: 'failed',
+  WARNING: 'warning'
+})
+const LOG_STATUS_DICTIONARY = Object.freeze({
+  [LOG_STATUS.SUCCESS]: { value: LOG_STATUS.SUCCESS, label: '成功' },
+  [LOG_STATUS.FAILED]: { value: LOG_STATUS.FAILED, label: '失败' },
+  [LOG_STATUS.WARNING]: { value: LOG_STATUS.WARNING, label: '警告' }
+})
+const PROJECT_STATUS_LABEL_ALIASES = Object.freeze({
+  谈判中: '洽谈中',
+  已完成: '已结清',
+  已完工: '已结清',
+  施工中: '交付中',
+  已竣工: '已交付'
+})
+const COST_SETTLEMENT_DICTIONARY = Object.freeze({
+  true: { value: true },
+  false: { value: false }
+})
 
 const normalizeYesNo = (value, defaultValue = YES_NO_VALUE.NO) => {
-  if (value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES || value === true) return YES_NO_VALUE.YES
-  if (value === YES_NO_VALUE.NO || value === LEGACY_YES_NO_VALUE.NO || value === false) return YES_NO_VALUE.NO
+  if (Object.prototype.hasOwnProperty.call(YES_NO_DICTIONARY, value)) return value
   return defaultValue
 }
 
@@ -3306,7 +3351,15 @@ const normalizeSupplier = (value) => {
 }
 
 const isCostSettled = (value) => {
-  return value === true || value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES
+  if (Object.prototype.hasOwnProperty.call(COST_SETTLEMENT_DICTIONARY, value)) return value === true || value === 'true'
+  return true
+}
+
+const getCreationChannelLabel = (value) => {
+  if (Object.prototype.hasOwnProperty.call(CREATION_CHANNEL_DICTIONARY, value)) {
+    return CREATION_CHANNEL_DICTIONARY[value].label
+  }
+  return CREATION_CHANNEL_DICTIONARY[CREATION_CHANNEL.ADMIN_WEB].label
 }
 
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
@@ -3889,6 +3942,7 @@ const visibleMenuItems = computed(() => {
 // 系统设置页面数据配置卡片
 const settingConfigCards = [
   {
+    key: 'CLIENT_SOURCE',
     title: '客户来源',
     description: '管理商机流量渠道入口标签',
     icon: 'hub',
@@ -3898,6 +3952,7 @@ const settingConfigCards = [
     tags: ['老客户推荐', '官网咨询', '行业展会']
   },
   {
+    key: 'COST_CATEGORY',
     title: '成本项目',
     description: '定义项目物料与劳务成本科目',
     icon: 'payments',
@@ -3907,6 +3962,7 @@ const settingConfigCards = [
     tags: ['真植物', '仿真植物', '石材/铺装']
   },
   {
+    key: 'CLIENT_ROLE',
     title: '客户角色',
     description: '配置甲方组织架构对应身份',
     icon: 'groups',
@@ -3916,6 +3972,7 @@ const settingConfigCards = [
     tags: ['甲方老板', '项目负责人', '采购代理', '设计代表']
   },
   {
+    key: 'PROJECT_SCENE',
     title: '项目场景',
     description: '维护项目基础信息中的场景选项',
     icon: 'scene',
@@ -3945,21 +4002,13 @@ const settingConfigItems = reactive({
   PROJECT_SCENE: []
 })
 
-const configGroupMap = {
-  '客户来源': 'CLIENT_SOURCE',
-  '成本项目': 'COST_CATEGORY',
-  '客户角色': 'CLIENT_ROLE',
-  '项目场景': 'PROJECT_SCENE'
-}
-
 /**
  * 获取系统设置卡片配置项
  * @param {Object} card 配置卡片
  * @returns {Array} 配置项列表
  */
 const getSettingConfigItems = (card) => {
-  const group = configGroupMap[card.title]
-  return settingConfigItems[group] || []
+  return settingConfigItems[card.key] || []
 }
 
 /**
@@ -3999,7 +4048,7 @@ const configValuePreview = computed(() => {
  * @returns {void}
  */
 const openConfigDialog = (card) => {
-  const group = configGroupMap[card.title]
+  const group = card.key
   if (!group) return
   configDialog.title = card.title
   configDialog.group = group
@@ -4062,7 +4111,7 @@ const handleCreateConfig = async () => {
  * @throws {Error} 接口异常时提示错误
  */
 const handleToggleConfigStatus = async (card, tag) => {
-  const group = configGroupMap[card.title]
+  const group = card.key
   const configId = tag?.id || tag?._id
   if (!group || !configId || updatingConfigKey.value) return
 
@@ -4708,7 +4757,7 @@ const operationLogStats = computed(() => {
 const writeOperationLog = async (logData, originalData = null, newData = null) => {
   try {
     await recordOperationLog({
-      status: '成功',
+      status: LOG_STATUS.SUCCESS,
       ...logData,
       originalData,
       newData
@@ -4871,8 +4920,8 @@ const resetOperationLogFilters = () => {
  * 功能：返回日志状态文字样式 * @param {string} status 状态 * @returns {string} 样式类名
  * @throws {Error} 无 */
 const operationLogStatusClass = (status) => {
-  if (status === '失败') return 'text-red-300'
-  if (status === '警告') return 'text-secondary'
+  if (status === LOG_STATUS.FAILED) return 'text-red-300'
+  if (status === LOG_STATUS.WARNING) return 'text-secondary'
   return 'text-primary'
 }
 
@@ -4880,8 +4929,8 @@ const operationLogStatusClass = (status) => {
  * 功能：返回日志状态圆点样式 * @param {string} status 状态 * @returns {string} 样式类名
  * @throws {Error} 无 */
 const operationLogDotClass = (status) => {
-  if (status === '失败') return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
-  if (status === '警告') return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
+  if (status === LOG_STATUS.FAILED) return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
+  if (status === LOG_STATUS.WARNING) return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
   return 'bg-primary shadow-[0_0_8px_#52ee8a]'
 }
 
@@ -5376,11 +5425,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
-        let label = s.label;
-        if (label === '谈判中') label = '洽谈中';
-        if (label === '已完成' || label === '已完工') label = '已结清';
-        if (label === '施工中') label = '交付中';
-        if (label === '已竣工') label = '已交付';
+        const label = PROJECT_STATUS_LABEL_ALIASES[s.label] || s.label;
         return { ...s, label };
       })
       applySessionTimeoutConfig(configs)
@@ -5411,11 +5456,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
-        let label = s.label;
-        if (label === '谈判中') label = '洽谈中';
-        if (label === '已完成' || label === '已完工') label = '已结清';
-        if (label === '施工中') label = '交付中';
-        if (label === '已竣工') label = '已交付';
+        const label = PROJECT_STATUS_LABEL_ALIASES[s.label] || s.label;
         return { ...s, label };
       })
       
@@ -6244,7 +6285,7 @@ const handleDeleteProject = (project) => {
     writeOperationLog({
       module: '项目管理',
       action: 'delete',
-      status: '失败',
+      status: LOG_STATUS.FAILED,
       content: `尝试删除项目“${project.name}”，但没有删除权限`
     })
     import('element-plus').then(({ ElMessage }) => {
@@ -6318,7 +6359,7 @@ const handleDeleteProject = (project) => {
           writeOperationLog({
             module: '项目管理',
             action: 'delete',
-            status: '失败',
+            status: LOG_STATUS.FAILED,
             content: `删除项目“${project.name}”失败：${err.message || '未知错误'}`
           })
           console.error('删除项目失败:', err)
@@ -7112,6 +7153,9 @@ const handleSaveProject = async () => {
       // 创建项目
       res = await createProject({
         ...projectData,
+        // 与小程序共用 projects 集合，创建渠道仅在首次创建时写入。
+        creationChannel: CREATION_CHANNEL.ADMIN_WEB,
+        creationChannelLabel: getCreationChannelLabel(CREATION_CHANNEL.ADMIN_WEB),
         contractFileIds: contracts.value.map(c => c.id),
         previewFileIds: previews.value.map(p => p.id),
         currentUser: {

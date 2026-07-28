@@ -1,5 +1,7 @@
 const api = require("../../utils/api");
 const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
+const { buildVoucherCloudPath } = require("../../utils/voucher-path");
+const { isSettled } = require("../../utils/dictionary");
 
 const WRITE_ROLES = ["ADMIN_SUPER", "ADMIN_COM", "ADMIN", "PROJECT_MANAGER", "FINANCE_MANAGER"];
 const STATUS_LABELS = {
@@ -67,8 +69,7 @@ function supplierLabel(value) {
 }
 
 function isSettledCost(value) {
-  if (value === undefined || value === null || value === "") return true;
-  return value === true || value === 1 || ["是", "true", "已支付", "已结清"].includes(String(value).toLowerCase());
+  return isSettled(value);
 }
 
 function dateText(value) {
@@ -345,7 +346,7 @@ Page({
     try {
       const extensionMatch = String(file.tempFilePath).match(/\.[a-zA-Z0-9]+$/);
       const extension = extensionMatch ? extensionMatch[0].toLowerCase() : ".jpg";
-      const cloudPath = `bill_voucher/mobile/${this.data.projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
+      const cloudPath = buildVoucherCloudPath(this.data.project.name, extension).cloudPath;
       const uploadResult = await wx.cloud.uploadFile({
         cloudPath,
         filePath: file.tempFilePath,

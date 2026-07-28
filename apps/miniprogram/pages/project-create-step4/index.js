@@ -1,5 +1,7 @@
 const api = require("../../utils/api");
 const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
+const { buildVoucherCloudPath } = require("../../utils/voucher-path");
+const { CREATION_CHANNEL } = require("../../utils/dictionary");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -162,6 +164,7 @@ Page({
     submitText: "提交",
     isEditMode: false,
     projectId: "",
+    projectName: "",
     invoiceEnabled: true,
     files: [],
     submitting: false,
@@ -182,11 +185,13 @@ Page({
       submitText: isEditMode ? "保存" : "提交",
       isEditMode,
       projectId: isEditMode ? draft._projectId : (createdProjectId || ""),
+      projectName: String(draft.name || "").trim(),
       createdProjectId,
       invoiceEnabled: draft.invoiceEnabled !== false,
       files: Array.isArray(savedQueue) ? savedQueue.map((item) => ({
         ...item,
         pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
+        cloudFileName: item.cloudFileName || "",
         uploadStatus: item.uploadStatus === "uploading" ? "pending" : (item.uploadStatus || "pending"),
         uploadError: item.uploadError || "",
         isExisting: false,
@@ -203,6 +208,7 @@ Page({
         tempFilePath: item.tempFilePath,
         name: item.name,
         pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
+        cloudFileName: item.cloudFileName || "",
         size: item.size,
         isImage: item.isImage,
         isSavedFile: item.isSavedFile,
@@ -421,8 +427,12 @@ Page({
 
   async uploadVoucherOnce(projectId, file) {
     const extension = fileExtension(file.tempFilePath);
-    const safeTaskId = String(file.id).replace(/[^a-zA-Z0-9_-]/g, "");
-    const cloudPath = `bill_voucher/mobile/${projectId}/${safeTaskId}.${extension}`;
+    const pathInfo = buildVoucherCloudPath(this.data.projectName, extension, file.cloudFileName);
+    file.cloudFileName = pathInfo.fileName;
+    if (!this.data.files.find((item) => item.id === file.id && item.cloudFileName === pathInfo.fileName)) {
+      this.markFileUploadState(file.id, { cloudFileName: pathInfo.fileName });
+    }
+    const cloudPath = pathInfo.cloudPath;
     try {
       const uploadResult = await withTimeout(
         wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
@@ -686,6 +696,8 @@ Page({
             staffCount: Number(draft.staffCount) || 1,
             amount: Number(draft.amount),
             isHistorical: false,
+            // 与后台管理系统共用 projects 集合，明确记录首次创建入口。
+            creationChannel: CREATION_CHANNEL.MINIPROGRAM,
           });
           projectId = result.id;
         }

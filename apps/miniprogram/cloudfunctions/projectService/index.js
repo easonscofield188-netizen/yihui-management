@@ -21,6 +21,53 @@ const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
 const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
 const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
+const YES_NO = Object.freeze({ YES: 'yes', NO: 'no' });
+const YES_NO_DICTIONARY = Object.freeze({
+  [YES_NO.YES]: { value: YES_NO.YES, label: '是' },
+  [YES_NO.NO]: { value: YES_NO.NO, label: '否' }
+});
+const CREATION_CHANNEL = Object.freeze({
+  MINIPROGRAM: 'mini_program',
+  ADMIN_WEB: 'admin_web'
+});
+const CREATION_CHANNEL_DICTIONARY = Object.freeze({
+  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '小程序' },
+  [CREATION_CHANNEL.ADMIN_WEB]: { value: CREATION_CHANNEL.ADMIN_WEB, label: '后台管理系统' }
+});
+const COST_SETTLEMENT_DICTIONARY = Object.freeze({
+  true: { value: true, label: '已支付' },
+  false: { value: false, label: '待支付' }
+});
+
+function getDictionaryValue(value, dictionary, defaultValue) {
+  if (Object.prototype.hasOwnProperty.call(dictionary, value)) return value;
+  return defaultValue;
+}
+
+function normalizeYesNo(value, defaultValue = YES_NO.NO) {
+  return getDictionaryValue(value, YES_NO_DICTIONARY, defaultValue);
+}
+
+function getYesNoLabel(value) {
+  return YES_NO_DICTIONARY[normalizeYesNo(value)].label;
+}
+
+function normalizeCreationChannel(value) {
+  return getDictionaryValue(value, CREATION_CHANNEL_DICTIONARY, CREATION_CHANNEL.ADMIN_WEB);
+}
+
+function getCreationChannelLabel(value) {
+  return CREATION_CHANNEL_DICTIONARY[normalizeCreationChannel(value)].label;
+}
+
+function normalizeCostSettled(value, defaultValue = true) {
+  const normalized = getDictionaryValue(value, COST_SETTLEMENT_DICTIONARY, String(defaultValue));
+  return normalized === 'true';
+}
+
+function getCostSettledLabel(value, defaultValue = true) {
+  return COST_SETTLEMENT_DICTIONARY[String(normalizeCostSettled(value, defaultValue))].label;
+}
 
 function getServerDateOnly() {
   return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -148,7 +195,7 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
     costs.forEach((cost) => {
       const costCents = moneyToCents(cost.amount);
       payableCents += costCents;
-      if (cost.isSettled === true || cost.isSettled === '是') {
+      if (normalizeCostSettled(cost.isSettled)) {
         paidCents += costCents;
       }
     });
@@ -161,7 +208,7 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
         sp.costs.forEach((cost) => {
           const costCents = moneyToCents(cost.amount);
           payableCents += costCents;
-          if (cost.isSettled === true || cost.isSettled === '是') {
+          if (normalizeCostSettled(cost.isSettled)) {
             paidCents += costCents;
           }
         });
@@ -473,7 +520,8 @@ async function updateProject(params) {
         category: item.category || '',
         supplier: normalizeSupplier(item.supplier),
         amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
-        isSettled: item.isSettled || '否'
+        isSettled: normalizeCostSettled(item.isSettled),
+        isSettledLabel: getCostSettledLabel(item.isSettled)
       }));
     }
     
@@ -485,14 +533,16 @@ async function updateProject(params) {
         content: sp.content || '',
         startDate: sp.startDate || '',
         amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
-        isHasVoucher: sp.isHasVoucher || '否',
+        isHasVoucher: normalizeYesNo(sp.isHasVoucher),
+        isHasVoucherLabel: getYesNoLabel(sp.isHasVoucher),
         vouchers: sp.vouchers || [],
         costs: (sp.costs || []).map(c => ({
           id: c.id || Date.now() + Math.random(),
           category: c.category || '',
           supplier: normalizeSupplier(c.supplier),
           amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-          isSettled: c.isSettled || false
+          isSettled: normalizeCostSettled(c.isSettled, false),
+          isSettledLabel: getCostSettledLabel(c.isSettled, false)
         }))
       }));
     }
@@ -520,9 +570,18 @@ async function updateProject(params) {
       }
     }
 
-    if (isHasContract !== undefined) updateDataFinal.isHasContract = isHasContract;
-    if (isHasPreview !== undefined) updateDataFinal.isHasPreview = isHasPreview;
-    if (isHasVoucher !== undefined) updateDataFinal.isHasVoucher = isHasVoucher;
+    if (isHasContract !== undefined) {
+      updateDataFinal.isHasContract = normalizeYesNo(isHasContract);
+      updateDataFinal.isHasContractLabel = getYesNoLabel(isHasContract);
+    }
+    if (isHasPreview !== undefined) {
+      updateDataFinal.isHasPreview = normalizeYesNo(isHasPreview);
+      updateDataFinal.isHasPreviewLabel = getYesNoLabel(isHasPreview);
+    }
+    if (isHasVoucher !== undefined) {
+      updateDataFinal.isHasVoucher = normalizeYesNo(isHasVoucher);
+      updateDataFinal.isHasVoucherLabel = getYesNoLabel(isHasVoucher);
+    }
 
     // 时间节点显式更新
     if (negotiatingTime) updateDataFinal.negotiatingTime = negotiatingTime;
@@ -588,7 +647,7 @@ async function updateProject(params) {
     Object.assign(updateDataFinal, financials);
 
     // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
-    if (oldProject.isHasContract === '是' && isHasContract === '否') {
+    if (normalizeYesNo(oldProject.isHasContract) === YES_NO.YES && normalizeYesNo(isHasContract) === YES_NO.NO) {
       console.log(`项目 ${id} 合同状态由 是 改为 否，触发清理逻辑...`);
       try {
         await cloud.callFunction({
@@ -599,7 +658,7 @@ async function updateProject(params) {
         console.error('清理合同文件失败:', err);
       }
     }
-    if (oldProject.isHasPreview === '是' && isHasPreview === '否') {
+    if (normalizeYesNo(oldProject.isHasPreview) === YES_NO.YES && normalizeYesNo(isHasPreview) === YES_NO.NO) {
       console.log(`项目 ${id} 预览图状态由 是 改为 否，触发清理逻辑...`);
       try {
         await cloud.callFunction({
@@ -631,6 +690,9 @@ async function updateProject(params) {
 
 async function createProject(params) {
   const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
+  // 创建渠道只在首次创建时写入，避免后续编辑篡改项目来源。
+  // 未传该字段的旧管理端调用按“后台管理系统”处理，兼容既有入口。
+  const creationChannel = normalizeCreationChannel(params.creationChannel);
 
   // 1. 基础完整性校验
   if (!name || !client || !role || staffCount === undefined || !amount || !desc || !costs) {
@@ -642,12 +704,12 @@ async function createProject(params) {
   }
 
   // 合同/预览图校验
-  if (isHasContract === '是') {
+  if (normalizeYesNo(isHasContract) === YES_NO.YES) {
     if (!contractFileIds || !Array.isArray(contractFileIds) || contractFileIds.length === 0) {
       return { code: 400, message: '请上传合同文件后再创建项目' };
     }
   }
-  if (isHasPreview === '是') {
+  if (normalizeYesNo(isHasPreview) === YES_NO.YES) {
     if (!previewFileIds || !Array.isArray(previewFileIds) || previewFileIds.length === 0) {
       return { code: 400, message: '请上传预览图后再创建项目' };
     }
@@ -698,7 +760,9 @@ async function createProject(params) {
     const costsData = Array.isArray(costs)
       ? costs.map(cost => ({
         ...cost,
-        supplier: normalizeSupplier(cost.supplier)
+        supplier: normalizeSupplier(cost.supplier),
+        isSettled: normalizeCostSettled(cost.isSettled),
+        isSettledLabel: getCostSettledLabel(cost.isSettled)
       }))
       : [];
     
@@ -707,14 +771,16 @@ async function createProject(params) {
       content: sp.content || '',
       startDate: sp.startDate || '',
       amount: isNaN(parseFloat(sp.amount)) ? 0 : parseFloat(sp.amount),
-      isHasVoucher: sp.isHasVoucher || '否',
+      isHasVoucher: normalizeYesNo(sp.isHasVoucher),
+      isHasVoucherLabel: getYesNoLabel(sp.isHasVoucher),
       vouchers: sp.vouchers || [],
       costs: (sp.costs || []).map(c => ({
         id: c.id || Date.now() + Math.random(),
         category: c.category || '',
         supplier: normalizeSupplier(c.supplier),
         amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-        isSettled: c.isSettled || false
+        isSettled: normalizeCostSettled(c.isSettled, false),
+        isSettledLabel: getCostSettledLabel(c.isSettled, false)
       }))
     })) : [];
 
@@ -723,6 +789,14 @@ async function createProject(params) {
     
     const data = {
       ...params,
+      creationChannel,
+      creationChannelLabel: getCreationChannelLabel(creationChannel),
+      isHasContract: normalizeYesNo(isHasContract),
+      isHasContractLabel: getYesNoLabel(isHasContract),
+      isHasPreview: normalizeYesNo(isHasPreview),
+      isHasPreviewLabel: getYesNoLabel(isHasPreview),
+      isHasVoucher: normalizeYesNo(params.isHasVoucher),
+      isHasVoucherLabel: getYesNoLabel(params.isHasVoucher),
       receivedAmount: received,
       costs: costsData,
       subProjects: subProjectsData,
@@ -848,7 +922,8 @@ async function quickRecord(params, currentUser) {
           category: String(category).trim(),
           supplier: normalizeSupplier(supplier),
           amount: amountCents / 100,
-          isSettled: isSettled === true || isSettled === '是'
+          isSettled: normalizeCostSettled(isSettled),
+          isSettledLabel: getCostSettledLabel(isSettled)
         }];
         Object.assign(updateData, calculateFinancials(
           project.amount,
@@ -1003,7 +1078,7 @@ function getOverviewProjectDate(project) {
 
 function isOverviewCostSettled(value) {
   if (value === undefined || value === null || value === '') return true;
-  return value === true || value === 1 || ['是', 'true', '已支付', '已结清'].includes(String(value).toLowerCase());
+  return normalizeCostSettled(value);
 }
 
 function getOverviewProjectAmount(project) {

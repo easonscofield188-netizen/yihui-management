@@ -201,7 +201,7 @@ Page({
     const maxYear = this.data.maxYear || getLocalYear();
     this.setData({ yearPickerVisible: false });
 
-    let nextYear = selected === ALL_YEARS_VALUE || selected === "全部年份"
+    let nextYear = selected === ALL_YEARS_VALUE
       ? ALL_YEARS_VALUE
       : Number(selected);
     if (nextYear !== ALL_YEARS_VALUE) {

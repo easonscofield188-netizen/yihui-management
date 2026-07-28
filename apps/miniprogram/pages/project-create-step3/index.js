@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const { isSettled } = require("../../utils/dictionary");
 
 const DRAFT_KEY = "projectCreateDraft";
 const FALLBACK_CATEGORIES = [{ label: "物流", value: "logistics" }];
@@ -37,7 +38,7 @@ function normalizeCosts(costs) {
     categoryCode: item.categoryCode || "",
     supplier: item.supplier || "未填写供应商",
     amount: Number(item.amount) || 0,
-    isSettled: item.isSettled === true || item.isSettled === "是",
+    isSettled: isSettled(item.isSettled),
   }));
 }
 

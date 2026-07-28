@@ -72,11 +72,14 @@
 - `paidAmount` (number): 已付账款 (计算字段)
 - `description` (string): 项目详细描述
 - `status` (string): 项目状态标识 (negotiating, constructing, completed, settling, closed, in_cooperation, terminated)
+- `creationChannel` (string): 创建渠道字典值 (`mini_program` / `admin_web`)
+- `creationChannelLabel` (string): 创建渠道中文标签（冗余显示）
 - `subProjects` (array): 子项目列表 (仅长期项目)
   - `content` (string): 项目内容 (植物养护, 植物换新, 景观优化, 环境治理)
   - `startDate` (string): 开始日期
   - `amount` (number): 订单金额
   - `isHasVoucher` (string): 是否有发票凭证 (yes/no)
+  - `isHasVoucherLabel` (string): 是否有发票凭证中文标签（冗余显示）
   - `vouchers` (array): 凭证列表
     - `id` (string): 凭证 ID
     - `fileId` (string): 云存储文件 ID
@@ -87,9 +90,13 @@
     - `supplier` (string): 供应商
     - `amount` (number): 支出金额
     - `isSettled` (boolean): 是否结清
+    - `isSettledLabel` (string): 结算状态中文标签（冗余显示）
 - `isHasContract` (string): 是否有合同 (yes/no)
+- `isHasContractLabel` (string): 是否有合同中文标签（冗余显示）
 - `isHasPreview` (string): 是否有预览图 (yes/no)
+- `isHasPreviewLabel` (string): 是否有预览图中文标签（冗余显示）
 - `isHasVoucher` (string): 是否有发票凭证 (yes/no，常规项目用于控制成本支出凭证上传是否必填)
+- `isHasVoucherLabel` (string): 是否有发票凭证中文标签（冗余显示）
 - `amountEditCount` (number): 订单金额修改次数 (创建成功后最多允许修改一次)
 - `createdAt` (timestamp): 创建时间
 
@@ -148,7 +155,8 @@
 - `module` (string): 操作所属模块（如 项目管理、系统配置、操作日志）
 - `action` (string): 操作动作（create/update/delete/view/export）
 - `content` (string): 操作内容描述
-- `status` (string): 操作状态（成功、警告、失败）
+- `status` (string): 操作状态字典值（`success`、`warning`、`failed`）
+- `statusLabel` (string): 操作状态中文标签（冗余显示）
 - `ip` (string): 客户端 IP
 - `user_agent` (string): 客户端 User-Agent
 - `create_time` (string): 操作时间 ISO 字符串
