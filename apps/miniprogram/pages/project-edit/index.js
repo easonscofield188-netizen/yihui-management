@@ -353,12 +353,8 @@ Page({
     const projectAmount = Number(project.amount) || 0;
     const projectReceivedAmount = Number(project.receivedAmount) || 0;
     const isFullySettled = projectAmount > 0 && toCents(projectAmount) === toCents(projectReceivedAmount);
-    this._statusBeforeFullySettled = project.status && project.status !== "closed"
-      ? project.status
-      : "completed";
-
     this.setData({
-      isClosedEdit: project.status === "closed",
+      isClosedEdit: ["closed", "archived"].includes(project.status),
       isFullySettled,
       sceneOptions: scenes,
       sceneLabel: (sceneMatched && sceneMatched.label) || scene || "",
@@ -378,7 +374,7 @@ Page({
         startDate: dateOnly(project.startDate || project.completionTime || (project.period && project.period[0])),
         amount: String(projectAmount),
         receivedAmount: String(projectReceivedAmount),
-        status: isFullySettled ? "closed" : (project.status || "completed"),
+        status: project.status || "completed",
         client: project.client || "",
         clientId: project.clientId || "",
         role: project.role || "",
@@ -493,18 +489,11 @@ Page({
       && toCents(nextAmount) === toCents(nextReceivedAmount);
 
     if (amountsEqual) {
-      if (this.data.form.status !== "closed") {
-        this._statusBeforeFullySettled = this.data.form.status || "completed";
-      }
       patch.isFullySettled = true;
-      patch["form.status"] = "closed";
       patch.moneyFocusAnchor = "";
       patch.formKeyboardPadding = 0;
     } else {
       patch.isFullySettled = false;
-      if (this.data.form.status === "closed") {
-        patch["form.status"] = this._statusBeforeFullySettled || "completed";
-      }
     }
     this.setData(patch, () => {
       if (amountsEqual) wx.hideKeyboard();
@@ -530,14 +519,10 @@ Page({
       clearTimeout(this._moneyBlurTimer);
       this._moneyBlurTimer = null;
     }
-    if (this.data.form.status !== "closed") {
-      this._statusBeforeFullySettled = this.data.form.status || "completed";
-    }
     wx.hideKeyboard();
     this.setData({
       isFullySettled: true,
       "form.receivedAmount": amount,
-      "form.status": "closed",
       moneyFocusAnchor: "",
       formKeyboardPadding: 0,
     }, () => this.refreshProfit());
@@ -864,7 +849,6 @@ Page({
     const name = String(form.name || "").trim();
     const amount = Number(form.amount);
     const receivedAmount = Number(form.receivedAmount) || 0;
-    const amountsFullySettled = amount > 0 && toCents(amount) === toCents(receivedAmount);
     if (!name) {
       wx.showToast({ title: "请填写项目名称", icon: "none" });
       return;
@@ -899,9 +883,6 @@ Page({
         receivedAmount,
         desc: form.desc || "无",
         costs,
-        status: amountsFullySettled
-          ? "closed"
-          : (form.status === "closed" ? (this._statusBeforeFullySettled || "completed") : (form.status || "completed")),
         isHasVoucher: this.data.vouchers.length > 0 ? YES_NO.YES : YES_NO.NO,
       };
       if (!this.data.isClosedEdit) {

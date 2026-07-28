@@ -21,6 +21,16 @@ const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
 const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
 const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
+const PROJECT_STATUS = Object.freeze({
+  COMPLETED: 'completed',
+  CLOSED: 'closed',
+  ARCHIVED: 'archived'
+});
+const PROJECT_STATUS_LABELS = Object.freeze({
+  [PROJECT_STATUS.COMPLETED]: '已交付',
+  [PROJECT_STATUS.CLOSED]: '已结清',
+  [PROJECT_STATUS.ARCHIVED]: '已归档'
+});
 const YES_NO = Object.freeze({ YES: 'yes', NO: 'no' });
 const YES_NO_DICTIONARY = Object.freeze({
   [YES_NO.YES]: { value: YES_NO.YES, label: '是' },
@@ -61,8 +71,7 @@ function getCreationChannelLabel(value) {
 }
 
 function normalizeCostSettled(value, defaultValue = true) {
-  const normalized = getDictionaryValue(value, COST_SETTLEMENT_DICTIONARY, String(defaultValue));
-  return normalized === 'true';
+  return typeof value === 'boolean' ? value : defaultValue;
 }
 
 function getCostSettledLabel(value, defaultValue = true) {
@@ -254,7 +263,38 @@ function getAllowedStatusesByType(type, isHistorical) {
   if (type === 'historical' || isHistorical) {
     return ['closed'];
   }
-  return ['negotiating', 'constructing', 'completed', 'settling', 'closed'];
+  return ['negotiating', 'constructing', 'completed', 'settling', 'closed', 'archived'];
+}
+
+function areAllCostsSettled(costs, subProjects) {
+  const projectCosts = Array.isArray(costs) ? costs : [];
+  const childCosts = (Array.isArray(subProjects) ? subProjects : [])
+    .flatMap(item => Array.isArray(item.costs) ? item.costs : []);
+  return [...projectCosts, ...childCosts].every(cost => normalizeCostSettled(cost.isSettled));
+}
+
+function deriveNormalProjectStatus(amount, receivedAmount, costs, subProjects) {
+  const amountCents = moneyToCents(amount);
+  const receivedCents = moneyToCents(receivedAmount);
+  if (amountCents <= 0 || receivedCents < amountCents) return PROJECT_STATUS.COMPLETED;
+  return areAllCostsSettled(costs, subProjects) ? PROJECT_STATUS.ARCHIVED : PROJECT_STATUS.CLOSED;
+}
+
+function buildNormalProjectLifecycle(project, now = new Date().toISOString()) {
+  const status = deriveNormalProjectStatus(
+    project.amount,
+    project.receivedAmount,
+    project.costs,
+    project.subProjects
+  );
+  const isFullyReceived = status !== PROJECT_STATUS.COMPLETED;
+  const isArchived = status === PROJECT_STATUS.ARCHIVED;
+  return {
+    status,
+    statusLabel: PROJECT_STATUS_LABELS[status],
+    settledTime: isFullyReceived ? (project.settledTime || now) : null,
+    archivedTime: isArchived ? (project.archivedTime || now) : null
+  };
 }
 
 // 资金计算同步接口
@@ -268,15 +308,19 @@ async function syncFinancials(params) {
     
     const project = projectDoc.data;
     const financials = calculateFinancials(project.amount, project.receivedAmount, project.costs, project.subProjects);
+    const lifecycle = project.type === 'normal' && !project.isHistorical
+      ? buildNormalProjectLifecycle(project)
+      : {};
     
     await db.collection('projects').doc(projectId).update({
       data: {
         ...financials,
+        ...lifecycle,
         updateTime: db.serverDate()
       }
     });
     
-    return { code: 0, message: '同步成功', data: financials };
+    return { code: 0, message: '同步成功', data: { ...financials, ...lifecycle } };
   } catch (err) {
     console.error('同步资金失败:', err);
     return { code: 500, message: '同步失败', error: err.message };
@@ -422,6 +466,7 @@ async function updateProject(params) {
     // 已结清状态权限控制
     const nextType = type || oldProject.type;
     const nextIsHistorical = isHistorical !== undefined ? !!isHistorical : !!oldProject.isHistorical;
+    const shouldAutoStatus = nextType === 'normal' && !nextIsHistorical;
     if (status) {
       const allowedStatuses = getAllowedStatusesByType(nextType, nextIsHistorical);
       if (!allowedStatuses.includes(status)) {
@@ -437,7 +482,7 @@ async function updateProject(params) {
       }
     }
 
-    if (oldProject.status === 'closed' && oldProject.type !== 'historical') {
+    if ([PROJECT_STATUS.CLOSED, PROJECT_STATUS.ARCHIVED].includes(oldProject.status) && oldProject.type !== 'historical') {
       const allowedFields = [
         'name',
         'desc',
@@ -452,7 +497,8 @@ async function updateProject(params) {
         'constructingTime',
         'completedTime',
         'settlingTime',
-        'settledTime'
+        'settledTime',
+        'archivedTime'
       ];
       const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && !['id', 'authToken'].includes(key));
       
@@ -475,7 +521,7 @@ async function updateProject(params) {
       if (illegalChanges.length > 0) {
         return { 
           code: 403, 
-          message: '已结清项目仅可编辑：项目状态、项目名称、项目描述、成本支出、凭证上传及已收账款',
+          message: '已结清或已归档项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款',
           details: `非法修改了字段: ${illegalChanges.join(', ')}`
         };
       }
@@ -525,7 +571,7 @@ async function updateProject(params) {
       }));
     }
     
-    if (status) updateDataFinal.status = status;
+    if (status && !shouldAutoStatus) updateDataFinal.status = status;
     
     if (subProjects && Array.isArray(subProjects)) {
       updateDataFinal.subProjects = subProjects.map(sp => ({
@@ -587,8 +633,8 @@ async function updateProject(params) {
     if (negotiatingTime) updateDataFinal.negotiatingTime = negotiatingTime;
     if (constructingTime) updateDataFinal.constructingTime = constructingTime;
     if (completedTime) updateDataFinal.completedTime = completedTime;
-    if (settlingTime) updateDataFinal.settlingTime = settlingTime;
-    if (settledTime) updateDataFinal.settledTime = settledTime;
+    if (settlingTime && !shouldAutoStatus) updateDataFinal.settlingTime = settlingTime;
+    if (settledTime && !shouldAutoStatus) updateDataFinal.settledTime = settledTime;
 
     // 长期项目状态切换时，项目周期结束日期立即联动到当天
     if (status && status !== oldProject.status && oldProject.type === 'long_term') {
@@ -598,7 +644,7 @@ async function updateProject(params) {
     }
 
     // 状态变更自动记录时间节点及周期联动 (仅针对常规项目)
-    if (status && status !== oldProject.status && oldProject.type !== 'historical' && oldProject.type !== 'long_term') {
+    if (status && !shouldAutoStatus && status !== oldProject.status && oldProject.type !== 'historical' && oldProject.type !== 'long_term') {
       const now = new Date().toISOString();
       const today = now.split('T')[0];
       
@@ -645,6 +691,16 @@ async function updateProject(params) {
     const finalSubProjects = updateDataFinal.subProjects || oldProject.subProjects || [];
     const financials = calculateFinancials(finalAmount, finalReceived, finalCosts, finalSubProjects);
     Object.assign(updateDataFinal, financials);
+    if (shouldAutoStatus) {
+      Object.assign(updateDataFinal, buildNormalProjectLifecycle({
+        ...oldProject,
+        ...updateDataFinal,
+        amount: finalAmount,
+        receivedAmount: finalReceived,
+        costs: finalCosts,
+        subProjects: finalSubProjects
+      }));
+    }
 
     // 联动删除逻辑：如果从“是”改为“否”，清理云端文件
     if (normalizeYesNo(oldProject.isHasContract) === YES_NO.YES && normalizeYesNo(isHasContract) === YES_NO.NO) {
@@ -689,7 +745,7 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
-  const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
+  const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
   // 创建渠道只在首次创建时写入，避免后续编辑篡改项目来源。
   // 未传该字段的旧管理端调用按“后台管理系统”处理，兼容既有入口。
   const creationChannel = normalizeCreationChannel(params.creationChannel);
@@ -716,11 +772,6 @@ async function createProject(params) {
   }
 
   // 2. 安全校验
-  const allowedStatuses = getAllowedStatusesByType(type, !!isHistorical);
-  if (status && !allowedStatuses.includes(status)) {
-    return { code: 400, message: '当前项目类型不支持该项目状态' };
-  }
-
   if (type === 'long_term') {
     const hasFutureSubProjectDate = Array.isArray(subProjects) && subProjects.some(item => isFutureDateValue(item.startDate));
     if (hasFutureSubProjectDate) {
@@ -808,18 +859,13 @@ async function createProject(params) {
     };
     delete data.currentUser;
     delete data.authToken;
-
-    // 初始化时间节点 (仅针对常规项目)
-    if (type !== 'historical') {
-      const initialStatus = status || 'negotiating';
-      if (initialStatus === 'negotiating' && !data.negotiatingTime) data.negotiatingTime = now;
-      if (initialStatus === 'constructing' && !data.constructingTime) data.constructingTime = now;
-      if (initialStatus === 'completed' && !data.completedTime) data.completedTime = now;
-      if (initialStatus === 'closed' && !data.settledTime) data.settledTime = now;
-    } else {
-      // 补录单仅记录完结时间
-      if (!data.settledTime) data.settledTime = now;
-    }
+    // 常规项目状态完全由收款和成本结算情况决定；交付时间使用用户填写的交付日期。
+    data.completedTime = String(startDate).slice(0, 10);
+    Object.assign(data, buildNormalProjectLifecycle({
+      ...data,
+      settledTime: null,
+      archivedTime: null
+    }, now));
 
     const res = await db.collection('projects').add({
       data
@@ -933,6 +979,15 @@ async function quickRecord(params, currentUser) {
         ));
       }
 
+      if (project.type === 'normal' && !project.isHistorical) {
+        Object.assign(updateData, buildNormalProjectLifecycle({
+          ...project,
+          ...updateData,
+          costs: updateData.costs || project.costs || [],
+          subProjects: project.subProjects || []
+        }));
+      }
+
       await projectRef.update({ data: updateData });
       return { duplicated: false, financials: updateData };
     });
@@ -964,6 +1019,7 @@ async function listProjects(params) {
     'completed',
     'settling',
     'closed',
+    'archived',
     'in_cooperation',
     'terminated'
   ]);
@@ -1221,10 +1277,11 @@ function getOverviewStatusMeta(status) {
     completed: '已交付',
     settling: '结账中',
     closed: '已结清',
+    archived: '已归档',
     in_cooperation: '合作中',
     terminated: '已终止'
   };
-  if (status === 'completed' || status === 'closed') {
+  if (status === 'completed' || status === 'closed' || status === 'archived') {
     return { label: labels[status] || '已完成', tone: 'done' };
   }
   if (status === 'terminated') {

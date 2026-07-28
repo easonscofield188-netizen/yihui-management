@@ -6,7 +6,7 @@ const STATUS_OPTIONS = [
 ];
 const STATUS_LABELS = {
   negotiating: "洽谈中", constructing: "施工中", completed: "已交付",
-  settling: "结算中", closed: "已结清", in_cooperation: "合作中", terminated: "已终止",
+  settling: "结算中", closed: "已结清", archived: "已归档", in_cooperation: "合作中", terminated: "已终止",
 };
 
 function money(value) {
@@ -56,7 +56,7 @@ function loadingYearText(filterYear) {
 }
 
 function decorateProject(project) {
-  const isClosed = project.status === "closed";
+  const isClosed = ["closed", "archived"].includes(project.status);
   const profitAmount = Number(project.profitAmount);
   return {
     ...project,

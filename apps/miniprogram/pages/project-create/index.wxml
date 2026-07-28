@@ -14,12 +14,6 @@
       <view class="field-label">项目名称</view>
       <view class="input-shell"><t-input t-class="form-input" borderless value="{{form.name}}" placeholder="例如：西溪湿地动漫展会" bindchange="onNameChange" /></view>
 
-      <view class="field-label">项目状态</view>
-      <view class="status-switch">
-        <t-button t-class="status-option {{form.status === 'completed' ? 'selected' : ''}}" theme="primary" content="已交付" data-value="completed" bindtap="onStatusTap" />
-        <t-button t-class="status-option {{form.status === 'closed' ? 'selected' : ''}}" theme="primary" content="已结清" data-value="closed" bindtap="onStatusTap" />
-      </view>
-
       <view class="field-label">项目场景</view>
       <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="scene" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{projectScenes[sceneIndex].label}}" suffix-icon="chevron-down" /></view>
 

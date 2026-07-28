@@ -51,7 +51,7 @@ Page({
       ...getNavMetrics(),
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
-      isClosedEdit: isEditMode && (draft._originalStatus || draft.status) === "closed",
+      isClosedEdit: isEditMode && ["closed", "archived"].includes(draft._originalStatus || draft.status),
       form: {
         amount: draft.amount === undefined ? "" : String(draft.amount),
         receivedAmount: draft.receivedAmount === undefined ? "" : String(draft.receivedAmount),

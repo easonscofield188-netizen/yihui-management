@@ -645,7 +645,7 @@ Page({
 
     this.setData({ submitting: true });
     const isEditMode = draft._mode === "edit" && Boolean(draft._projectId);
-    const isClosedEdit = isEditMode && draft._originalStatus === "closed";
+    const isClosedEdit = isEditMode && ["closed", "archived"].includes(draft._originalStatus);
     const deliveryDate = String(draft.startDate).slice(0, 10);
     const needUpload = this.data.invoiceEnabled && this.data.files.some((file) => !file.isExisting && file.uploadStatus !== "success");
     wx.showLoading({ title: isEditMode ? "正在保存修改" : "正在创建项目", mask: true });
@@ -657,7 +657,6 @@ Page({
         receivedAmount: Number(draft.receivedAmount) || 0,
         desc: isEditMode ? (String(draft.desc || "").trim() || "无") : "无",
         costs: draft.costs,
-        status: draft.status || "completed",
         // 创建时先标记为无凭证，至少一张凭证真正落库后再同步为“是”。
         isHasVoucher: this.countUploadedVouchers() > 0 ? "是" : "否",
       };

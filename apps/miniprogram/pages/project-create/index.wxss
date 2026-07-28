@@ -35,9 +35,6 @@ page { background: #f9f9ff; }
   font-size: 28rpx;
   line-height: 44rpx;
 }
-.status-switch { display: flex; height: 92rpx; padding: 8rpx; border: 2rpx solid #d9e3f9; border-radius: 22rpx; background: #f0f3ff; }
-.status-option { flex: 1; height: 76rpx !important; margin: 0 !important; border-radius: 14rpx !important; background: transparent !important; color: #242c3a !important; font-size: 28rpx !important; line-height: 76rpx !important; }
-.status-option.selected { background: #1a365d !important; color: #fff !important; box-shadow: 0 4rpx 8rpx rgba(26,54,93,.15); }
 .client-card { margin-top: 34rpx; }
 .client-head { display: flex; align-items: center; justify-content: space-between; }
 .card-title { color: #002045; font-size: 36rpx; font-weight: 700; }

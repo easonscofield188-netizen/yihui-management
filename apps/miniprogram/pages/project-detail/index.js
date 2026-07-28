@@ -10,6 +10,7 @@ const STATUS_LABELS = {
   completed: "已交付",
   settling: "结账中",
   closed: "已结清",
+  archived: "已归档",
   in_cooperation: "合作中",
   terminated: "已终止",
 };

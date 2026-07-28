@@ -31,7 +31,7 @@ function normalizeYesNo(value, defaultValue = YES_NO.NO) {
 }
 
 function isSettled(value, defaultValue = true) {
-  return getDictionaryValue(value, COST_SETTLEMENT_DICTIONARY, String(defaultValue)) === 'true';
+  return typeof value === 'boolean' ? value : defaultValue;
 }
 
 module.exports = {

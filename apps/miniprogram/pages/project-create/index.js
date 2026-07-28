@@ -85,7 +85,6 @@ Page({
     newClientSourceIndex: 0,
     form: {
       name: "",
-      status: "completed",
       scene: FALLBACK_SCENES[0].value,
       startDate: "",
       client: "",
@@ -110,7 +109,7 @@ Page({
       ...getNavMetrics(),
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
-      isClosedEdit: isEditMode && (savedDraft._originalStatus || savedDraft.status) === "closed",
+      isClosedEdit: isEditMode && ["closed", "archived"].includes(savedDraft._originalStatus || savedDraft.status),
       isDateLocked: false,
       form,
     });
@@ -230,10 +229,6 @@ Page({
     clearTimeout(this.clientSearchTimer);
     clearTimeout(this.clientBlurTimer);
     clearTimeout(this.clientListTouchTimer);
-  },
-
-  onStatusTap(event) {
-    this.setData({ "form.status": event.currentTarget.dataset.value });
   },
 
   openPicker(event) {

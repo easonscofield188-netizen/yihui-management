@@ -71,7 +71,7 @@
 - `payableAmount` (number): 应付账款 (计算字段)
 - `paidAmount` (number): 已付账款 (计算字段)
 - `description` (string): 项目详细描述
-- `status` (string): 项目状态标识 (negotiating, constructing, completed, settling, closed, in_cooperation, terminated)
+- `status` (string): 项目状态标识 (negotiating, constructing, completed, settling, closed, archived, in_cooperation, terminated)
 - `creationChannel` (string): 创建渠道字典值 (`mini_program` / `admin_web`)
 - `creationChannelLabel` (string): 创建渠道中文标签（冗余显示）
 - `subProjects` (array): 子项目列表 (仅长期项目)
@@ -106,6 +106,7 @@
 - `completedTime` (timestamp): 完工时间
 - `settlingTime` (timestamp): 结账时间
 - `settledTime` (timestamp): 结清时间
+- `archivedTime` (timestamp): 归档时间（订单全额收回且全部成本支付完成时自动记录）
 
 ### 1.5 成本明细表 (`costs`)
 记录每个项目的具体支出。

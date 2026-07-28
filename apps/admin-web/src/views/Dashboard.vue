@@ -982,6 +982,30 @@
                 </template>
               </el-table-column>
               <el-table-column
+                prop="settledDateText"
+                label="结清日期"
+                min-width="100"
+              >
+                <template #default="{ row }">
+                  <span
+                    class="font-mono text-sm"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.settledDateText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="archivedDateText"
+                label="归档日期"
+                min-width="100"
+              >
+                <template #default="{ row }">
+                  <span
+                    class="font-mono text-sm"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.archivedDateText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
                 prop="amount"
                 label="订单金额 (¥)"
                 min-width="120"
@@ -1003,7 +1027,7 @@
                   <el-dropdown 
                     trigger="click" 
                     popper-class="status-dropdown-popper"
-                    :disabled="isCreating || (row.status === 'closed' && row.type !== 'normal')"
+                    :disabled="isCreating || row.type === 'normal' || (row.status === 'closed' && row.type !== 'normal')"
                     @command="(val) => handleInlineStatusChange(row, val)"
                     @click.stop
                   >
@@ -1017,7 +1041,7 @@
                       <div class="status-dot" />
                       <span class="status-text">{{ row.statusText }}</span>
                       <el-icon
-                        v-if="!isCreating"
+                        v-if="!isCreating && row.type !== 'normal'"
                         class="status-chevron"
                       >
                         <ArrowDown />
@@ -1266,7 +1290,7 @@
                   </div>
 
                   <!-- Project Status -->
-                  <div class="space-y-2">
+                  <div v-if="!isCreating && form.type !== 'normal'" class="space-y-2">
                     <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
                     <el-select 
                       v-model="form.status" 
@@ -1382,7 +1406,7 @@
 
                   <!-- Construction Period -->
                   <div
-                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['constructing', 'completed', 'settling', 'closed', 'archived'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -1420,7 +1444,7 @@
 
                   <!-- Collection Period -->
                   <div
-                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['settling', 'closed', 'archived'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -3333,6 +3357,16 @@ const PROJECT_STATUS_LABEL_ALIASES = Object.freeze({
   施工中: '交付中',
   已竣工: '已交付'
 })
+const PROJECT_STATUS_FALLBACK_LABELS = Object.freeze({
+  negotiating: '洽谈中',
+  constructing: '交付中',
+  completed: '已交付',
+  settling: '结账中',
+  closed: '已结清',
+  archived: '已归档',
+  in_cooperation: '合作中',
+  terminated: '已终止'
+})
 const COST_SETTLEMENT_DICTIONARY = Object.freeze({
   true: { value: true },
   false: { value: false }
@@ -4631,7 +4665,7 @@ const dashboardTopOrders = computed(() => {
       date: getProjectDashboardDate(item)?.toISOString().split('T')[0] || '-',
       amountText: dashboardMoney(getDashboardProjectAmount(item)),
       statusLabel: item.statusLabel || projectStatuses.value.find(status => status.value === item.status)?.label || item.status || '-',
-      statusClass: ['completed', 'closed'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+      statusClass: ['completed', 'closed', 'archived'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
     }))
 })
 
@@ -5010,7 +5044,7 @@ const selectFilter = (type, value) => {
 }
 
 const ONGOING_PROJECT_STATUSES = ['negotiating', 'constructing', 'completed', 'settling', 'in_cooperation']
-const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'terminated']
+const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'archived', 'terminated']
 
 const getProjectSortValue = (project, prop) => {
   if (prop === 'name' || prop === 'client') {
@@ -5860,7 +5894,7 @@ const projectTypeRibbon = computed(() => {
 const isProjectClosed = computed(() => {
   if (isEditMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value);
-    return p && p.status === 'closed';
+    return p && ['closed', 'archived'].includes(p.status);
   }
   return false;
 });
@@ -6731,11 +6765,13 @@ const loadProjects = async () => {
           type: p.type || (isHistorical ? 'historical' : 'normal'),
           typeLabel: projectTypes.value.find(t => t.value === (p.type || (isHistorical ? 'historical' : 'normal')))?.label || (isHistorical ? '补录' : '常规'),
           statusColor: p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-          statusText: statusConfig ? statusConfig.label : '未知状态',
+          statusText: statusConfig?.label || PROJECT_STATUS_FALLBACK_LABELS[p.status] || '未知状态',
           date: p.period ? formatDate(p.period[0]) : (p.negotiatingTime || p.createTime ? formatDate(p.negotiatingTime || p.createTime) : '-'),
           createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-',
           createDateText: formatDate(createDate),
           deliveryDateText: formatDate(deliveryDate),
+          settledDateText: formatDate(p.settledTime),
+          archivedDateText: formatDate(p.archivedTime),
           projectDays: pDays || null,
           constructionDays: conDays || null,
           collectionDays: colDays || null,
@@ -6931,7 +6967,7 @@ const validateProjectForm = (checkVouchers = true) => {
   
   if (isNewClient.value && !form.clientSource) return '请选择新客户来源';
 
-  if (!form.status) return '请选择项目状态';
+  if (!isCreating.value && !form.status) return '请选择项目状态';
   if (!form.scene) return '请选择项目场景';
 
   if (form.type !== 'long_term') {
@@ -7034,7 +7070,6 @@ const handleSaveProject = async () => {
       client: form.client,
       role: form.role,
       clientSource: form.clientSource,
-      status: form.status,
       staffCount: form.type === 'long_term' ? 0 : Number(form.staffCount),
       amount: Number(totalOrderAmount.value),
       receivedAmount: Number(form.receivedAmount),
@@ -7067,6 +7102,10 @@ const handleSaveProject = async () => {
       }))
     }
 
+    if (!isCreating.value && form.type !== 'normal') {
+      projectData.status = form.status
+    }
+
     if (form.type === 'normal') {
       projectData.startDate = form.startDate
     }
@@ -7086,28 +7125,7 @@ const handleSaveProject = async () => {
       projectData.period = [today, systemToday];
       projectData.negotiatingTime = date; // 记录项目周期开始时�?
       
-      // 根据初始状态初始化其他周期
-      if (form.status === 'constructing') {
-        projectData.constructingTime = date;
-        projectData.constructionPeriod = [today, today];
-      } else if (form.status === 'completed') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.constructionPeriod = [today, today];
-      } else if (form.status === 'settling') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.settlingTime = date;
-        projectData.constructionPeriod = [today, today];
-        projectData.collectionPeriod = [today, today];
-      } else if (form.status === 'closed') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.settlingTime = date;
-        projectData.settledTime = date;
-        projectData.constructionPeriod = [today, today];
-        projectData.collectionPeriod = [today, today];
-      }
+      projectData.completedTime = date;
     } else {
       // 历史模式或编辑模�?
       // 常规项目编辑模式下，不发送项目类型及三大周期，由后端逻辑自动处理
@@ -7248,43 +7266,15 @@ const handleSaveProject = async () => {
         content: logContent
       })
       
-      // 立即更新本地列表数据，确�?UI 实时响应
-      const statusConfig = projectStatuses.value.find(s => s.value === form.status)
-      
-      // 如果金额发生了变化且是编辑模式，本地模拟增加修改次数
-      let localAmountEditCount = form.amountEditCount || 0
-      if (isEditMode.value && Number(form.amount) !== Number(projects.value.find(p => p.id === projectId)?.amount)) {
-        localAmountEditCount += 1
-      }
-
-      const updatedItem = {
-        ...projectData,
-        id: projectId,
-        amountEditCount: localAmountEditCount,
-        statusText: statusConfig ? statusConfig.label : '未知状态',
-        statusColor: form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-        date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-',
-        createTimeText: new Date().toLocaleString() // 新建时默认当前时间，后续 loadProjects 会刷新为真实时间
-      }
-      
-      const index = projects.value.findIndex(p => p.id === projectId)
-      if (index !== -1) {
-        // 使用 splice 确保响应式更�?
-        projects.value.splice(index, 1, updatedItem)
-      } else {
-        projects.value.unshift(updatedItem)
-      }
-
       // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
-      
-      // 异步加载最新列表，不阻塞 UI 响应
-      loadProjects()
-      
-      // 保持当前选中项并回显
+
+      // 以后端自动计算的状态与时间节点为准，重新读取后再回显。
+      await loadProjects()
       selectedProjectId.value = projectId
-      handleViewProject(updatedItem)
+      const refreshedProject = projects.value.find(item => item.id === projectId)
+      if (refreshedProject) handleViewProject(refreshedProject)
     } else {
       throw new Error(res.message)
     }
@@ -8328,11 +8318,13 @@ const handleLogout = () => {
 }
 
 /* 已结�?- 灰色 */
-.is-closed .status-dot {
+.is-closed .status-dot,
+.is-archived .status-dot {
   background-color: #9ca3af;
   box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
 }
-.is-closed.status-badge-trigger {
+.is-closed.status-badge-trigger,
+.is-archived.status-badge-trigger {
   opacity: 0.8;
 }
 
