@@ -53,7 +53,7 @@
         <view class="project-meta">
           <text class="project-code">{{item.createDateText}}</text>
           <view class="status-badge status-{{item.status}}">
-            <t-icon wx:if="{{item.isClosed}}" name="check-circle" size="25rpx" color="#0f7a45" />
+            <t-icon wx:if="{{item.usesCheckIcon}}" name="check-circle" size="25rpx" color="{{item.statusIconColor}}" />
             <view wx:else class="status-dot"></view><text>{{item.statusLabel}}</text>
           </view>
         </view>

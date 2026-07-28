@@ -111,7 +111,10 @@
         </view>
         <view class="recent-right">
           <view class="recent-amount">¥{{item.amountText}}</view>
-          <view class="status-tag status-{{item.statusTone}}">{{item.statusLabel}}</view>
+          <view class="status-tag status-{{item.statusTone}} status-{{item.status}}">
+            <t-icon wx:if="{{item.usesCheckIcon}}" name="check-circle" size="20rpx" color="{{item.statusIconColor}}" />
+            <text>{{item.statusLabel}}</text>
+          </view>
         </view>
       </view>
       <view class="empty-recent" wx:if="{{!recentProjects.length}}">当前筛选范围内暂无项目</view>

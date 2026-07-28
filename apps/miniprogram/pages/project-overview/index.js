@@ -76,8 +76,15 @@ function decorateOverview(result) {
       timeText: formatDateTime(item.time || item.createTime),
       amountText: formatMoney(item.amount),
       statusLabel: item.statusLabel || "进行中",
+      status: item.status || "",
       statusTone: item.statusTone || "doing",
-      icon: item.statusTone === "done" ? "check-circle" : "time",
+      usesCheckIcon: ["completed", "closed", "archived"].includes(item.status),
+      statusIconColor: {
+        completed: "#002045",
+        closed: "#0f7a45",
+        archived: "#6b7280",
+      }[item.status] || "#002045",
+      icon: ["completed", "closed", "archived"].includes(item.status) ? "check-circle" : "time",
     }))
     : [];
 

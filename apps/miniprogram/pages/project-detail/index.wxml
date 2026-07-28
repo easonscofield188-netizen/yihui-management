@@ -18,7 +18,8 @@
     <view class="project-heading-main">
       <view class="project-name">{{project.name}}</view>
       <view class="status status-{{project.status}}">
-        <view class="status-dot"></view>
+        <t-icon wx:if="{{project.usesCheckIcon}}" name="check-circle" size="24rpx" color="{{project.statusIconColor}}" />
+        <view wx:else class="status-dot"></view>
         <text>{{project.statusLabel}}</text>
       </view>
     </view>

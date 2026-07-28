@@ -3,6 +3,7 @@ const STATUS_OPTIONS = [
   { label: "全部", value: "" },
   { label: "已交付", value: "completed" },
   { label: "已结清", value: "closed" },
+  { label: "已归档", value: "archived" },
 ];
 const STATUS_LABELS = {
   negotiating: "洽谈中", constructing: "施工中", completed: "已交付",
@@ -57,6 +58,12 @@ function loadingYearText(filterYear) {
 
 function decorateProject(project) {
   const isClosed = ["closed", "archived"].includes(project.status);
+  const usesCheckIcon = ["completed", "closed", "archived"].includes(project.status);
+  const statusIconColors = {
+    completed: "#002045",
+    closed: "#0f7a45",
+    archived: "#6b7280",
+  };
   const profitAmount = Number(project.profitAmount);
   return {
     ...project,
@@ -71,6 +78,8 @@ function decorateProject(project) {
     })(),
     statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
     isClosed,
+    usesCheckIcon,
+    statusIconColor: statusIconColors[project.status] || "#002045",
     amountLabel: "订单金额",
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount),

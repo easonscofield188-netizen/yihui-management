@@ -82,6 +82,12 @@ function dateText(value) {
 function decorateProject(project, config) {
   // 金额字段由后端 calculateFinancials 计算，前端仅做展示格式化
   const profitAmount = Number(project.profitAmount);
+  const usesCheckIcon = ["completed", "closed", "archived"].includes(project.status);
+  const statusIconColors = {
+    completed: "#002045",
+    closed: "#0f7a45",
+    archived: "#6b7280",
+  };
   return {
     ...project,
     costs: (project.costs || []).map((item, index) => {
@@ -97,6 +103,8 @@ function decorateProject(project, config) {
       };
     }),
     statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
+    usesCheckIcon,
+    statusIconColor: statusIconColors[project.status] || "#002045",
     amountText: money(project.amount),
     receivedText: money(project.receivedAmount),
     unreceivedText: money(project.unreceivedAmount),
