@@ -51,6 +51,13 @@ page {
   min-width: 0;
 }
 
+.detail-actions {
+  display: flex;
+  margin-bottom: 16rpx;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .heading-edit {
   position: relative;
   z-index: 2;
@@ -86,8 +93,6 @@ page {
   overflow: hidden;
   padding: 24rpx 28rpx;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16rpx;
   border: 2rpx solid rgba(214, 227, 255, .8);
   border-radius: 24rpx;
   background: linear-gradient(135deg, #ffffff 0%, #f2f6ff 100%);
