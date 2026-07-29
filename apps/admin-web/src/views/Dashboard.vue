@@ -940,17 +940,20 @@
               <el-table-column
                 prop="creationChannel"
                 label="创建渠道"
-                min-width="120"
+                width="160"
+                class-name="creation-channel-column"
+                label-class-name="project-table-nowrap-header"
               >
                 <template #default="{ row }">
                   <el-tag
                     size="small"
                     effect="plain"
+                    class="creation-channel-tag !inline-flex !w-[112px] !max-w-none !shrink-0 !justify-center !whitespace-nowrap"
                     :class="row.creationChannel === CREATION_CHANNEL.MINIPROGRAM
                       ? '!border-emerald-500/30 !bg-emerald-500/10 !text-emerald-400'
                       : '!border-sky-500/30 !bg-sky-500/10 !text-sky-400'"
                   >
-                    {{ row.creationChannelLabel || getCreationChannelLabel(row.creationChannel) }}
+                    {{ getCreationChannelLabel(row.creationChannel) }}
                   </el-tag>
                 </template>
               </el-table-column>
@@ -1008,8 +1011,10 @@
               <el-table-column
                 prop="amount"
                 label="订单金额 (¥)"
-                min-width="120"
+                width="145"
+                fixed="right"
                 sortable="custom"
+                label-class-name="project-table-nowrap-header"
               >
                 <template #default="{ row }">
                   <span 
@@ -1021,7 +1026,9 @@
               <el-table-column
                 label="项目状态"
                 prop="status"
-                min-width="110"
+                width="130"
+                fixed="right"
+                label-class-name="project-table-nowrap-header"
               >
                 <template #default="{ row }">
                   <el-dropdown 
@@ -3337,7 +3344,7 @@ const CREATION_CHANNEL = Object.freeze({
   ADMIN_WEB: 'admin_web'
 })
 const CREATION_CHANNEL_DICTIONARY = Object.freeze({
-  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '小程序' },
+  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '微信小程序' },
   [CREATION_CHANNEL.ADMIN_WEB]: { value: CREATION_CHANNEL.ADMIN_WEB, label: '后台管理系统' }
 })
 const LOG_STATUS = Object.freeze({
@@ -8267,6 +8274,8 @@ const handleLogout = () => {
 .status-badge-trigger {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   gap: 8px;
   padding: 4px 10px;
   border-radius: 6px;
@@ -8283,6 +8292,7 @@ const handleLogout = () => {
 }
 
 .status-dot {
+  flex: 0 0 auto;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -8329,16 +8339,63 @@ const handleLogout = () => {
 }
 
 .status-text {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
   color: rgba(229, 226, 227, 0.9);
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .status-chevron {
+  flex: 0 0 auto;
   font-size: 10px;
   color: rgba(229, 226, 227, 0.3);
   transition: transform 0.3s;
+}
+
+.project-table-nowrap-header,
+.project-table-nowrap-header .cell {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+.project-table-nowrap-header .cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.project-table-nowrap-header .caret-wrapper {
+  flex: 0 0 auto;
+}
+
+.creation-channel-column .cell {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.creation-channel-tag {
+  box-sizing: border-box;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+/* 固定列必须使用不透明背景，避免横向滚动内容从下方透出。 */
+.el-table th.el-table-fixed-column--right,
+.el-table td.el-table-fixed-column--right,
+.el-table .el-table__fixed-right-patch {
+  background-color: #2a2a2b !important;
+}
+
+.el-table .el-table__row:hover > td.el-table-fixed-column--right {
+  background-color: #2e2e2f !important;
+}
+
+.el-table .el-table__row.active-project-row > td.el-table-fixed-column--right,
+.el-table .el-table__row.active-project-row:hover > td.el-table-fixed-column--right {
+  background-color: #2d3a32 !important;
 }
 
 .status-badge-trigger:hover .status-chevron {

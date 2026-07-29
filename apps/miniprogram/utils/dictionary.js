@@ -12,7 +12,7 @@ const CREATION_CHANNEL = Object.freeze({
   ADMIN_WEB: 'admin_web'
 });
 const CREATION_CHANNEL_DICTIONARY = Object.freeze({
-  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '小程序' },
+  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '微信小程序' },
   [CREATION_CHANNEL.ADMIN_WEB]: { value: CREATION_CHANNEL.ADMIN_WEB, label: '后台管理系统' }
 });
 
