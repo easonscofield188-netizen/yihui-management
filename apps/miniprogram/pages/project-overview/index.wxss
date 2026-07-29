@@ -229,6 +229,23 @@ page {
   padding: 28rpx 24rpx;
 }
 
+.metric-card-action {
+  position: relative;
+  transition: transform .16s ease, opacity .16s ease;
+}
+
+.metric-card-action:active {
+  opacity: .86;
+  transform: scale(.98);
+}
+
+.metric-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
 .unpaid-card {
   border: 2rpx solid rgba(251, 146, 60, .28);
   background: linear-gradient(160deg, #fff7ed 0%, #ffffff 70%);

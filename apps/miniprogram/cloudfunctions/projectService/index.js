@@ -109,6 +109,8 @@ exports.main = async (event, context) => {
         return await createProject({ ...data, currentUser: auth.user });
       case 'list':
         return await listProjects(data);
+      case 'financialList':
+        return await listFinancialProjects(data);
       case 'overview':
       case 'getOverview':
         return await getOverview(data);
@@ -1108,6 +1110,119 @@ async function listProjects(params) {
   } catch (err) {
     console.error('查询项目列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+async function listFinancialProjects(params = {}) {
+  const {
+    type = '',
+    rangeType = 'all',
+    startDate = '',
+    endDate = '',
+    page = 1,
+    pageSize = 20
+  } = params;
+  const allowedTypes = new Set(['unreceived', 'unpaid_cost']);
+  const allowedRanges = new Set(['all', 'month', 'quarter', 'year', 'custom']);
+  const normalizedType = String(type || '').trim();
+  const normalizedRange = String(rangeType || 'all').trim();
+  const normalizedStart = String(startDate || '').slice(0, 10);
+  const normalizedEnd = String(endDate || '').slice(0, 10);
+
+  if (!allowedTypes.has(normalizedType)) {
+    return { code: 400, message: '资金项目筛选类型无效' };
+  }
+  if (!allowedRanges.has(normalizedRange)) {
+    return { code: 400, message: '时间范围类型无效' };
+  }
+  if (normalizedRange === 'custom' && (!normalizedStart || !normalizedEnd)) {
+    return { code: 400, message: '自定义范围请选择开始和结束日期' };
+  }
+  if (normalizedRange === 'custom' && normalizedStart > normalizedEnd) {
+    return { code: 400, message: '开始日期不能晚于结束日期' };
+  }
+
+  const currentPage = Math.max(1, Number(page) || 1);
+  const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+
+  try {
+    const bounds = normalizedRange === 'all'
+      ? null
+      : getOverviewRangeBounds(normalizedRange, normalizedStart, normalizedEnd);
+    if (normalizedRange !== 'all' && !bounds) {
+      return { code: 400, message: '时间范围无效' };
+    }
+
+    const allProjects = await fetchAllProjectsForOverview();
+    const rangeProjects = bounds
+      ? filterOverviewProjects(allProjects, bounds)
+      : allProjects;
+    const matchedProjects = rangeProjects
+      .map((project) => {
+        const amount = getOverviewProjectAmount(project);
+        const receivedAmount = Number(project.receivedAmount) || 0;
+        const payableAmount = getOverviewProjectCost(project);
+        const paidAmount = getOverviewProjectPaidCost(project);
+        const unreceivedCents = Math.max(
+          0,
+          moneyToCents(amount) - moneyToCents(receivedAmount)
+        );
+        const enriched = enrichProjectFinancials(project);
+        const unpaidCostCents = Math.max(
+          0,
+          moneyToCents(payableAmount) - moneyToCents(paidAmount)
+        );
+        return {
+          ...enriched,
+          amount,
+          receivedAmount,
+          unreceivedAmount: centsToMoney(unreceivedCents),
+          payableAmount,
+          paidAmount,
+          profitAmount: centsToMoney(moneyToCents(amount) - moneyToCents(payableAmount)),
+          unpaidCostAmount: centsToMoney(unpaidCostCents)
+        };
+      })
+      .filter((project) => (
+        normalizedType === 'unreceived'
+          ? moneyToCents(project.unreceivedAmount) > 0
+          : moneyToCents(project.unpaidCostAmount) > 0
+      ))
+      .sort((a, b) => {
+        const timeA = toOverviewDate(a.createTime);
+        const timeB = toOverviewDate(b.createTime);
+        return (timeB ? timeB.getTime() : 0) - (timeA ? timeA.getTime() : 0);
+      });
+
+    const total = matchedProjects.length;
+    const startIndex = (currentPage - 1) * currentPageSize;
+    const list = matchedProjects.slice(startIndex, startIndex + currentPageSize);
+    const summaryAmountCents = matchedProjects.reduce((sum, project) => (
+      sum + moneyToCents(
+        normalizedType === 'unreceived'
+          ? project.unreceivedAmount
+          : project.unpaidCostAmount
+      )
+    ), 0);
+
+    return {
+      code: 0,
+      message: '查询成功',
+      data: {
+        list,
+        total,
+        page: currentPage,
+        pageSize: currentPageSize,
+        hasMore: currentPage * currentPageSize < total,
+        summaryAmount: centsToMoney(summaryAmountCents),
+        periodLabel: normalizedRange === 'all'
+          ? '全部项目'
+          : getOverviewPeriodLabel(normalizedRange, normalizedStart, normalizedEnd, bounds)
+      }
+    };
+  } catch (error) {
+    console.error('查询资金项目列表失败:', error);
+    return { code: 500, message: '查询失败', error: error.message };
   }
 }
 

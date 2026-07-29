@@ -10,7 +10,8 @@
     "pages/project-edit/index",
     "pages/account-create/index",
     "pages/profile/index",
-    "pages/project-overview/index"
+    "pages/project-overview/index",
+    "pages/project-financial-list/index"
   ],
   "window": {
     "backgroundColor": "#F5F7F6",

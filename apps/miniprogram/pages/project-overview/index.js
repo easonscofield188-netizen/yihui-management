@@ -284,5 +284,21 @@ Page({
     wx.navigateTo({ url: `/pages/project-detail/index?id=${id}` });
   },
 
+  openFinancialProjects(event) {
+    const type = String(event.currentTarget.dataset.type || "");
+    if (!["unreceived", "unpaid_cost"].includes(type)) return;
+    const isCustom = this.data.customRange.length === 2;
+    const rangeType = isCustom ? "custom" : this.data.rangeValue;
+    const startDate = isCustom ? this.data.customRange[0] : "";
+    const endDate = isCustom ? this.data.customRange[1] : "";
+    const query = [
+      `type=${encodeURIComponent(type)}`,
+      `rangeType=${encodeURIComponent(rangeType)}`,
+      `startDate=${encodeURIComponent(startDate)}`,
+      `endDate=${encodeURIComponent(endDate)}`,
+    ].join("&");
+    wx.navigateTo({ url: `/pages/project-financial-list/index?${query}` });
+  },
+
   stopPropagation() {},
 });

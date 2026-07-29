@@ -1,0 +1,88 @@
+<view class="financial-list-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">{{pageTitle}}</view>
+  </view>
+  <view class="page-nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="summary-card {{filterType === 'unpaid_cost' ? 'cost-summary' : 'receivable-summary'}}">
+    <view>
+      <view class="summary-label">{{summaryLabel}}</view>
+      <view class="summary-period">{{periodLabel}} · 共 {{total}} 个项目</view>
+    </view>
+    <view class="summary-amount">¥{{summaryAmountText}}</view>
+  </view>
+
+  <view class="project-list">
+    <view
+      wx:for="{{projects}}"
+      wx:key="_id"
+      class="project-card {{item.isClosed ? 'closed-card' : ''}}"
+      data-id="{{item._id}}"
+      bindtap="openProject"
+    >
+      <view class="card-accent"></view>
+      <view class="card-body">
+        <view class="project-meta">
+          <text class="project-code">{{item.createDateText}}</text>
+          <view class="status-badge status-{{item.status}}">
+            <t-icon wx:if="{{item.usesCheckIcon}}" name="check-circle" size="25rpx" color="{{item.statusIconColor}}" />
+            <view wx:else class="status-dot"></view>
+            <text>{{item.statusLabel}}</text>
+          </view>
+        </view>
+        <view class="project-name">{{item.name}}</view>
+        <view class="client-row">
+          <t-icon name="building-1" size="30rpx" color="#43474e" />
+          <text>{{item.client || '未填写客户'}}</text>
+        </view>
+        <view class="delivery-row">
+          <t-icon name="calendar" size="29rpx" color="#74777f" />
+          <text>交付日期</text>
+          <text class="delivery-date">{{item.deliveryDateText}}</text>
+        </view>
+        <view class="divider"></view>
+        <view class="amount-main">
+          <text>订单金额</text>
+          <text class="amount-main-value">￥{{item.amountText}}</text>
+        </view>
+        <view class="amount-grid">
+          <view class="amount-cell receivable">
+            <view class="amount-label">
+              <t-icon wx:if="{{!item.isClosed}}" name="arrow-down" size="28rpx" color="#ba1a1a" />
+              <text>待收金额</text>
+            </view>
+            <text class="amount-value">￥{{item.unreceivedText}}</text>
+          </view>
+          <view class="amount-cell cost {{filterType === 'unpaid_cost' ? 'unpaid-cost' : ''}}">
+            <view class="amount-label">
+              <t-icon wx:if="{{!item.isClosed}}" name="arrow-up" size="28rpx" color="{{filterType === 'unpaid_cost' ? '#a16207' : '#43474e'}}" />
+              <text>{{item.costLabel}}</text>
+            </view>
+            <text class="amount-value">￥{{item.costText}}</text>
+          </view>
+          <view class="amount-cell profit">
+            <view class="amount-label">
+              <t-icon name="chart-line" size="28rpx" color="{{item.profitPositive ? '#137047' : '#ba1a1a'}}" />
+              <text>项目利润</text>
+            </view>
+            <text class="amount-value {{item.profitPositive ? 'profit-positive' : 'profit-negative'}}">￥{{item.profitText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading && projects.length === 0}}">
+      <t-icon name="folder-open" size="80rpx" color="#989fa6" />
+      <view class="empty-title">{{emptyTitle}}</view>
+      <view>{{emptyHint}}</view>
+    </view>
+    <view class="loading" wx:if="{{loading}}">
+      <t-loading size="36rpx" theme="circular" />
+      <text>正在加载项目...</text>
+    </view>
+    <view class="loading" wx:if="{{!loading && projects.length && !hasMore}}">没有更多项目了</view>
+  </view>
+</view>

@@ -144,6 +144,10 @@ function listProjects(params) {
   return callFunction("projectService", "list", params).then(normalizeProjectList);
 }
 
+function listFinancialProjects(params) {
+  return callFunction("projectService", "financialList", params).then(normalizeProjectList);
+}
+
 function queryClients(keyword = "") {
   return callFunction("clientsService", "", { keyword });
 }
@@ -210,6 +214,7 @@ module.exports = {
   getUserInfo,
   getVouchers,
   listProjects,
+  listFinancialProjects,
   login,
   logout,
   quickRecord,
