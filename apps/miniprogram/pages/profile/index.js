@@ -48,7 +48,7 @@ Page({
   },
 
   onLoad() {
-    const cachedUser = wx.getStorageSync("userInfo");
+    const cachedUser = api.getCachedUserInfo();
     const runtimeVersion = getRuntimeVersion();
     this.setData({
       ...getNavMetrics(),
@@ -69,43 +69,53 @@ Page({
     }
     const tabBar = this.getTabBar && this.getTabBar();
     if (tabBar) tabBar.setData({ selected: 1 });
-    this.loadUser();
-  },
-
-  async loadUser() {
-    this.setData({ loading: true, loadingMessage: "正在加载账户信息..." });
-    try {
-      const userInfo = await api.getUserInfo();
-      const avatarUrl = await this.resolveAvatarUrl(userInfo);
-      wx.setStorageSync("userInfo", userInfo);
-      getApp().globalData.userInfo = userInfo;
-      this.setData({ userInfo: decorateUser(userInfo, avatarUrl) });
-    } catch (error) {
-      wx.showToast({ title: error.message || "账户信息加载失败", icon: "none" });
-    } finally {
-      this.setData({ loading: false });
+    const cachedUser = api.getCachedUserInfo();
+    if (cachedUser) this.showUser(cachedUser);
+    if (!cachedUser || !api.isUserInfoCacheFresh()) {
+      this.loadUser({ silent: Boolean(cachedUser) });
     }
   },
 
-  async resolveAvatarUrl(userInfo) {
-    if (!userInfo) return "";
+  onPullDownRefresh() {
+    this.loadUser({ force: true, silent: true })
+      .finally(() => wx.stopPullDownRefresh());
+  },
 
-    // 优先使用 cloud://，小程序 image 组件原生支持，不依赖临时 HTTPS 域名白名单
-    const cloudFileId = userInfo.avatarFileId || toCloudFileId(userInfo.avatarUrl);
-    if (cloudFileId) {
-      try {
-        const result = await wx.cloud.getTempFileURL({ fileList: [cloudFileId] });
-        const file = result.fileList && result.fileList[0];
-        if (file && file.tempFileURL && (!file.status || file.status === 0)) {
-          return file.tempFileURL;
-        }
-      } catch (error) {
-        // 换临时链接失败时，直接把 cloud:// 交给 image 组件加载
-      }
-      return cloudFileId;
+  showUser(userInfo) {
+    if (!userInfo) return;
+    const avatarUrl = userInfo.avatarFileId
+      || toCloudFileId(userInfo.avatarUrl)
+      || userInfo.avatarUrl
+      || "";
+    this.setData({ userInfo: decorateUser(userInfo, avatarUrl) });
+  },
+
+  loadUser({ force = false, silent = false } = {}) {
+    const cachedUser = api.getCachedUserInfo();
+    if (!force && cachedUser && api.isUserInfoCacheFresh()) {
+      this.showUser(cachedUser);
+      return Promise.resolve(cachedUser);
     }
+    if (this.userLoadPromise) return this.userLoadPromise;
 
-    return userInfo.avatarUrl || "";
+    if (!silent) {
+      this.setData({ loading: true, loadingMessage: "正在加载账户信息..." });
+    }
+    this.userLoadPromise = api.getUserInfo()
+      .then((userInfo) => {
+        api.cacheUserInfo(userInfo);
+        this.showUser(userInfo);
+        return userInfo;
+      })
+      .catch((error) => {
+        wx.showToast({ title: error.message || "账户信息加载失败", icon: "none" });
+        return cachedUser || null;
+      })
+      .finally(() => {
+        this.userLoadPromise = null;
+        if (!silent) this.setData({ loading: false });
+      });
+    return this.userLoadPromise;
   },
 
   onAvatarError() {
