@@ -128,6 +128,19 @@ async function getUnreadCount(current) {
   };
 }
 
+async function listNotificationIds(data, current) {
+  const readStatus = normalizeReadStatus(data.readStatus);
+  const list = await getUserNotifications(current.userId);
+  const filtered = readStatus
+    ? list.filter(item => item.readStatus === readStatus)
+    : list;
+  return {
+    code: 0,
+    message: '查询成功',
+    data: { ids: filtered.map(item => item._id) }
+  };
+}
+
 async function getNotificationDetail(data, current) {
   const id = String(data.id || '').trim();
   if (!id) return { code: 400, message: '缺少通知 ID' };
@@ -171,6 +184,33 @@ async function markAllRead(current) {
     }
   })));
   return { code: 0, message: '已全部标记为已读', data: { updated: unread.length } };
+}
+
+function normalizeNotificationIds(data) {
+  const values = Array.isArray(data.ids) ? data.ids : [data.id];
+  return Array.from(new Set(values.map(value => String(value || '').trim()).filter(Boolean))).slice(0, 1000);
+}
+
+async function deleteNotifications(data, current) {
+  const ids = normalizeNotificationIds(data);
+  if (!ids.length) return { code: 400, message: '请选择要删除的消息' };
+
+  const userNotifications = await getUserNotifications(current.userId);
+  const allowedIds = userNotifications
+    .filter(item => ids.includes(item._id))
+    .map(item => item._id);
+  if (!allowedIds.length) return { code: 404, message: '消息不存在或已删除' };
+
+  const batchSize = 20;
+  for (let index = 0; index < allowedIds.length; index += batchSize) {
+    const batch = allowedIds.slice(index, index + batchSize);
+    await Promise.all(batch.map(id => db.collection(NOTIFICATION_COLLECTION).doc(id).remove()));
+  }
+  return {
+    code: 0,
+    message: '删除成功',
+    data: { deleted: allowedIds.length }
+  };
 }
 
 function forbiddenSubscription() {
@@ -274,10 +314,15 @@ exports.main = async (event) => {
         return await listNotifications(data, current);
       case 'unreadCount':
         return await getUnreadCount(current);
+      case 'listIds':
+        return await listNotificationIds(data, current);
       case 'detail':
         return await getNotificationDetail(data, current);
       case 'markAllRead':
         return await markAllRead(current);
+      case 'delete':
+      case 'deleteBatch':
+        return await deleteNotifications(data, current);
       case 'getWechatSubscriptionStatus':
         return await getWechatSubscriptionStatus(current);
       case 'saveWechatSubscription':

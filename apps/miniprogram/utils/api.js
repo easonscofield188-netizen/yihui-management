@@ -225,6 +225,18 @@ function getNotificationDetail(id) {
   return callFunction("notificationService", "detail", { id });
 }
 
+function listNotificationIds(readStatus = "") {
+  return callFunction("notificationService", "listIds", { readStatus });
+}
+
+function deleteNotification(id) {
+  return callFunction("notificationService", "delete", { id });
+}
+
+function deleteNotifications(ids) {
+  return callFunction("notificationService", "deleteBatch", { ids });
+}
+
 function markAllNotificationsRead() {
   return callFunction("notificationService", "markAllRead", {});
 }
@@ -265,6 +277,8 @@ module.exports = {
   createAccount,
   createClient,
   createProject,
+  deleteNotification,
+  deleteNotifications,
   deleteVoucher,
   ensureAuthOnShow,
   getProject,
@@ -281,6 +295,7 @@ module.exports = {
   getWechatSubscriptionStatus,
   listProjects,
   listFinancialProjects,
+  listNotificationIds,
   listNotifications,
   login,
   logout,

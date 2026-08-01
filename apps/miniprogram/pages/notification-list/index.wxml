@@ -5,7 +5,15 @@
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
 
-  <view class="toolbar">
+  <view class="selection-toolbar" wx:if="{{selectionMode}}">
+    <view class="selection-cancel" bindtap="cancelSelection">取消</view>
+    <view class="selection-count">已选择 {{selectedIds.length}} 条</view>
+    <view class="selection-action" bindtap="toggleSelectAll">{{allSelected ? '取消全选' : '全选'}}</view>
+    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelected">
+      {{deleting ? '删除中' : '删除'}}
+    </view>
+  </view>
+  <view class="toolbar" wx:else>
     <view class="status-tabs">
       <view
         wx:for="{{readStatusOptions}}"
@@ -22,22 +30,30 @@
     <view
       wx:for="{{notifications}}"
       wx:key="_id"
-      class="notification-card {{item.isUnread ? 'unread' : ''}}"
-      data-id="{{item._id}}"
-      bindtap="openNotification"
+      class="notification-row"
     >
-      <view class="notification-icon {{item.eventType === 'project_created' ? 'created' : 'updated'}}">
-        <t-icon name="{{item.iconName}}" size="38rpx" color="{{item.iconColor}}" />
-      </view>
-      <view class="notification-main">
-        <view class="notification-head">
-          <view class="notification-title">{{item.listTitle}}</view>
-          <view wx:if="{{item.isUnread}}" class="unread-dot"></view>
+      <view
+        class="notification-card {{item.eventType === 'project_created' ? 'created' : 'updated'}} {{item.isUnread ? 'unread' : ''}} {{selectionMode ? 'selecting' : ''}}"
+        data-id="{{item._id}}"
+        bindtap="onNotificationTap"
+        bindlongpress="enterSelectionMode"
+      >
+        <view wx:if="{{selectionMode}}" class="selection-check">
+          <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? '#1a365d' : '#a9b0bb'}}" />
         </view>
-        <view class="notification-summary">{{item.summary}}</view>
-        <view class="notification-meta">{{item.actorName}} · {{item.timeText}}</view>
+        <view class="notification-icon {{item.eventType === 'project_created' ? 'created' : 'updated'}}">
+          <t-icon name="{{item.iconName}}" size="38rpx" color="{{item.iconColor}}" />
+        </view>
+        <view class="notification-main">
+          <view class="notification-head">
+            <view class="notification-title">{{item.listTitle}}</view>
+            <view wx:if="{{item.isUnread}}" class="unread-dot"></view>
+          </view>
+          <view class="notification-summary">{{item.summary}}</view>
+          <view class="notification-meta">{{item.actorName}} · {{item.timeText}}</view>
+        </view>
+        <t-icon wx:if="{{!selectionMode}}" name="chevron-right" size="34rpx" color="#989fa6" />
       </view>
-      <t-icon name="chevron-right" size="34rpx" color="#989fa6" />
     </view>
 
     <view class="empty" wx:if="{{!loading && !notifications.length}}">
@@ -46,6 +62,6 @@
       <view>{{readStatusIndex === 1 ? '没有未读项目消息' : '项目变更消息会显示在这里'}}</view>
     </view>
     <view class="loading" wx:if="{{loading}}"><t-loading size="36rpx" theme="circular" /><text>正在加载消息...</text></view>
-    <view class="loading" wx:if="{{!loading && notifications.length && !hasMore}}">没有更多消息了</view>
+    <view class="loading" wx:if="{{!loading && notifications.length && !hasMore && !selectionMode}}">没有更多消息了</view>
   </view>
 </view>

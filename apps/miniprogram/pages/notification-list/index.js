@@ -54,6 +54,10 @@ Page({
     page: 1,
     hasMore: true,
     loading: false,
+    deleting: false,
+    selectionMode: false,
+    selectedIds: [],
+    allSelected: false,
   },
 
   onShow() {
@@ -65,11 +69,17 @@ Page({
   },
 
   onPullDownRefresh() {
+    if (this.data.selectionMode) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     this.loadNotifications(true).finally(() => wx.stopPullDownRefresh());
   },
 
   onReachBottom() {
-    if (!this.data.loading && this.data.hasMore) this.loadNotifications(false);
+    if (!this.data.selectionMode && !this.data.loading && this.data.hasMore) {
+      this.loadNotifications(false);
+    }
   },
 
   goBack() {
@@ -81,13 +91,124 @@ Page({
   onStatusTap(event) {
     const index = Number(event.currentTarget.dataset.index);
     if (index === this.data.readStatusIndex || !this.data.readStatusOptions[index]) return;
-    this.setData({ readStatusIndex: index }, () => this.loadNotifications(true));
+    this.setData({
+      readStatusIndex: index,
+      selectionMode: false,
+      selectedIds: [],
+      allSelected: false,
+    }, () => this.loadNotifications(true));
   },
 
-  openNotification(event) {
+  onUnload() {
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+  },
+
+  onNotificationTap(event) {
     const id = event.currentTarget.dataset.id;
     if (!id) return;
+    if (this.longPressedId === id) {
+      this.longPressedId = "";
+      return;
+    }
+    if (this.data.selectionMode) {
+      this.toggleSelectionById(id);
+      return;
+    }
     wx.navigateTo({ url: `/pages/notification-detail/index?id=${id}` });
+  },
+
+  enterSelectionMode(event) {
+    const id = event.currentTarget.dataset.id;
+    if (!id) return;
+    this.longPressedId = id;
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+    this.longPressTimer = setTimeout(() => {
+      this.longPressedId = "";
+    }, 700);
+    if (wx.vibrateShort) wx.vibrateShort({ type: "light" });
+    if (this.data.selectionMode) {
+      this.toggleSelectionById(id);
+      return;
+    }
+    this.applySelection([id], true);
+  },
+
+  toggleSelectionById(id) {
+    const selectedIds = this.data.selectedIds.includes(id)
+      ? this.data.selectedIds.filter(item => item !== id)
+      : this.data.selectedIds.concat(id);
+    this.applySelection(selectedIds, true);
+  },
+
+  applySelection(selectedIds, selectionMode = this.data.selectionMode) {
+    const selectedSet = new Set(selectedIds);
+    const total = Number(this.data.total) || this.data.notifications.length;
+    this.setData({
+      selectionMode,
+      selectedIds,
+      allSelected: total > 0 && selectedIds.length === total,
+      notifications: this.data.notifications.map(item => ({
+        ...item,
+        selected: selectedSet.has(item._id),
+      })),
+    });
+  },
+
+  cancelSelection() {
+    this.applySelection([], false);
+  },
+
+  async toggleSelectAll() {
+    if (this.data.deleting || !this.data.total) return;
+    if (this.data.allSelected) {
+      this.applySelection([], true);
+      return;
+    }
+    try {
+      this.setData({ loading: true });
+      const readStatus = this.data.readStatusOptions[this.data.readStatusIndex].value;
+      const result = await api.listNotificationIds(readStatus);
+      this.applySelection(Array.isArray(result.ids) ? result.ids : [], true);
+    } catch (error) {
+      wx.showToast({ title: error.message || "全选失败", icon: "none" });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  deleteSelected() {
+    if (!this.data.selectedIds.length || this.data.deleting) return;
+    this.confirmDelete(this.data.selectedIds);
+  },
+
+  confirmDelete(ids) {
+    const count = ids.length;
+    wx.showModal({
+      title: count > 1 ? "批量删除消息" : "删除消息",
+      content: count > 1 ? `确定删除选中的 ${count} 条消息吗？` : "确定删除这条消息吗？",
+      confirmText: "删除",
+      confirmColor: "#c62828",
+      success: result => {
+        if (result.confirm) this.performDelete(ids);
+      },
+    });
+  },
+
+  async performDelete(ids) {
+    if (this.data.deleting) return;
+    this.setData({ deleting: true });
+    try {
+      if (ids.length === 1) await api.deleteNotification(ids[0]);
+      else await api.deleteNotifications(ids);
+      wx.removeStorageSync("notificationUnreadCountCachedAt");
+      wx.showToast({ title: "删除成功", icon: "success" });
+      this.setData({ selectionMode: false, selectedIds: [], allSelected: false });
+      await this.loadNotifications(true);
+    } catch (error) {
+      wx.showToast({ title: error.message || "删除失败", icon: "none" });
+    } finally {
+      this.setData({ deleting: false });
+    }
   },
 
   async markAllRead() {
@@ -112,7 +233,11 @@ Page({
       const readStatus = this.data.readStatusOptions[this.data.readStatusIndex].value;
       const result = await api.listNotifications({ page, pageSize: 20, readStatus });
       if (requestId !== this.requestId) return;
-      const incoming = (result.list || []).map(decorateNotification);
+      const selectedSet = new Set(this.data.selectedIds);
+      const incoming = (result.list || []).map(item => ({
+        ...decorateNotification(item),
+        selected: selectedSet.has(item._id),
+      }));
       const unreadCount = Number(result.unreadCount) || 0;
       wx.setStorageSync("notificationUnreadCount", unreadCount);
       wx.setStorageSync("notificationUnreadCountCachedAt", Date.now());
