@@ -194,6 +194,15 @@ page {
   line-height: 104rpx;
 }
 
+.app-version {
+  margin-top: 48rpx;
+  margin-bottom: 24rpx;
+  color: #98a0ad;
+  font-size: 22rpx;
+  line-height: 32rpx;
+  text-align: center;
+}
+
 .profile-loading-mask {
   position: fixed;
   z-index: 50;

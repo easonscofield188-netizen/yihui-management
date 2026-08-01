@@ -7,11 +7,21 @@
 <view class="detail-nav-placeholder" style="height: {{navHeight}}px;"></view>
 
 <view class="detail-page" wx:if="{{project}}">
+  <view class="detail-actions" wx:if="{{canEdit}}">
+    <view class="heading-edit" bindtap="editProject">
+      <t-icon name="edit-1" size="34rpx" color="#ffffff" />
+      <text>编辑</text>
+    </view>
+  </view>
+
   <view class="project-heading">
-    <view class="project-name">{{project.name}}</view>
-    <view class="status status-{{project.status}}">
-      <view class="status-dot"></view>
-      <text>{{project.statusLabel}}</text>
+    <view class="project-heading-main">
+      <view class="project-name">{{project.name}}</view>
+      <view class="status status-{{project.status}}">
+        <t-icon wx:if="{{project.usesCheckIcon}}" name="check-circle" size="24rpx" color="{{project.statusIconColor}}" />
+        <view wx:else class="status-dot"></view>
+        <text>{{project.statusLabel}}</text>
+      </view>
     </view>
   </view>
 
@@ -99,10 +109,18 @@
           class="voucher-image"
           src="{{item.displayUrl || item.fileUrl}}"
           mode="aspectFill"
-          data-url="{{item.displayUrl || item.fileUrl}}"
+          data-id="{{item._id || item.id}}"
           bindtap="previewVoucher"
         />
-        <view wx:else class="pdf-voucher">PDF</view>
+        <view
+          wx:else
+          class="pdf-voucher"
+          data-id="{{item._id || item.id}}"
+          bindtap="previewVoucher"
+        >
+          <t-icon name="file-pdf" size="54rpx" color="#ba1a1a" />
+          <text class="pdf-voucher-name">{{item.pdfDisplayName}}</text>
+        </view>
       </view>
     </view>
     <view class="empty-row" wx:if="{{!vouchers.length}}">暂无凭证</view>

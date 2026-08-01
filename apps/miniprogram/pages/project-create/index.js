@@ -85,7 +85,6 @@ Page({
     newClientSourceIndex: 0,
     form: {
       name: "",
-      status: "completed",
       scene: FALLBACK_SCENES[0].value,
       startDate: "",
       client: "",
@@ -110,8 +109,8 @@ Page({
       ...getNavMetrics(),
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
-      isClosedEdit: isEditMode && (savedDraft._originalStatus || savedDraft.status) === "closed",
-      isDateLocked: isEditMode,
+      isClosedEdit: isEditMode && ["closed", "archived"].includes(savedDraft._originalStatus || savedDraft.status),
+      isDateLocked: false,
       form,
     });
     this.loadServerDate();
@@ -232,10 +231,6 @@ Page({
     clearTimeout(this.clientListTouchTimer);
   },
 
-  onStatusTap(event) {
-    this.setData({ "form.status": event.currentTarget.dataset.value });
-  },
-
   openPicker(event) {
     const field = event.currentTarget.dataset.field;
     if (this.data.isClosedEdit && ["scene", "role", "source"].includes(field)) return;
@@ -277,7 +272,7 @@ Page({
 
   async openDatePicker() {
     if (this.data.isDateLocked) {
-      wx.showToast({ title: "编辑时不可修改交付日期", icon: "none" });
+      wx.showToast({ title: "当前不可修改交付日期", icon: "none" });
       return;
     }
     const serverToday = this.data.serverToday || await this.loadServerDate() || getToday();

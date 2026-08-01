@@ -20,7 +20,16 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const VIEW_OPERATION_LOGS = 'VIEW_OPERATION_LOGS';
 const WRITE_ACTIONS = new Set(['create', 'add', 'insert', 'update', 'edit', 'modify', 'delete', 'remove']);
-const WRITE_STATUS = new Set(['成功', '失败', '警告']);
+const LOG_STATUS = Object.freeze({
+  SUCCESS: 'success',
+  FAILED: 'failed',
+  WARNING: 'warning'
+});
+const LOG_STATUS_DICTIONARY = Object.freeze({
+  [LOG_STATUS.SUCCESS]: { value: LOG_STATUS.SUCCESS, label: '成功' },
+  [LOG_STATUS.FAILED]: { value: LOG_STATUS.FAILED, label: '失败' },
+  [LOG_STATUS.WARNING]: { value: LOG_STATUS.WARNING, label: '警告' }
+});
 const ACTION_ALIAS_MAP = {
   add: 'create',
   insert: 'create',
@@ -34,6 +43,15 @@ const FLUSH_DELAY_MS = 120;
 const LOG_RETENTION_DAYS = 180;
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const LOCAL_TIMEZONE_OFFSET_HOURS = 8;
+
+function normalizeLogStatus(value) {
+  if (Object.prototype.hasOwnProperty.call(LOG_STATUS_DICTIONARY, value)) return value;
+  return LOG_STATUS.SUCCESS;
+}
+
+function getLogStatusLabel(value) {
+  return LOG_STATUS_DICTIONARY[normalizeLogStatus(value)].label;
+}
 const LOCAL_TIMEZONE_OFFSET_MS = LOCAL_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000;
 
 /**
@@ -337,7 +355,8 @@ function formatLog(item) {
     module: item.m || item.module || '系统',
     action: item.a || item.action || '',
     content: item.c || item.content || '',
-    status: item.s || item.status || '成功',
+    status: normalizeLogStatus(item.s || item.status),
+    statusLabel: item.sl || item.statusLabel || getLogStatusLabel(item.s || item.status),
     createTime: displayTime.createTime
   };
 }
@@ -357,7 +376,7 @@ function buildSlimLog(data, current) {
   const content = slimText(data.content || data.title || data.name);
   if (!moduleName || !content) return null;
 
-  const status = slimText(data.status || '成功', 4);
+  const status = normalizeLogStatus(data.status);
   const now = Date.now();
 
   return {
@@ -366,7 +385,8 @@ function buildSlimLog(data, current) {
     m: moduleName,
     a: action,
     c: content,
-    s: WRITE_STATUS.has(status) ? status : '成功',
+    s: status,
+    sl: getLogStatusLabel(status),
     ts: now
   };
 }
@@ -610,7 +630,7 @@ async function listOperationLogs(data, event) {
     const logTime = getLogTimestamp(item);
     const logUser = item.un || item.nickname || item.username || '';
     const logModule = item.m || item.module || '';
-    const logStatus = item.s || item.status || '';
+    const logStatus = normalizeLogStatus(item.s || item.status);
     const matchTime = logTime >= startTime && logTime <= endTime;
     const matchUser = !user || logUser === user;
     const matchModule = !module || logModule === module;
@@ -621,8 +641,8 @@ async function listOperationLogs(data, event) {
   const pagedLogs = filteredLogs.slice(startIndex, startIndex + safePageSize);
   const users = Array.from(new Set(allLogs.map(item => item.un || item.nickname || item.username).filter(Boolean)));
   const modules = Array.from(new Set(allLogs.map(item => item.m || item.module).filter(Boolean)));
-  const failedCount = allLogs.filter(item => (item.s || item.status) === '失败').length;
-  const warningCount = allLogs.filter(item => (item.s || item.status) === '警告').length;
+  const failedCount = allLogs.filter(item => normalizeLogStatus(item.s || item.status) === LOG_STATUS.FAILED).length;
+  const warningCount = allLogs.filter(item => normalizeLogStatus(item.s || item.status) === LOG_STATUS.WARNING).length;
   const moduleMap = allLogs.reduce((map, item) => {
     const moduleName = item.m || item.module || '系统';
     map[moduleName] = (map[moduleName] || 0) + 1;

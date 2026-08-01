@@ -1,7 +1,9 @@
 const TOKEN_KEY = "authToken";
 const USER_KEY = "userInfo";
+const USER_CACHE_AT_KEY = "userInfoCachedAt";
 const EXPIRES_KEY = "sessionExpiresAt";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const USER_CACHE_TTL_MS = 5 * 60 * 1000;
 
 function getStoredExpiresAt() {
   return Number(wx.getStorageSync(EXPIRES_KEY) || 0);
@@ -42,14 +44,44 @@ function normalizeProjectList(result) {
 
 function saveSession(data) {
   wx.setStorageSync(TOKEN_KEY, data.token);
-  wx.setStorageSync(USER_KEY, data.userInfo);
+  cacheUserInfo(data.userInfo);
   touchLocalSession(data.expiresAt || (Date.now() + SESSION_TTL_MS));
-  getApp().globalData.userInfo = data.userInfo;
+}
+
+function cacheUserInfo(userInfo) {
+  if (!userInfo) return;
+  wx.setStorageSync(USER_KEY, userInfo);
+  wx.setStorageSync(USER_CACHE_AT_KEY, Date.now());
+  try {
+    getApp().globalData.userInfo = userInfo;
+  } catch (error) {
+    // App 尚未初始化时仅保留本地缓存
+  }
+}
+
+function getCachedUserInfo() {
+  try {
+    const globalUser = getApp().globalData && getApp().globalData.userInfo;
+    if (globalUser) return globalUser;
+  } catch (error) {
+    // App 尚未初始化时读取本地缓存
+  }
+  return wx.getStorageSync(USER_KEY) || null;
+}
+
+function isUserInfoCacheFresh() {
+  const cachedAt = Number(wx.getStorageSync(USER_CACHE_AT_KEY) || 0);
+  return Boolean(getCachedUserInfo() && cachedAt && Date.now() - cachedAt < USER_CACHE_TTL_MS);
+}
+
+function invalidateUserInfoCache() {
+  wx.removeStorageSync(USER_CACHE_AT_KEY);
 }
 
 function clearSession() {
   wx.removeStorageSync(TOKEN_KEY);
   wx.removeStorageSync(USER_KEY);
+  wx.removeStorageSync(USER_CACHE_AT_KEY);
   wx.removeStorageSync(EXPIRES_KEY);
   try {
     getApp().globalData.userInfo = null;
@@ -144,6 +176,10 @@ function listProjects(params) {
   return callFunction("projectService", "list", params).then(normalizeProjectList);
 }
 
+function listFinancialProjects(params) {
+  return callFunction("projectService", "financialList", params).then(normalizeProjectList);
+}
+
 function queryClients(keyword = "") {
   return callFunction("clientsService", "", { keyword });
 }
@@ -194,6 +230,7 @@ function deleteVoucher(data) {
 
 module.exports = {
   addVoucher,
+  cacheUserInfo,
   callFunction,
   clearSession,
   createAccount,
@@ -202,6 +239,7 @@ module.exports = {
   deleteVoucher,
   ensureAuthOnShow,
   getProject,
+  getCachedUserInfo,
   getGlobalConfig,
   getNextEmployeeNo,
   getProjectOverview,
@@ -210,8 +248,11 @@ module.exports = {
   getUserInfo,
   getVouchers,
   listProjects,
+  listFinancialProjects,
   login,
   logout,
+  invalidateUserInfoCache,
+  isUserInfoCacheFresh,
   quickRecord,
   queryClients,
   updateProject,

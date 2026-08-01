@@ -47,15 +47,21 @@
     </view>
 
     <view class="metric-grid">
-      <view class="metric-card unpaid-card">
+      <view class="metric-card metric-card-action unpaid-card" data-type="unreceived" bindtap="openFinancialProjects">
         <view class="metric-icon unpaid-icon"><t-icon name="wallet" size="34rpx" color="#9a3412" /></view>
         <view class="metric-label">总待收金额</view>
-        <view class="metric-value unpaid-value">{{metrics.unpaidText}}</view>
+        <view class="metric-value-row">
+          <view class="metric-value unpaid-value">{{metrics.unpaidText}}</view>
+          <t-icon name="chevron-right" size="28rpx" color="#9a3412" />
+        </view>
       </view>
-      <view class="metric-card pending-cost-card">
+      <view class="metric-card metric-card-action pending-cost-card" data-type="unpaid_cost" bindtap="openFinancialProjects">
         <view class="metric-icon pending-cost-icon"><t-icon name="error-circle" size="34rpx" color="#a16207" /></view>
         <view class="metric-label">总待付成本</view>
-        <view class="metric-value pending-cost-value">{{metrics.unpaidCostText}}</view>
+        <view class="metric-value-row">
+          <view class="metric-value pending-cost-value">{{metrics.unpaidCostText}}</view>
+          <t-icon name="chevron-right" size="28rpx" color="#a16207" />
+        </view>
       </view>
       <view class="metric-card cost-card cost-card-full">
         <view class="metric-icon cost-icon"><t-icon name="bill" size="34rpx" color="#1d4ed8" /></view>
@@ -111,7 +117,10 @@
         </view>
         <view class="recent-right">
           <view class="recent-amount">¥{{item.amountText}}</view>
-          <view class="status-tag status-{{item.statusTone}}">{{item.statusLabel}}</view>
+          <view class="status-tag status-{{item.statusTone}} status-{{item.status}}">
+            <t-icon wx:if="{{item.usesCheckIcon}}" name="check-circle" size="20rpx" color="{{item.statusIconColor}}" />
+            <text>{{item.statusLabel}}</text>
+          </view>
         </view>
       </view>
       <view class="empty-recent" wx:if="{{!recentProjects.length}}">当前筛选范围内暂无项目</view>

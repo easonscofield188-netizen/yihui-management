@@ -1,6 +1,8 @@
 const api = require("../../utils/api");
+const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
+const { buildVoucherCloudPath } = require("../../utils/voucher-path");
+const { isSettled } = require("../../utils/dictionary");
 
-const PROJECT_DRAFT_KEY = "projectCreateDraft";
 const WRITE_ROLES = ["ADMIN_SUPER", "ADMIN_COM", "ADMIN", "PROJECT_MANAGER", "FINANCE_MANAGER"];
 const STATUS_LABELS = {
   negotiating: "洽谈中",
@@ -8,6 +10,7 @@ const STATUS_LABELS = {
   completed: "已交付",
   settling: "结账中",
   closed: "已结清",
+  archived: "已归档",
   in_cooperation: "合作中",
   terminated: "已终止",
 };
@@ -67,8 +70,7 @@ function supplierLabel(value) {
 }
 
 function isSettledCost(value) {
-  if (value === undefined || value === null || value === "") return true;
-  return value === true || value === 1 || ["是", "true", "已支付", "已结清"].includes(String(value).toLowerCase());
+  return isSettled(value);
 }
 
 function dateText(value) {
@@ -80,6 +82,12 @@ function dateText(value) {
 function decorateProject(project, config) {
   // 金额字段由后端 calculateFinancials 计算，前端仅做展示格式化
   const profitAmount = Number(project.profitAmount);
+  const usesCheckIcon = ["completed", "closed", "archived"].includes(project.status);
+  const statusIconColors = {
+    completed: "#002045",
+    closed: "#0f7a45",
+    archived: "#6b7280",
+  };
   return {
     ...project,
     costs: (project.costs || []).map((item, index) => {
@@ -95,6 +103,8 @@ function decorateProject(project, config) {
       };
     }),
     statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
+    usesCheckIcon,
+    statusIconColor: statusIconColors[project.status] || "#002045",
     amountText: money(project.amount),
     receivedText: money(project.receivedAmount),
     unreceivedText: money(project.unreceivedAmount),
@@ -215,6 +225,7 @@ Page({
       return vouchers.map((item) => ({
         ...item,
         displayUrl: item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     }
@@ -227,12 +238,14 @@ Page({
       return vouchers.map((item) => ({
         ...item,
         displayUrl: urlMap[item.fileId] || item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     } catch (error) {
       return vouchers.map((item) => ({
         ...item,
         displayUrl: item.fileUrl,
+        pdfDisplayName: getPdfDisplayName(item.fileName),
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     }
@@ -250,39 +263,7 @@ Page({
   editProject() {
     const project = this.data.project;
     if (!project || !this.data.canEdit) return;
-    const rawDeliveryDate = project.startDate
-      || project.completionTime
-      || (project.period && project.period[0])
-      || "";
-    const deliveryDate = String(rawDeliveryDate).slice(0, 10);
-    wx.setStorageSync(PROJECT_DRAFT_KEY, {
-      _mode: "edit",
-      _projectId: this.data.projectId,
-      _originalStatus: project.status || "",
-      name: project.name || "",
-      status: project.status || "completed",
-      scene: project.scene || "",
-      startDate: deliveryDate,
-      client: project.client || "",
-      clientId: project.clientId || "",
-      role: project.role || "",
-      source: project.clientSource || project.source || "",
-      createClient: false,
-      amount: Number(project.amount) || 0,
-      receivedAmount: Number(project.receivedAmount) || 0,
-      staffCount: Number(project.staffCount) || 1,
-      desc: project.desc || "",
-      costs: (project.costs || []).map((item) => ({
-        id: item.id,
-        category: item.category || "",
-        categoryCode: item.categoryCode || "",
-        supplier: item.supplier || "无",
-        amount: Number(item.amount) || 0,
-        isSettled: item.isSettled === true || item.isSettled === "是",
-      })),
-      invoiceEnabled: this.data.vouchers.length > 0 || project.isHasVoucher === "是",
-    });
-    wx.navigateTo({ url: `/pages/project-create/index?mode=edit&id=${this.data.projectId}` });
+    wx.navigateTo({ url: `/pages/project-edit/index?id=${this.data.projectId}` });
   },
 
   openCost() {
@@ -374,7 +355,7 @@ Page({
     try {
       const extensionMatch = String(file.tempFilePath).match(/\.[a-zA-Z0-9]+$/);
       const extension = extensionMatch ? extensionMatch[0].toLowerCase() : ".jpg";
-      const cloudPath = `bill_voucher/mobile/${this.data.projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
+      const cloudPath = buildVoucherCloudPath(this.data.project.name, extension).cloudPath;
       const uploadResult = await wx.cloud.uploadFile({
         cloudPath,
         filePath: file.tempFilePath,
@@ -403,13 +384,34 @@ Page({
     }
   },
 
-  previewVoucher(event) {
-    const current = event.currentTarget.dataset.url;
-    const urls = this.data.vouchers
-      .filter((item) => item.isImage !== false)
-      .map((item) => item.displayUrl || item.fileUrl)
-      .filter(Boolean);
-    if (!current || !urls.includes(current)) return;
-    wx.previewImage({ current, urls });
+  async previewVoucher(event) {
+    const id = event.currentTarget.dataset.id;
+    const target = this.data.vouchers.find((item) => String(item._id || item.id) === String(id));
+    if (!target) return;
+
+    if (target.isImage !== false) {
+      const current = target.displayUrl || target.fileUrl;
+      const urls = this.data.vouchers
+        .filter((item) => item.isImage !== false)
+        .map((item) => item.displayUrl || item.fileUrl)
+        .filter(Boolean);
+      if (current && urls.includes(current)) {
+        wx.previewImage({ current, urls });
+      }
+      return;
+    }
+
+    wx.showLoading({ title: "打开中...", mask: true });
+    try {
+      await openPdfFile({
+        filePath: target.displayUrl || target.fileUrl,
+        fileId: target.fileId,
+        fileUrl: target.displayUrl || target.fileUrl,
+      });
+    } catch (error) {
+      wx.showToast({ title: (error && error.message) || "无法打开 PDF", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
   },
 });

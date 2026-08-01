@@ -4,7 +4,7 @@ const ROLE_OPTIONS = [
   { label: "超级系统管理员", value: "ADMIN_SUPER" },
   { label: "系统管理员", value: "ADMIN_COM" },
   { label: "项目经理", value: "PROJECT_MANAGER" },
-  { label: "财务主管", value: "FINANCE_MANAGER" },
+  { label: "项目主管", value: "FINANCE_MANAGER" },
   { label: "普通访客", value: "VISITOR" },
 ];
 

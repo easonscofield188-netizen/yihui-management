@@ -1,4 +1,7 @@
 const api = require("../../utils/api");
+const { getPdfDisplayName, openPdfFile } = require("../../utils/file-preview");
+const { buildVoucherCloudPath } = require("../../utils/voucher-path");
+const { CREATION_CHANNEL } = require("../../utils/dictionary");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -52,6 +55,7 @@ function toUploadFile(file) {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     tempFilePath,
     name: file.name || `凭证.${fileExtension(tempFilePath)}`,
+    pdfDisplayName: getPdfDisplayName(file.name || `凭证.${fileExtension(tempFilePath)}`),
     size: Number(file.size) || 0,
     isImage: isImageFile(file),
     isExisting: false,
@@ -160,6 +164,7 @@ Page({
     submitText: "提交",
     isEditMode: false,
     projectId: "",
+    projectName: "",
     invoiceEnabled: true,
     files: [],
     submitting: false,
@@ -180,10 +185,13 @@ Page({
       submitText: isEditMode ? "保存" : "提交",
       isEditMode,
       projectId: isEditMode ? draft._projectId : (createdProjectId || ""),
+      projectName: String(draft.name || "").trim(),
       createdProjectId,
       invoiceEnabled: draft.invoiceEnabled !== false,
       files: Array.isArray(savedQueue) ? savedQueue.map((item) => ({
         ...item,
+        pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
+        cloudFileName: item.cloudFileName || "",
         uploadStatus: item.uploadStatus === "uploading" ? "pending" : (item.uploadStatus || "pending"),
         uploadError: item.uploadError || "",
         isExisting: false,
@@ -199,6 +207,8 @@ Page({
         id: item.id,
         tempFilePath: item.tempFilePath,
         name: item.name,
+        pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
+        cloudFileName: item.cloudFileName || "",
         size: item.size,
         isImage: item.isImage,
         isSavedFile: item.isSavedFile,
@@ -250,6 +260,7 @@ Page({
           fileId: item.fileId,
           tempFilePath: path,
           name,
+          pdfDisplayName: getPdfDisplayName(name),
           size: Number(item.fileSize) || 0,
           isImage: !/\.pdf$/i.test(name) && item.mimeType !== "application/pdf",
           isExisting: true,
@@ -375,10 +386,34 @@ Page({
     });
   },
 
-  previewFile(event) {
-    const current = event.currentTarget.dataset.path;
-    const images = this.data.files.filter((item) => item.isImage).map((item) => item.tempFilePath);
-    if (images.includes(current)) wx.previewImage({ current, urls: images });
+  async previewFile(event) {
+    const id = event.currentTarget.dataset.id;
+    const target = this.data.files.find((item) => item.id === id);
+    if (!target) return;
+
+    if (target.isImage) {
+      const current = target.tempFilePath;
+      const images = this.data.files
+        .filter((item) => item.isImage && item.tempFilePath)
+        .map((item) => item.tempFilePath);
+      if (current && images.includes(current)) {
+        wx.previewImage({ current, urls: images });
+      }
+      return;
+    }
+
+    wx.showLoading({ title: "打开中...", mask: true });
+    try {
+      await openPdfFile({
+        filePath: target.tempFilePath,
+        fileId: target.fileId,
+        fileUrl: target.tempFilePath,
+      });
+    } catch (error) {
+      wx.showToast({ title: (error && error.message) || "无法打开 PDF", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   previous() {
@@ -392,8 +427,12 @@ Page({
 
   async uploadVoucherOnce(projectId, file) {
     const extension = fileExtension(file.tempFilePath);
-    const safeTaskId = String(file.id).replace(/[^a-zA-Z0-9_-]/g, "");
-    const cloudPath = `bill_voucher/mobile/${projectId}/${safeTaskId}.${extension}`;
+    const pathInfo = buildVoucherCloudPath(this.data.projectName, extension, file.cloudFileName);
+    file.cloudFileName = pathInfo.fileName;
+    if (!this.data.files.find((item) => item.id === file.id && item.cloudFileName === pathInfo.fileName)) {
+      this.markFileUploadState(file.id, { cloudFileName: pathInfo.fileName });
+    }
+    const cloudPath = pathInfo.cloudPath;
     try {
       const uploadResult = await withTimeout(
         wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
@@ -606,7 +645,7 @@ Page({
 
     this.setData({ submitting: true });
     const isEditMode = draft._mode === "edit" && Boolean(draft._projectId);
-    const isClosedEdit = isEditMode && draft._originalStatus === "closed";
+    const isClosedEdit = isEditMode && ["closed", "archived"].includes(draft._originalStatus);
     const deliveryDate = String(draft.startDate).slice(0, 10);
     const needUpload = this.data.invoiceEnabled && this.data.files.some((file) => !file.isExisting && file.uploadStatus !== "success");
     wx.showLoading({ title: isEditMode ? "正在保存修改" : "正在创建项目", mask: true });
@@ -618,14 +657,15 @@ Page({
         receivedAmount: Number(draft.receivedAmount) || 0,
         desc: isEditMode ? (String(draft.desc || "").trim() || "无") : "无",
         costs: draft.costs,
-        status: draft.status || "completed",
         // 创建时先标记为无凭证，至少一张凭证真正落库后再同步为“是”。
         isHasVoucher: this.countUploadedVouchers() > 0 ? "是" : "否",
       };
 
       if (!projectId) {
         if (isEditMode) {
-          const editableData = isClosedEdit ? {} : {
+          const editableData = isClosedEdit ? {
+            startDate: deliveryDate,
+          } : {
             scene: draft.scene || "",
             client: draft.client.trim(),
             clientId: draft.clientId || "",
@@ -633,6 +673,7 @@ Page({
             clientSource: draft.source || "",
             staffCount: Number(draft.staffCount) || 1,
             amount: Number(draft.amount),
+            startDate: deliveryDate,
           };
           await api.updateProject({
             id: draft._projectId,
@@ -654,6 +695,8 @@ Page({
             staffCount: Number(draft.staffCount) || 1,
             amount: Number(draft.amount),
             isHistorical: false,
+            // 与后台管理系统共用 projects 集合，明确记录首次创建入口。
+            creationChannel: CREATION_CHANNEL.MINIPROGRAM,
           });
           projectId = result.id;
         }

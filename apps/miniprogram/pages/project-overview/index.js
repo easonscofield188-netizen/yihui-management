@@ -37,6 +37,35 @@ function formatDateTime(value) {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateOnly(value) {
+  const text = String(value || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  const date = new Date(`${text}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** 自定义筛选默认：结束日=服务器当天，开始日=往前 90 天 */
+function getDefaultCustomRange(serverToday) {
+  const end = parseDateOnly(serverToday) || (() => {
+    const local = new Date();
+    local.setHours(0, 0, 0, 0);
+    return local;
+  })();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 90);
+  return {
+    startDate: formatDate(start),
+    endDate: formatDate(end),
+  };
+}
+
 function decorateOverview(result) {
   const metrics = (result && result.metrics) || {};
   const trendPercent = Number(metrics.trendPercent || 0);
@@ -47,8 +76,15 @@ function decorateOverview(result) {
       timeText: formatDateTime(item.time || item.createTime),
       amountText: formatMoney(item.amount),
       statusLabel: item.statusLabel || "进行中",
+      status: item.status || "",
       statusTone: item.statusTone || "doing",
-      icon: item.statusTone === "done" ? "check-circle" : "time",
+      usesCheckIcon: ["completed", "closed", "archived"].includes(item.status),
+      statusIconColor: {
+        completed: "#002045",
+        closed: "#0f7a45",
+        archived: "#6b7280",
+      }[item.status] || "#002045",
+      icon: ["completed", "closed", "archived"].includes(item.status) ? "check-circle" : "time",
     }))
     : [];
 
@@ -109,15 +145,29 @@ Page({
   },
 
   onLoad() {
-    const today = new Date();
-    const todayText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    this.setData({ ...getNavMetrics() });
+    this.loadServerDate();
+  },
+
+  async loadServerDate() {
+    let serverToday = "";
+    try {
+      const result = await api.getServerDate();
+      serverToday = String((result && result.date) || "").slice(0, 10);
+    } catch (error) {
+      serverToday = "";
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(serverToday)) {
+      serverToday = formatDate(new Date());
+    }
+    const { startDate, endDate } = getDefaultCustomRange(serverToday);
     this.setData({
-      ...getNavMetrics(),
-      today: todayText,
-      customStartDate: todayText,
-      customEndDate: todayText,
-      datePickerValue: todayText,
+      today: endDate,
+      customStartDate: startDate,
+      customEndDate: endDate,
+      datePickerValue: endDate,
     });
+    return endDate;
   },
 
   onShow() {
@@ -146,12 +196,15 @@ Page({
     }, () => this.loadOverview());
   },
 
-  openCustomRange() {
-    const [start = this.data.today, end = this.data.today] = this.data.customRange;
+  async openCustomRange() {
+    const serverToday = await this.loadServerDate();
+    const defaults = getDefaultCustomRange(serverToday || this.data.today);
+    const [start = defaults.startDate, end = defaults.endDate] = this.data.customRange;
     this.setData({
       customPopupVisible: true,
       customStartDate: start,
       customEndDate: end,
+      today: defaults.endDate,
     });
   },
 
@@ -229,6 +282,22 @@ Page({
     const id = event.currentTarget.dataset.id;
     if (!id) return;
     wx.navigateTo({ url: `/pages/project-detail/index?id=${id}` });
+  },
+
+  openFinancialProjects(event) {
+    const type = String(event.currentTarget.dataset.type || "");
+    if (!["unreceived", "unpaid_cost"].includes(type)) return;
+    const isCustom = this.data.customRange.length === 2;
+    const rangeType = isCustom ? "custom" : this.data.rangeValue;
+    const startDate = isCustom ? this.data.customRange[0] : "";
+    const endDate = isCustom ? this.data.customRange[1] : "";
+    const query = [
+      `type=${encodeURIComponent(type)}`,
+      `rangeType=${encodeURIComponent(rangeType)}`,
+      `startDate=${encodeURIComponent(startDate)}`,
+      `endDate=${encodeURIComponent(endDate)}`,
+    ].join("&");
+    wx.navigateTo({ url: `/pages/project-financial-list/index?${query}` });
   },
 
   stopPropagation() {},

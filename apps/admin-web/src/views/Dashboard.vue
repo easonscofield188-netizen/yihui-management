@@ -502,9 +502,9 @@
                   class="operation-log-control"
                 >
                   <option value="">全部状态</option>
-                  <option value="成功">成功</option>
-                  <option value="警告">警告</option>
-                  <option value="失败">失败</option>
+                  <option :value="LOG_STATUS.SUCCESS">成功</option>
+                  <option :value="LOG_STATUS.WARNING">警告</option>
+                  <option :value="LOG_STATUS.FAILED">失败</option>
                 </select>
               </div>
             </section>
@@ -566,7 +566,7 @@
                           :class="operationLogStatusClass(log.status)"
                         >
                           <span class="w-1.5 h-1.5 rounded-full" :class="operationLogDotClass(log.status)"></span>
-                          <span class="text-xs font-bold">{{ log.status }}</span>
+                          <span class="text-xs font-bold">{{ log.statusLabel }}</span>
                         </div>
                       </td>
                     </tr>
@@ -938,6 +938,26 @@
                 </template>
               </el-table-column>
               <el-table-column
+                prop="creationChannel"
+                label="创建渠道"
+                width="160"
+                class-name="creation-channel-column"
+                label-class-name="project-table-nowrap-header"
+              >
+                <template #default="{ row }">
+                  <el-tag
+                    size="small"
+                    effect="plain"
+                    class="creation-channel-tag !inline-flex !w-[112px] !max-w-none !shrink-0 !justify-center !whitespace-nowrap"
+                    :class="row.creationChannel === CREATION_CHANNEL.MINIPROGRAM
+                      ? '!border-emerald-500/30 !bg-emerald-500/10 !text-emerald-400'
+                      : '!border-sky-500/30 !bg-sky-500/10 !text-sky-400'"
+                  >
+                    {{ getCreationChannelLabel(row.creationChannel) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column
                 prop="createDateText"
                 label="创单日期"
                 min-width="100"
@@ -965,10 +985,36 @@
                 </template>
               </el-table-column>
               <el-table-column
+                prop="settledDateText"
+                label="结清日期"
+                min-width="100"
+              >
+                <template #default="{ row }">
+                  <span
+                    class="font-mono text-sm"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.settledDateText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="archivedDateText"
+                label="归档日期"
+                min-width="100"
+              >
+                <template #default="{ row }">
+                  <span
+                    class="font-mono text-sm"
+                    :class="row.id === selectedProjectId ? 'text-on-surface' : 'text-on-surface-variant/80'"
+                  >{{ row.archivedDateText }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
                 prop="amount"
                 label="订单金额 (¥)"
-                min-width="120"
+                width="145"
+                fixed="right"
                 sortable="custom"
+                label-class-name="project-table-nowrap-header"
               >
                 <template #default="{ row }">
                   <span 
@@ -980,13 +1026,15 @@
               <el-table-column
                 label="项目状态"
                 prop="status"
-                min-width="110"
+                width="130"
+                fixed="right"
+                label-class-name="project-table-nowrap-header"
               >
                 <template #default="{ row }">
                   <el-dropdown 
                     trigger="click" 
                     popper-class="status-dropdown-popper"
-                    :disabled="isCreating || (row.status === 'closed' && row.type !== 'normal')"
+                    :disabled="isCreating || row.type === 'normal' || (row.status === 'closed' && row.type !== 'normal')"
                     @command="(val) => handleInlineStatusChange(row, val)"
                     @click.stop
                   >
@@ -1000,7 +1048,7 @@
                       <div class="status-dot" />
                       <span class="status-text">{{ row.statusText }}</span>
                       <el-icon
-                        v-if="!isCreating"
+                        v-if="!isCreating && row.type !== 'normal'"
                         class="status-chevron"
                       >
                         <ArrowDown />
@@ -1249,7 +1297,7 @@
                   </div>
 
                   <!-- Project Status -->
-                  <div class="space-y-2">
+                  <div v-if="!isCreating && form.type !== 'normal'" class="space-y-2">
                     <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">项目状态</label>
                     <el-select 
                       v-model="form.status" 
@@ -1365,7 +1413,7 @@
 
                   <!-- Construction Period -->
                   <div
-                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['constructing', 'completed', 'settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['constructing', 'completed', 'settling', 'closed', 'archived'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -1403,7 +1451,7 @@
 
                   <!-- Collection Period -->
                   <div
-                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['settling', 'closed'].includes(form.status)"
+                    v-if="SHOW_REGULAR_PROJECT_PERIODS && form.type === 'normal' && !isCreating && ['settling', 'closed', 'archived'].includes(form.status)"
                     class="space-y-2"
                   >
                     <div class="flex justify-between items-center px-1">
@@ -2959,7 +3007,7 @@
                   :key="card.title"
                   class="p-8 rounded-xl bg-surface-container-high border-b-2 border-transparent transition-all duration-300 group"
                   :class="card.hoverBorder"
-                  v-show="!(card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE'))"
+                  v-show="!(card.key === 'PROJECT_SCENE' && !hasPermission('MANAGE_PROJECT_SCENE'))"
                 >
                   <div class="flex justify-between items-start mb-6">
                     <div
@@ -2974,7 +3022,7 @@
                     <button
                       class="text-zinc-600 hover:text-zinc-300"
                       @click="openConfigDialog(card)"
-                      :disabled="card.title === '项目场景' && !hasPermission('MANAGE_PROJECT_SCENE')"
+                      :disabled="card.key === 'PROJECT_SCENE' && !hasPermission('MANAGE_PROJECT_SCENE')"
                     >
                       <span class="material-symbols-outlined">settings</span>
                     </button>
@@ -3287,14 +3335,52 @@ const YES_NO_VALUE = {
   YES: 'yes',
   NO: 'no'
 }
-const LEGACY_YES_NO_VALUE = {
-  YES: '是',
-  NO: '否'
+const YES_NO_DICTIONARY = {
+  [YES_NO_VALUE.YES]: { value: YES_NO_VALUE.YES, label: '是' },
+  [YES_NO_VALUE.NO]: { value: YES_NO_VALUE.NO, label: '否' }
 }
+const CREATION_CHANNEL = Object.freeze({
+  MINIPROGRAM: 'mini_program',
+  ADMIN_WEB: 'admin_web'
+})
+const CREATION_CHANNEL_DICTIONARY = Object.freeze({
+  [CREATION_CHANNEL.MINIPROGRAM]: { value: CREATION_CHANNEL.MINIPROGRAM, label: '微信小程序' },
+  [CREATION_CHANNEL.ADMIN_WEB]: { value: CREATION_CHANNEL.ADMIN_WEB, label: '后台管理系统' }
+})
+const LOG_STATUS = Object.freeze({
+  SUCCESS: 'success',
+  FAILED: 'failed',
+  WARNING: 'warning'
+})
+const LOG_STATUS_DICTIONARY = Object.freeze({
+  [LOG_STATUS.SUCCESS]: { value: LOG_STATUS.SUCCESS, label: '成功' },
+  [LOG_STATUS.FAILED]: { value: LOG_STATUS.FAILED, label: '失败' },
+  [LOG_STATUS.WARNING]: { value: LOG_STATUS.WARNING, label: '警告' }
+})
+const PROJECT_STATUS_LABEL_ALIASES = Object.freeze({
+  谈判中: '洽谈中',
+  已完成: '已结清',
+  已完工: '已结清',
+  施工中: '交付中',
+  已竣工: '已交付'
+})
+const PROJECT_STATUS_FALLBACK_LABELS = Object.freeze({
+  negotiating: '洽谈中',
+  constructing: '交付中',
+  completed: '已交付',
+  settling: '结账中',
+  closed: '已结清',
+  archived: '已归档',
+  in_cooperation: '合作中',
+  terminated: '已终止'
+})
+const COST_SETTLEMENT_DICTIONARY = Object.freeze({
+  true: { value: true },
+  false: { value: false }
+})
 
 const normalizeYesNo = (value, defaultValue = YES_NO_VALUE.NO) => {
-  if (value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES || value === true) return YES_NO_VALUE.YES
-  if (value === YES_NO_VALUE.NO || value === LEGACY_YES_NO_VALUE.NO || value === false) return YES_NO_VALUE.NO
+  if (Object.prototype.hasOwnProperty.call(YES_NO_DICTIONARY, value)) return value
   return defaultValue
 }
 
@@ -3306,7 +3392,15 @@ const normalizeSupplier = (value) => {
 }
 
 const isCostSettled = (value) => {
-  return value === true || value === YES_NO_VALUE.YES || value === LEGACY_YES_NO_VALUE.YES
+  if (Object.prototype.hasOwnProperty.call(COST_SETTLEMENT_DICTIONARY, value)) return value === true || value === 'true'
+  return true
+}
+
+const getCreationChannelLabel = (value) => {
+  if (Object.prototype.hasOwnProperty.call(CREATION_CHANNEL_DICTIONARY, value)) {
+    return CREATION_CHANNEL_DICTIONARY[value].label
+  }
+  return CREATION_CHANNEL_DICTIONARY[CREATION_CHANNEL.ADMIN_WEB].label
 }
 
 // 是否正在加载项目数据（用于屏蔽某些监听器的自动触发）
@@ -3889,6 +3983,7 @@ const visibleMenuItems = computed(() => {
 // 系统设置页面数据配置卡片
 const settingConfigCards = [
   {
+    key: 'CLIENT_SOURCE',
     title: '客户来源',
     description: '管理商机流量渠道入口标签',
     icon: 'hub',
@@ -3898,6 +3993,7 @@ const settingConfigCards = [
     tags: ['老客户推荐', '官网咨询', '行业展会']
   },
   {
+    key: 'COST_CATEGORY',
     title: '成本项目',
     description: '定义项目物料与劳务成本科目',
     icon: 'payments',
@@ -3907,6 +4003,7 @@ const settingConfigCards = [
     tags: ['真植物', '仿真植物', '石材/铺装']
   },
   {
+    key: 'CLIENT_ROLE',
     title: '客户角色',
     description: '配置甲方组织架构对应身份',
     icon: 'groups',
@@ -3916,6 +4013,7 @@ const settingConfigCards = [
     tags: ['甲方老板', '项目负责人', '采购代理', '设计代表']
   },
   {
+    key: 'PROJECT_SCENE',
     title: '项目场景',
     description: '维护项目基础信息中的场景选项',
     icon: 'scene',
@@ -3945,21 +4043,13 @@ const settingConfigItems = reactive({
   PROJECT_SCENE: []
 })
 
-const configGroupMap = {
-  '客户来源': 'CLIENT_SOURCE',
-  '成本项目': 'COST_CATEGORY',
-  '客户角色': 'CLIENT_ROLE',
-  '项目场景': 'PROJECT_SCENE'
-}
-
 /**
  * 获取系统设置卡片配置项
  * @param {Object} card 配置卡片
  * @returns {Array} 配置项列表
  */
 const getSettingConfigItems = (card) => {
-  const group = configGroupMap[card.title]
-  return settingConfigItems[group] || []
+  return settingConfigItems[card.key] || []
 }
 
 /**
@@ -3999,7 +4089,7 @@ const configValuePreview = computed(() => {
  * @returns {void}
  */
 const openConfigDialog = (card) => {
-  const group = configGroupMap[card.title]
+  const group = card.key
   if (!group) return
   configDialog.title = card.title
   configDialog.group = group
@@ -4062,7 +4152,7 @@ const handleCreateConfig = async () => {
  * @throws {Error} 接口异常时提示错误
  */
 const handleToggleConfigStatus = async (card, tag) => {
-  const group = configGroupMap[card.title]
+  const group = card.key
   const configId = tag?.id || tag?._id
   if (!group || !configId || updatingConfigKey.value) return
 
@@ -4582,7 +4672,7 @@ const dashboardTopOrders = computed(() => {
       date: getProjectDashboardDate(item)?.toISOString().split('T')[0] || '-',
       amountText: dashboardMoney(getDashboardProjectAmount(item)),
       statusLabel: item.statusLabel || projectStatuses.value.find(status => status.value === item.status)?.label || item.status || '-',
-      statusClass: ['completed', 'closed'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+      statusClass: ['completed', 'closed', 'archived'].includes(item.status) ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
     }))
 })
 
@@ -4708,7 +4798,7 @@ const operationLogStats = computed(() => {
 const writeOperationLog = async (logData, originalData = null, newData = null) => {
   try {
     await recordOperationLog({
-      status: '成功',
+      status: LOG_STATUS.SUCCESS,
       ...logData,
       originalData,
       newData
@@ -4871,8 +4961,8 @@ const resetOperationLogFilters = () => {
  * 功能：返回日志状态文字样式 * @param {string} status 状态 * @returns {string} 样式类名
  * @throws {Error} 无 */
 const operationLogStatusClass = (status) => {
-  if (status === '失败') return 'text-red-300'
-  if (status === '警告') return 'text-secondary'
+  if (status === LOG_STATUS.FAILED) return 'text-red-300'
+  if (status === LOG_STATUS.WARNING) return 'text-secondary'
   return 'text-primary'
 }
 
@@ -4880,8 +4970,8 @@ const operationLogStatusClass = (status) => {
  * 功能：返回日志状态圆点样式 * @param {string} status 状态 * @returns {string} 样式类名
  * @throws {Error} 无 */
 const operationLogDotClass = (status) => {
-  if (status === '失败') return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
-  if (status === '警告') return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
+  if (status === LOG_STATUS.FAILED) return 'bg-red-300 shadow-[0_0_8px_#ffb4ab]'
+  if (status === LOG_STATUS.WARNING) return 'bg-secondary shadow-[0_0_8px_#eabcb8]'
   return 'bg-primary shadow-[0_0_8px_#52ee8a]'
 }
 
@@ -4961,7 +5051,7 @@ const selectFilter = (type, value) => {
 }
 
 const ONGOING_PROJECT_STATUSES = ['negotiating', 'constructing', 'completed', 'settling', 'in_cooperation']
-const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'terminated']
+const DELIVERED_PROJECT_STATUSES = ['completed', 'closed', 'archived', 'terminated']
 
 const getProjectSortValue = (project, prop) => {
   if (prop === 'name' || prop === 'client') {
@@ -5376,11 +5466,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
-        let label = s.label;
-        if (label === '谈判中') label = '洽谈中';
-        if (label === '已完成' || label === '已完工') label = '已结清';
-        if (label === '施工中') label = '交付中';
-        if (label === '已竣工') label = '已交付';
+        const label = PROJECT_STATUS_LABEL_ALIASES[s.label] || s.label;
         return { ...s, label };
       })
       applySessionTimeoutConfig(configs)
@@ -5411,11 +5497,7 @@ const initGlobalConfigs = async (forceRefresh = false) => {
       projectTypes.value = deduplicate(configs['PROJECT_TYPE'])
       projectScenes.value = deduplicate(configs['PROJECT_SCENE']).length ? deduplicate(configs['PROJECT_SCENE']) : defaultProjectScenes
       projectStatuses.value = deduplicate(configs['PROJECT_STATUS']).map(s => {
-        let label = s.label;
-        if (label === '谈判中') label = '洽谈中';
-        if (label === '已完成' || label === '已完工') label = '已结清';
-        if (label === '施工中') label = '交付中';
-        if (label === '已竣工') label = '已交付';
+        const label = PROJECT_STATUS_LABEL_ALIASES[s.label] || s.label;
         return { ...s, label };
       })
       
@@ -5819,7 +5901,7 @@ const projectTypeRibbon = computed(() => {
 const isProjectClosed = computed(() => {
   if (isEditMode.value && selectedProjectId.value) {
     const p = projects.value.find(item => item.id === selectedProjectId.value);
-    return p && p.status === 'closed';
+    return p && ['closed', 'archived'].includes(p.status);
   }
   return false;
 });
@@ -6244,7 +6326,7 @@ const handleDeleteProject = (project) => {
     writeOperationLog({
       module: '项目管理',
       action: 'delete',
-      status: '失败',
+      status: LOG_STATUS.FAILED,
       content: `尝试删除项目“${project.name}”，但没有删除权限`
     })
     import('element-plus').then(({ ElMessage }) => {
@@ -6318,7 +6400,7 @@ const handleDeleteProject = (project) => {
           writeOperationLog({
             module: '项目管理',
             action: 'delete',
-            status: '失败',
+            status: LOG_STATUS.FAILED,
             content: `删除项目“${project.name}”失败：${err.message || '未知错误'}`
           })
           console.error('删除项目失败:', err)
@@ -6690,11 +6772,13 @@ const loadProjects = async () => {
           type: p.type || (isHistorical ? 'historical' : 'normal'),
           typeLabel: projectTypes.value.find(t => t.value === (p.type || (isHistorical ? 'historical' : 'normal')))?.label || (isHistorical ? '补录' : '常规'),
           statusColor: p.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-          statusText: statusConfig ? statusConfig.label : '未知状态',
+          statusText: statusConfig?.label || PROJECT_STATUS_FALLBACK_LABELS[p.status] || '未知状态',
           date: p.period ? formatDate(p.period[0]) : (p.negotiatingTime || p.createTime ? formatDate(p.negotiatingTime || p.createTime) : '-'),
           createTimeText: p.createTime ? new Date(p.createTime).toLocaleString() : '-',
           createDateText: formatDate(createDate),
           deliveryDateText: formatDate(deliveryDate),
+          settledDateText: formatDate(p.settledTime),
+          archivedDateText: formatDate(p.archivedTime),
           projectDays: pDays || null,
           constructionDays: conDays || null,
           collectionDays: colDays || null,
@@ -6890,7 +6974,7 @@ const validateProjectForm = (checkVouchers = true) => {
   
   if (isNewClient.value && !form.clientSource) return '请选择新客户来源';
 
-  if (!form.status) return '请选择项目状态';
+  if (!isCreating.value && !form.status) return '请选择项目状态';
   if (!form.scene) return '请选择项目场景';
 
   if (form.type !== 'long_term') {
@@ -6993,7 +7077,6 @@ const handleSaveProject = async () => {
       client: form.client,
       role: form.role,
       clientSource: form.clientSource,
-      status: form.status,
       staffCount: form.type === 'long_term' ? 0 : Number(form.staffCount),
       amount: Number(totalOrderAmount.value),
       receivedAmount: Number(form.receivedAmount),
@@ -7026,6 +7109,10 @@ const handleSaveProject = async () => {
       }))
     }
 
+    if (!isCreating.value && form.type !== 'normal') {
+      projectData.status = form.status
+    }
+
     if (form.type === 'normal') {
       projectData.startDate = form.startDate
     }
@@ -7045,28 +7132,7 @@ const handleSaveProject = async () => {
       projectData.period = [today, systemToday];
       projectData.negotiatingTime = date; // 记录项目周期开始时�?
       
-      // 根据初始状态初始化其他周期
-      if (form.status === 'constructing') {
-        projectData.constructingTime = date;
-        projectData.constructionPeriod = [today, today];
-      } else if (form.status === 'completed') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.constructionPeriod = [today, today];
-      } else if (form.status === 'settling') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.settlingTime = date;
-        projectData.constructionPeriod = [today, today];
-        projectData.collectionPeriod = [today, today];
-      } else if (form.status === 'closed') {
-        projectData.constructingTime = date;
-        projectData.completedTime = date;
-        projectData.settlingTime = date;
-        projectData.settledTime = date;
-        projectData.constructionPeriod = [today, today];
-        projectData.collectionPeriod = [today, today];
-      }
+      projectData.completedTime = date;
     } else {
       // 历史模式或编辑模�?
       // 常规项目编辑模式下，不发送项目类型及三大周期，由后端逻辑自动处理
@@ -7112,6 +7178,9 @@ const handleSaveProject = async () => {
       // 创建项目
       res = await createProject({
         ...projectData,
+        // 与小程序共用 projects 集合，创建渠道仅在首次创建时写入。
+        creationChannel: CREATION_CHANNEL.ADMIN_WEB,
+        creationChannelLabel: getCreationChannelLabel(CREATION_CHANNEL.ADMIN_WEB),
         contractFileIds: contracts.value.map(c => c.id),
         previewFileIds: previews.value.map(p => p.id),
         currentUser: {
@@ -7204,43 +7273,15 @@ const handleSaveProject = async () => {
         content: logContent
       })
       
-      // 立即更新本地列表数据，确�?UI 实时响应
-      const statusConfig = projectStatuses.value.find(s => s.value === form.status)
-      
-      // 如果金额发生了变化且是编辑模式，本地模拟增加修改次数
-      let localAmountEditCount = form.amountEditCount || 0
-      if (isEditMode.value && Number(form.amount) !== Number(projects.value.find(p => p.id === projectId)?.amount)) {
-        localAmountEditCount += 1
-      }
-
-      const updatedItem = {
-        ...projectData,
-        id: projectId,
-        amountEditCount: localAmountEditCount,
-        statusText: statusConfig ? statusConfig.label : '未知状态',
-        statusColor: form.status === 'constructing' ? 'bg-primary' : 'bg-secondary',
-        date: form.period ? new Date(form.period[0]).toLocaleDateString() : '-',
-        createTimeText: new Date().toLocaleString() // 新建时默认当前时间，后续 loadProjects 会刷新为真实时间
-      }
-      
-      const index = projects.value.findIndex(p => p.id === projectId)
-      if (index !== -1) {
-        // 使用 splice 确保响应式更�?
-        projects.value.splice(index, 1, updatedItem)
-      } else {
-        projects.value.unshift(updatedItem)
-      }
-
       // 强制重置编辑状态
       isEditMode.value = false
       isViewMode.value = true
-      
-      // 异步加载最新列表，不阻塞 UI 响应
-      loadProjects()
-      
-      // 保持当前选中项并回显
+
+      // 以后端自动计算的状态与时间节点为准，重新读取后再回显。
+      await loadProjects()
       selectedProjectId.value = projectId
-      handleViewProject(updatedItem)
+      const refreshedProject = projects.value.find(item => item.id === projectId)
+      if (refreshedProject) handleViewProject(refreshedProject)
     } else {
       throw new Error(res.message)
     }
@@ -8233,6 +8274,8 @@ const handleLogout = () => {
 .status-badge-trigger {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   gap: 8px;
   padding: 4px 10px;
   border-radius: 6px;
@@ -8249,6 +8292,7 @@ const handleLogout = () => {
 }
 
 .status-dot {
+  flex: 0 0 auto;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -8284,25 +8328,74 @@ const handleLogout = () => {
 }
 
 /* 已结�?- 灰色 */
-.is-closed .status-dot {
+.is-closed .status-dot,
+.is-archived .status-dot {
   background-color: #9ca3af;
   box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
 }
-.is-closed.status-badge-trigger {
+.is-closed.status-badge-trigger,
+.is-archived.status-badge-trigger {
   opacity: 0.8;
 }
 
 .status-text {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
   color: rgba(229, 226, 227, 0.9);
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .status-chevron {
+  flex: 0 0 auto;
   font-size: 10px;
   color: rgba(229, 226, 227, 0.3);
   transition: transform 0.3s;
+}
+
+.project-table-nowrap-header,
+.project-table-nowrap-header .cell {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+.project-table-nowrap-header .cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.project-table-nowrap-header .caret-wrapper {
+  flex: 0 0 auto;
+}
+
+.creation-channel-column .cell {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.creation-channel-tag {
+  box-sizing: border-box;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+/* 固定列必须使用不透明背景，避免横向滚动内容从下方透出。 */
+.el-table th.el-table-fixed-column--right,
+.el-table td.el-table-fixed-column--right,
+.el-table .el-table__fixed-right-patch {
+  background-color: #2a2a2b !important;
+}
+
+.el-table .el-table__row:hover > td.el-table-fixed-column--right {
+  background-color: #2e2e2f !important;
+}
+
+.el-table .el-table__row.active-project-row > td.el-table-fixed-column--right,
+.el-table .el-table__row.active-project-row:hover > td.el-table-fixed-column--right {
+  background-color: #2d3a32 !important;
 }
 
 .status-badge-trigger:hover .status-chevron {
