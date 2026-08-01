@@ -15,6 +15,8 @@ cloud.init({
 const db = cloud.database();
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
+const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
+const NOTIFICATION_COLLECTION = 'notifications';
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -48,6 +50,332 @@ const COST_SETTLEMENT_DICTIONARY = Object.freeze({
   true: { value: true, label: '已支付' },
   false: { value: false, label: '待支付' }
 });
+const COST_CATEGORY_DICTIONARY = Object.freeze({
+  real_plant: { value: 'real_plant', label: '真植物' },
+  fake_plant: { value: 'fake_plant', label: '仿真植物' },
+  labor: { value: 'labor', label: '人工费' },
+  food: { value: 'food', label: '伙食费' },
+  meal: { value: 'meal', label: '餐食' },
+  logistics: { value: 'logistics', label: '物流运输' },
+  material: { value: 'material', label: '材料费' },
+  stone: { value: 'stone', label: '石材' },
+  paving: { value: 'paving', label: '铺装' },
+  other: { value: 'other', label: '其他' }
+});
+const COST_CATEGORY_VALUE_ALIASES = Object.freeze({
+  '真植物': 'real_plant',
+  '仿真植物': 'fake_plant',
+  '人工': 'labor',
+  '人工费': 'labor',
+  '伙食': 'food',
+  '伙食费': 'food',
+  '餐食': 'meal',
+  '物流': 'logistics',
+  '物流运输': 'logistics',
+  '材料': 'material',
+  '材料费': 'material',
+  '石材': 'stone',
+  '铺装': 'paving',
+  '其他': 'other',
+  '其他成本': 'other'
+});
+const PROJECT_EVENT_TYPE = Object.freeze({
+  CREATED: 'project_created',
+  UPDATED: 'project_updated'
+});
+const PROJECT_EVENT_TYPE_DICTIONARY = Object.freeze({
+  [PROJECT_EVENT_TYPE.CREATED]: { value: PROJECT_EVENT_TYPE.CREATED, label: '新建项目' },
+  [PROJECT_EVENT_TYPE.UPDATED]: { value: PROJECT_EVENT_TYPE.UPDATED, label: '项目重要信息变更' }
+});
+const NOTIFICATION_READ_STATUS = Object.freeze({
+  UNREAD: 'unread',
+  READ: 'read'
+});
+const NOTIFICATION_DELIVERY_STATUS = Object.freeze({
+  PENDING: 'pending'
+});
+const PROJECT_CHANGE_FIELD_DICTIONARY = Object.freeze({
+  name: { label: '项目名称', valueType: 'text' },
+  client: { label: '客户名称', valueType: 'text' },
+  amount: { label: '订单金额', valueType: 'money' },
+  receivedAmount: { label: '已收金额', valueType: 'money' },
+  startDate: { label: '交付日期', valueType: 'date' },
+  staffCount: { label: '人员数量', valueType: 'number' },
+  status: { label: '项目状态', valueType: 'project_status' },
+  desc: { label: '项目描述', valueType: 'text' }
+});
+
+function getProjectEventTypeLabel(value) {
+  return PROJECT_EVENT_TYPE_DICTIONARY[value]?.label || value;
+}
+
+function auditValuesEqual(left, right, valueType) {
+  if (valueType === 'money' || valueType === 'number') {
+    return Number(left || 0) === Number(right || 0);
+  }
+  return String(left ?? '') === String(right ?? '');
+}
+
+function normalizeAuditValue(value, valueType) {
+  if (valueType === 'money' || valueType === 'number') return Number(value || 0);
+  return value == null ? '' : String(value);
+}
+
+function getProjectStatusAuditLabel(value) {
+  const labels = {
+    negotiating: '洽谈中',
+    constructing: '施工中',
+    completed: '已交付',
+    settling: '结算中',
+    closed: '已结清',
+    archived: '已归档',
+    in_cooperation: '合作中',
+    terminated: '已终止'
+  };
+  return labels[value] || value || '未设置';
+}
+
+function buildSimpleProjectChanges(beforeProject, afterProject, isCreated = false) {
+  return Object.entries(PROJECT_CHANGE_FIELD_DICTIONARY).reduce((changes, [field, meta]) => {
+    const oldValue = isCreated ? null : beforeProject?.[field];
+    const newValue = afterProject?.[field];
+    if (!isCreated && auditValuesEqual(oldValue, newValue, meta.valueType)) return changes;
+    if (isCreated && (newValue === undefined || newValue === null || newValue === '')) return changes;
+    const normalizedOldValue = normalizeAuditValue(oldValue, meta.valueType);
+    const normalizedNewValue = normalizeAuditValue(newValue, meta.valueType);
+    changes.push({
+      field,
+      fieldLabel: meta.label,
+      valueType: meta.valueType,
+      changeType: isCreated ? 'created' : 'updated',
+      oldValue: isCreated ? null : normalizedOldValue,
+      newValue: normalizedNewValue,
+      oldDisplayValue: meta.valueType === 'project_status'
+        ? getProjectStatusAuditLabel(oldValue)
+        : normalizedOldValue,
+      newDisplayValue: meta.valueType === 'project_status'
+        ? getProjectStatusAuditLabel(newValue)
+        : normalizedNewValue
+    });
+    return changes;
+  }, []);
+}
+
+function flattenProjectCosts(project) {
+  const result = [];
+  const appendCosts = (costs, scope, scopeLabel) => {
+    (Array.isArray(costs) ? costs : []).forEach((cost, index) => {
+      const key = String(cost.id || `${scope}-${index}`);
+      const category = normalizeCostCategoryCode(cost);
+      const supplier = normalizeSupplier(cost.supplier);
+      result.push({
+        key,
+        scope,
+        scopeLabel,
+        category,
+        categoryLabel: getCostCategoryLabel(cost, category),
+        supplier,
+        amount: Number(cost.amount || 0),
+        isSettled: normalizeCostSettled(cost.isSettled)
+      });
+    });
+  };
+  appendCosts(project?.costs, 'project', '主项目');
+  (Array.isArray(project?.subProjects) ? project.subProjects : []).forEach((subProject, index) => {
+    const subProjectId = String(subProject.id || `sub-${index}`);
+    appendCosts(subProject.costs, `sub_project:${subProjectId}`, subProject.content || `子项目${index + 1}`);
+  });
+  return result;
+}
+
+function normalizeCostCategoryCode(cost = {}) {
+  const rawValue = String(cost.categoryCode || cost.category || 'other').trim();
+  return COST_CATEGORY_VALUE_ALIASES[rawValue] || rawValue || 'other';
+}
+
+function getCostCategoryLabel(cost = {}, categoryCode = normalizeCostCategoryCode(cost)) {
+  const explicitLabel = String(cost.categoryLabel || '').trim();
+  if (explicitLabel) {
+    const explicitCode = COST_CATEGORY_VALUE_ALIASES[explicitLabel] || explicitLabel;
+    return COST_CATEGORY_DICTIONARY[explicitCode]?.label || explicitLabel;
+  }
+  const dictionaryItem = COST_CATEGORY_DICTIONARY[categoryCode];
+  if (dictionaryItem) return dictionaryItem.label;
+  const rawCategory = String(cost.category || '').trim();
+  return COST_CATEGORY_VALUE_ALIASES[rawCategory] ? rawCategory : (rawCategory || categoryCode);
+}
+
+function normalizeCostCategory(cost = {}) {
+  const categoryCode = normalizeCostCategoryCode(cost);
+  const categoryLabel = getCostCategoryLabel(cost, categoryCode);
+  return { categoryCode, categoryLabel };
+}
+
+function getCostAuditName(cost) {
+  return `${cost.scopeLabel}-${cost.categoryLabel}-${cost.supplier}`;
+}
+
+function buildCostProjectChanges(beforeProject, afterProject, isCreated = false) {
+  const beforeMap = new Map(flattenProjectCosts(beforeProject).map(item => [item.key, item]));
+  const afterMap = new Map(flattenProjectCosts(afterProject).map(item => [item.key, item]));
+  const keys = new Set([...beforeMap.keys(), ...afterMap.keys()]);
+  const changes = [];
+
+  keys.forEach((key) => {
+    const before = beforeMap.get(key);
+    const after = afterMap.get(key);
+    if (!before && after) {
+      changes.push({
+        field: `costs.${key}`,
+        fieldLabel: `新增成本：${getCostAuditName(after)}`,
+        valueType: 'cost_item',
+        changeType: 'added',
+        oldValue: null,
+        newValue: after,
+        oldDisplayValue: '无',
+        newDisplayValue: `¥${after.amount.toFixed(2)} / ${after.isSettled ? '已支付' : '待支付'}`
+      });
+      return;
+    }
+    if (before && !after) {
+      changes.push({
+        field: `costs.${key}`,
+        fieldLabel: `删除成本：${getCostAuditName(before)}`,
+        valueType: 'cost_item',
+        changeType: 'removed',
+        oldValue: before,
+        newValue: null,
+        oldDisplayValue: `¥${before.amount.toFixed(2)} / ${before.isSettled ? '已支付' : '待支付'}`,
+        newDisplayValue: '无'
+      });
+      return;
+    }
+    if (!before || !after) return;
+    if (before.amount !== after.amount) {
+      changes.push({
+        field: `costs.${key}.amount`,
+        fieldLabel: `${getCostAuditName(after)}金额`,
+        valueType: 'money',
+        changeType: 'updated',
+        oldValue: before.amount,
+        newValue: after.amount,
+        oldDisplayValue: before.amount,
+        newDisplayValue: after.amount
+      });
+    }
+    if (before.isSettled !== after.isSettled) {
+      changes.push({
+        field: `costs.${key}.isSettled`,
+        fieldLabel: `${getCostAuditName(after)}支付状态`,
+        valueType: 'cost_settlement',
+        changeType: 'updated',
+        oldValue: before.isSettled,
+        newValue: after.isSettled,
+        oldDisplayValue: before.isSettled ? '已支付' : '待支付',
+        newDisplayValue: after.isSettled ? '已支付' : '待支付'
+      });
+    }
+    if (before.category !== after.category || before.supplier !== after.supplier) {
+      changes.push({
+        field: `costs.${key}.identity`,
+        fieldLabel: '成本信息',
+        valueType: 'text',
+        changeType: 'updated',
+        oldValue: getCostAuditName(before),
+        newValue: getCostAuditName(after),
+        oldDisplayValue: getCostAuditName(before),
+        newDisplayValue: getCostAuditName(after)
+      });
+    }
+  });
+
+  if (isCreated && !changes.length && afterMap.size) {
+    return buildCostProjectChanges({}, afterProject, false);
+  }
+  return changes;
+}
+
+function buildProjectChanges(beforeProject, afterProject, isCreated = false) {
+  return [
+    ...buildSimpleProjectChanges(beforeProject, afterProject, isCreated),
+    ...buildCostProjectChanges(beforeProject, afterProject, isCreated)
+  ];
+}
+
+function buildProjectEventSummary(eventType, projectName, changes) {
+  if (eventType === PROJECT_EVENT_TYPE.CREATED) return `新建项目“${projectName || '未命名项目'}”`;
+  const labels = Array.from(new Set(changes.map(item => item.fieldLabel))).slice(0, 3);
+  const suffix = changes.length > labels.length ? `等${changes.length}项` : labels.join('、');
+  return `修改项目“${projectName || '未命名项目'}”：${suffix || '项目信息'}`;
+}
+
+async function getActiveSuperAdmins() {
+  const result = await db.collection('users').where({ role: ADMIN_SUPER_ROLE }).get();
+  return (result.data || []).filter(user => !user.status || user.status === 'active');
+}
+
+async function recordProjectChangeEvent({ eventType, projectId, beforeProject, afterProject, actor, source }) {
+  try {
+    const isCreated = eventType === PROJECT_EVENT_TYPE.CREATED;
+    const changes = buildProjectChanges(beforeProject, afterProject, isCreated);
+    if (!isCreated && !changes.length) return null;
+    const now = Date.now();
+    const projectName = afterProject?.name || beforeProject?.name || '';
+    const eventTypeLabel = getProjectEventTypeLabel(eventType);
+    const summary = buildProjectEventSummary(eventType, projectName, changes);
+    const eventData = {
+      eventType,
+      eventTypeLabel,
+      projectId,
+      projectName,
+      actorUserId: actor?.id || actor?._id || '',
+      actorName: actor?.nickname || actor?.username || '未知用户',
+      actorUsername: actor?.username || '',
+      actorRole: actor?.role || 'user',
+      actorRoleLabel: actor?.roleName || actor?.role || '普通用户',
+      source,
+      sourceLabel: getCreationChannelLabel(source),
+      summary,
+      changes,
+      changeCount: changes.length,
+      createdTimestamp: now,
+      createdAt: db.serverDate()
+    };
+    const eventResult = await db.collection(PROJECT_CHANGE_EVENT_COLLECTION).add({ data: eventData });
+
+    if (actor?.role !== ADMIN_SUPER_ROLE) {
+      const recipients = await getActiveSuperAdmins();
+      await Promise.all(recipients.map(recipient => db.collection(NOTIFICATION_COLLECTION).add({
+        data: {
+          recipientUserId: recipient._id,
+          eventId: eventResult._id,
+          category: 'project_change',
+          categoryLabel: '项目变更',
+          eventType,
+          eventTypeLabel,
+          projectId,
+          projectName,
+          actorUserId: eventData.actorUserId,
+          actorName: eventData.actorName,
+          actorRole: eventData.actorRole,
+          actorRoleLabel: eventData.actorRoleLabel,
+          summary,
+          readStatus: NOTIFICATION_READ_STATUS.UNREAD,
+          readStatusLabel: '未读',
+          deliveryStatus: NOTIFICATION_DELIVERY_STATUS.PENDING,
+          deliveryStatusLabel: '待发送',
+          createdTimestamp: now,
+          createdAt: db.serverDate()
+        }
+      })));
+    }
+    return eventResult._id;
+  } catch (error) {
+    // 审计记录异常暂不阻断项目主流程；错误会保留在云函数日志中供排查。
+    console.error('记录项目变更事件失败:', error);
+    return null;
+  }
+}
 
 function getDictionaryValue(value, dictionary, defaultValue) {
   if (Object.prototype.hasOwnProperty.call(dictionary, value)) return value;
@@ -106,7 +434,11 @@ exports.main = async (event, context) => {
       case 'create':
       case 'createProject':
         if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
-        return await createProject({ ...data, currentUser: auth.user });
+        return await createProject({
+          ...data,
+          currentUser: auth.user,
+          requestSource: event.body ? CREATION_CHANNEL.ADMIN_WEB : CREATION_CHANNEL.MINIPROGRAM
+        });
       case 'list':
         return await listProjects(data);
       case 'financialList':
@@ -118,7 +450,11 @@ exports.main = async (event, context) => {
         return await getProject(data);
       case 'update':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
-        return await updateProject(data);
+        return await updateProject({
+          ...data,
+          currentUser: auth.user,
+          requestSource: event.body ? CREATION_CHANNEL.ADMIN_WEB : CREATION_CHANNEL.MINIPROGRAM
+        });
       case 'quickRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await quickRecord(data, auth.user);
@@ -445,7 +781,10 @@ async function updateProject(params) {
     } else {
       // 常规项目逻辑：创建成功后，项目类型和三大周期禁止编辑
       const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
-      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && !['id', 'authToken'].includes(key));
+      const incomingFields = Object.keys(params).filter(key => (
+        params[key] !== undefined
+        && !['id', 'authToken', 'currentUser', 'requestSource'].includes(key)
+      ));
       const illegalChanges = incomingFields.filter(field => {
         if (!lockedFields.includes(field)) return false;
         const newValue = params[field];
@@ -502,7 +841,10 @@ async function updateProject(params) {
         'settledTime',
         'archivedTime'
       ];
-      const incomingFields = Object.keys(params).filter(key => params[key] !== undefined && !['id', 'authToken'].includes(key));
+      const incomingFields = Object.keys(params).filter(key => (
+        params[key] !== undefined
+        && !['id', 'authToken', 'currentUser', 'requestSource'].includes(key)
+      ));
       
       // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
       const illegalChanges = incomingFields.filter(field => {
@@ -564,13 +906,20 @@ async function updateProject(params) {
     
     if (costs && Array.isArray(costs)) {
       // 清洗成本数据，确保没有 NaN 或 undefined
-      updateDataFinal.costs = costs.map(item => ({
-        category: item.category || '',
-        supplier: normalizeSupplier(item.supplier),
-        amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
-        isSettled: normalizeCostSettled(item.isSettled),
-        isSettledLabel: getCostSettledLabel(item.isSettled)
-      }));
+      updateDataFinal.costs = costs.map((item, index) => {
+        const category = normalizeCostCategory(item);
+        const oldCost = oldProject.costs?.[index];
+        return {
+          id: item.id || oldCost?.id || (oldCost ? '' : `cost-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`),
+          category: category.categoryLabel,
+          categoryCode: category.categoryCode,
+          categoryLabel: category.categoryLabel,
+          supplier: normalizeSupplier(item.supplier),
+          amount: isNaN(parseFloat(item.amount)) ? 0 : parseFloat(item.amount),
+          isSettled: normalizeCostSettled(item.isSettled),
+          isSettledLabel: getCostSettledLabel(item.isSettled)
+        };
+      });
     }
     
     if (status && !shouldAutoStatus) updateDataFinal.status = status;
@@ -584,14 +933,19 @@ async function updateProject(params) {
         isHasVoucher: normalizeYesNo(sp.isHasVoucher),
         isHasVoucherLabel: getYesNoLabel(sp.isHasVoucher),
         vouchers: sp.vouchers || [],
-        costs: (sp.costs || []).map(c => ({
-          id: c.id || Date.now() + Math.random(),
-          category: c.category || '',
-          supplier: normalizeSupplier(c.supplier),
-          amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-          isSettled: normalizeCostSettled(c.isSettled, false),
-          isSettledLabel: getCostSettledLabel(c.isSettled, false)
-        }))
+        costs: (sp.costs || []).map(c => {
+          const category = normalizeCostCategory(c);
+          return {
+            id: c.id || Date.now() + Math.random(),
+            category: category.categoryLabel,
+            categoryCode: category.categoryCode,
+            categoryLabel: category.categoryLabel,
+            supplier: normalizeSupplier(c.supplier),
+            amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
+            isSettled: normalizeCostSettled(c.isSettled, false),
+            isSettledLabel: getCostSettledLabel(c.isSettled, false)
+          };
+        })
       }));
     }
     
@@ -739,6 +1093,15 @@ async function updateProject(params) {
       data: updateDataFinal
     });
 
+    await recordProjectChangeEvent({
+      eventType: PROJECT_EVENT_TYPE.UPDATED,
+      projectId: id,
+      beforeProject: oldProject,
+      afterProject: { ...oldProject, ...updateDataFinal },
+      actor: params.currentUser,
+      source: normalizeCreationChannel(params.requestSource)
+    });
+
     return { code: 0, message: '更新成功' };
   } catch (err) {
     console.error('更新项目失败:', err);
@@ -811,12 +1174,19 @@ async function createProject(params) {
   try {
     const now = new Date().toISOString();
     const costsData = Array.isArray(costs)
-      ? costs.map(cost => ({
-        ...cost,
-        supplier: normalizeSupplier(cost.supplier),
-        isSettled: normalizeCostSettled(cost.isSettled),
-        isSettledLabel: getCostSettledLabel(cost.isSettled)
-      }))
+      ? costs.map((cost, index) => {
+        const category = normalizeCostCategory(cost);
+        return {
+          ...cost,
+          id: cost.id || `cost-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+          category: category.categoryLabel,
+          categoryCode: category.categoryCode,
+          categoryLabel: category.categoryLabel,
+          supplier: normalizeSupplier(cost.supplier),
+          isSettled: normalizeCostSettled(cost.isSettled),
+          isSettledLabel: getCostSettledLabel(cost.isSettled)
+        };
+      })
       : [];
     
     const subProjectsData = (subProjects && Array.isArray(subProjects)) ? subProjects.map(sp => ({
@@ -827,14 +1197,19 @@ async function createProject(params) {
       isHasVoucher: normalizeYesNo(sp.isHasVoucher),
       isHasVoucherLabel: getYesNoLabel(sp.isHasVoucher),
       vouchers: sp.vouchers || [],
-      costs: (sp.costs || []).map(c => ({
-        id: c.id || Date.now() + Math.random(),
-        category: c.category || '',
-        supplier: normalizeSupplier(c.supplier),
-        amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
-        isSettled: normalizeCostSettled(c.isSettled, false),
-        isSettledLabel: getCostSettledLabel(c.isSettled, false)
-      }))
+      costs: (sp.costs || []).map(c => {
+        const category = normalizeCostCategory(c);
+        return {
+          id: c.id || Date.now() + Math.random(),
+          category: category.categoryLabel,
+          categoryCode: category.categoryCode,
+          categoryLabel: category.categoryLabel,
+          supplier: normalizeSupplier(c.supplier),
+          amount: isNaN(parseFloat(c.amount)) ? 0 : parseFloat(c.amount),
+          isSettled: normalizeCostSettled(c.isSettled, false),
+          isSettledLabel: getCostSettledLabel(c.isSettled, false)
+        };
+      })
     })) : [];
 
     // 计算资金
@@ -861,6 +1236,7 @@ async function createProject(params) {
     };
     delete data.currentUser;
     delete data.authToken;
+    delete data.requestSource;
     // 常规项目状态完全由收款和成本结算情况决定；交付时间使用用户填写的交付日期。
     data.completedTime = String(startDate).slice(0, 10);
     Object.assign(data, buildNormalProjectLifecycle({
@@ -871,6 +1247,15 @@ async function createProject(params) {
 
     const res = await db.collection('projects').add({
       data
+    });
+
+    await recordProjectChangeEvent({
+      eventType: PROJECT_EVENT_TYPE.CREATED,
+      projectId: res._id,
+      beforeProject: null,
+      afterProject: data,
+      actor: currentUser,
+      source: normalizeCreationChannel(params.requestSource || creationChannel)
     });
 
     // 发送邮件通知超级管理员（仅当创建者是普通管理员时）
@@ -991,8 +1376,23 @@ async function quickRecord(params, currentUser) {
       }
 
       await projectRef.update({ data: updateData });
-      return { duplicated: false, financials: updateData };
+      return {
+        duplicated: false,
+        beforeProject: project,
+        afterProject: { ...project, ...updateData }
+      };
     });
+
+    if (!transactionResult.duplicated) {
+      await recordProjectChangeEvent({
+        eventType: PROJECT_EVENT_TYPE.UPDATED,
+        projectId,
+        beforeProject: transactionResult.beforeProject,
+        afterProject: transactionResult.afterProject,
+        actor: currentUser,
+        source: CREATION_CHANNEL.MINIPROGRAM
+      });
+    }
 
     return {
       code: 0,

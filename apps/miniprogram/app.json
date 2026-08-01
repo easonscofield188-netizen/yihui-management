@@ -11,7 +11,10 @@
     "pages/account-create/index",
     "pages/profile/index",
     "pages/project-overview/index",
-    "pages/project-financial-list/index"
+    "pages/project-financial-list/index",
+    "pages/notification-list/index",
+    "pages/notification-detail/index",
+    "pages/system-settings/index"
   ],
   "window": {
     "backgroundColor": "#F5F7F6",

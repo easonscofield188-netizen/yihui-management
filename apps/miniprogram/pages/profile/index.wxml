@@ -39,6 +39,25 @@
       </view>
       <block wx:if="{{userInfo.role === 'ADMIN_SUPER'}}">
         <view class="function-divider"></view>
+        <view class="function-row" bindtap="openNotifications">
+          <view class="function-main">
+            <view class="function-icon"><t-icon name="notification" size="38rpx" color="#002045" /></view>
+            <text>消息通知</text>
+          </view>
+          <view class="function-side">
+            <view wx:if="{{unreadNotificationCount}}" class="notification-badge">{{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}}</view>
+            <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+          </view>
+        </view>
+        <view class="function-divider"></view>
+        <view class="function-row" bindtap="openSystemSettings">
+          <view class="function-main">
+            <view class="function-icon"><t-icon name="setting" size="38rpx" color="#002045" /></view>
+            <text>系统设置</text>
+          </view>
+          <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+        </view>
+        <view class="function-divider"></view>
         <view class="function-row" bindtap="openCreateAccount">
           <view class="function-main">
             <view class="function-icon"><t-icon name="user-add" size="38rpx" color="#002045" /></view>

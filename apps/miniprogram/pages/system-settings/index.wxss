@@ -1,0 +1,19 @@
+page { background: #f5f7fb; }
+.settings-page { min-height: 100vh; background: linear-gradient(180deg, #f9faff, #f3f6fb); color: #172033; }
+.page-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #e7ebf2; background: rgba(255,255,255,.96); }
+.nav-placeholder { width: 100%; }
+.nav-back { position: absolute; bottom: 0; left: 24rpx; display: flex; width: 70rpx; height: 88rpx; align-items: center; }
+.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.settings-content { padding: 44rpx 32rpx; }
+.setting-heading { color: #172033; font-size: 34rpx; font-weight: 750; }
+.setting-description { margin-top: 12rpx; color: #697383; font-size: 24rpx; line-height: 38rpx; }
+.option-group { margin-top: 30rpx; }
+.option-card { display: flex; margin-bottom: 20rpx; padding: 26rpx 24rpx; align-items: center; gap: 20rpx; border: 2rpx solid #dfe5ee; border-radius: 22rpx; background: #ffffff; box-shadow: 0 8rpx 24rpx rgba(49,66,98,.05); }
+.option-card.selected { border-color: #9ab9ea; background: linear-gradient(135deg, #f7faff, #edf3ff); box-shadow: 0 10rpx 28rpx rgba(36,87,167,.1); }
+.option-icon { display: flex; width: 72rpx; height: 72rpx; flex: none; align-items: center; justify-content: center; border-radius: 19rpx; background: #e8effc; }
+.option-card.selected .option-icon { background: linear-gradient(145deg, #3d71c5, #234d96); }
+.option-main { min-width: 0; flex: 1; }
+.option-label { color: #202b3d; font-size: 28rpx; font-weight: 680; }
+.option-description { margin-top: 7rpx; color: #7b8492; font-size: 22rpx; line-height: 32rpx; }
+.setting-tip { display: flex; margin-top: 30rpx; padding: 20rpx 22rpx; align-items: flex-start; gap: 12rpx; border-radius: 16rpx; background: #eef1f6; color: #697383; font-size: 22rpx; line-height: 34rpx; }
+.setting-tip text { min-width: 0; flex: 1; }

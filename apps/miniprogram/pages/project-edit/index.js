@@ -76,15 +76,19 @@ function isSettledCost(value) {
   return isSettled(value);
 }
 
-function costCategoryLabel(config, item) {
+function resolveCostCategory(config, item) {
   const value = item.categoryCode || item.category || "";
   const options = config && Array.isArray(config.COST_CATEGORY) ? config.COST_CATEGORY : [];
   const matched = options.find((option) => option.value === value || option.code === value);
-  return item.categoryLabel
+  const label = item.categoryLabel
     || (matched && (matched.label || matched.name))
     || item.category
     || value
     || "其他成本";
+  const code = item.categoryCode
+    || (matched && (matched.value || matched.code))
+    || value;
+  return { code, label };
 }
 
 function fileExtension(path) {
@@ -326,11 +330,13 @@ Page({
     const scene = project.scene || "";
     const sceneMatched = scenes.find((item) => item.value === scene);
     const costs = (project.costs || []).map((item, index) => {
-      const category = costCategoryLabel(config, item);
+      const category = resolveCostCategory(config, item);
       return {
         id: item.id || item._id || `cost-${index}`,
-        category,
-        categoryCode: item.categoryCode || "",
+        persistedId: item.id || item._id || "",
+        category: category.label,
+        categoryCode: category.code,
+        categoryLabel: category.label,
         supplier: item.supplier || FIXED_SUPPLIER,
         amount: Number(item.amount) || 0,
         amountText: money(item.amount),
@@ -668,8 +674,10 @@ Page({
     const category = this.data.costCategories[this.data.categoryIndex] || this.data.costCategories[0];
     const item = {
       id: `cost-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      persistedId: "",
       category: category.label,
       categoryCode: category.value,
+      categoryLabel: category.label,
       supplier: FIXED_SUPPLIER,
       amount,
       amountText: money(amount),
@@ -870,8 +878,10 @@ Page({
     this.setData({ saving: true, loadingMessage: "正在保存修改..." });
     try {
       const costs = this.data.costs.map((item) => ({
+        id: item.persistedId || "",
         category: item.category,
         categoryCode: item.categoryCode || "",
+        categoryLabel: item.categoryLabel || item.category,
         supplier: item.supplier || FIXED_SUPPLIER,
         amount: Number(item.amount) || 0,
         isSettled: Boolean(item.isSettled),

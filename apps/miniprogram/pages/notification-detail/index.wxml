@@ -1,0 +1,79 @@
+<view class="detail-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">消息详情</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="detail-content theme-{{event.eventType === 'project_created' ? 'created' : 'updated'}}" wx:if="{{event}}">
+    <view class="event-card">
+      <view class="event-glow glow-one"></view>
+      <view class="event-glow glow-two"></view>
+      <view class="event-head">
+        <view class="event-icon">
+          <t-icon name="{{event.eventType === 'project_created' ? 'folder-add-filled' : 'edit-1-filled'}}" size="46rpx" color="#ffffff" />
+        </view>
+        <view class="event-badge">{{event.eventTypeLabel}}</view>
+      </view>
+      <view class="event-title">{{event.projectName}}</view>
+      <view class="event-summary">{{event.summary}}</view>
+      <view class="event-time"><t-icon name="time" size="26rpx" color="#697383" /><text>{{timeText}}</text></view>
+    </view>
+
+    <view class="info-card">
+      <view class="section-heading"><view class="heading-mark"></view><view class="section-title">操作信息</view></view>
+      <view class="info-grid">
+        <view class="info-item">
+          <view class="info-icon user-icon"><t-icon name="user-filled" size="30rpx" color="#6750a4" /></view>
+          <view class="info-main"><view class="info-label">操作人</view><view class="info-value">{{event.actorName}}</view></view>
+        </view>
+        <view class="info-item">
+          <view class="info-icon role-icon"><t-icon name="user-checked-filled" size="30rpx" color="#9a5b13" /></view>
+          <view class="info-main"><view class="info-label">账号角色</view><view class="info-value">{{event.actorRoleLabel}}</view></view>
+        </view>
+        <view class="info-item">
+          <view class="info-icon source-icon"><t-icon name="device-filled" size="30rpx" color="#08798c" /></view>
+          <view class="info-main"><view class="info-label">操作来源</view><view class="info-value">{{event.sourceLabel}}</view></view>
+        </view>
+        <view class="info-item">
+          <view class="info-icon project-icon"><t-icon name="folder-open-filled" size="30rpx" color="#2457a7" /></view>
+          <view class="info-main"><view class="info-label">变更项目</view><view class="info-value">{{event.projectName}}</view></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="change-section">
+      <view class="section-head">
+        <view class="section-heading"><view class="heading-mark"></view><view class="section-title">变更内容</view></view>
+        <view class="change-count">{{changes.length}} 项</view>
+      </view>
+      <view class="change-card" wx:for="{{changes}}" wx:key="id">
+        <view class="change-head">
+          <view class="change-label">{{item.fieldLabel}}</view>
+          <view class="change-type type-{{item.changeType}}">{{item.changeTypeLabel}}</view>
+        </view>
+        <view class="change-values">
+          <view class="value-block old-value">
+            <view class="value-caption"><view class="caption-dot"></view><text>修改前</text></view>
+            <view class="value-text">{{item.oldText}}</view>
+          </view>
+          <view class="change-arrow"><t-icon name="arrow-right" size="26rpx" color="#5d6b7d" /></view>
+          <view class="value-block new-value">
+            <view class="value-caption"><view class="caption-dot"></view><text>修改后</text></view>
+            <view class="value-text">{{item.newText}}</view>
+          </view>
+        </view>
+      </view>
+      <view class="empty-change" wx:if="{{!changes.length}}">本次操作没有可展示的字段变化</view>
+    </view>
+
+    <view class="project-button" bindtap="openProject">
+      <t-icon name="folder-open" size="34rpx" color="#ffffff" />
+      <text>查看项目详情</text>
+    </view>
+  </view>
+
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-content"><t-loading size="44rpx" theme="circular" /><text>正在加载消息详情...</text></view>
+  </view>
+</view>

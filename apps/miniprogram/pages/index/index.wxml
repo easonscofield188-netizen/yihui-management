@@ -86,6 +86,21 @@
     <view class="loading" wx:if="{{!loading && projects.length && !hasMore}}">没有更多项目了</view>
   </view>
 
+  <view
+    wx:if="{{floatingNotificationVisible}}"
+    class="floating-notification {{floatingNotificationCount ? 'has-unread' : ''}} {{floatingNotificationDragging ? 'dragging' : ''}}"
+    style="left: {{floatingNotificationLeft}}px; top: {{floatingNotificationTop}}px;"
+    bindtouchstart="onFloatingNotificationTouchStart"
+    catchtouchmove="onFloatingNotificationTouchMove"
+    bindtouchend="onFloatingNotificationTouchEnd"
+    bindtouchcancel="onFloatingNotificationTouchEnd"
+    catchtap="openFloatingNotifications"
+  >
+    <view class="floating-notification-glow"></view>
+    <t-icon name="notification-filled" size="50rpx" color="#ffffff" />
+    <view wx:if="{{floatingNotificationCount}}" class="floating-notification-badge">{{floatingNotificationCount > 99 ? '99+' : floatingNotificationCount}}</view>
+  </view>
+
   <t-picker
     t-class-confirm="picker-confirm"
     visible="{{yearPickerVisible}}"
