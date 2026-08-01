@@ -1,6 +1,10 @@
 const api = require("../../utils/api");
 const { getRuntimeVersion } = require("../../utils/app-version");
 
+const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
+const NOTIFICATION_COUNT_AT_KEY = "notificationUnreadCountCachedAt";
+const NOTIFICATION_COUNT_TTL_MS = 30 * 1000;
+
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
   const statusBarHeight = systemInfo.statusBarHeight || 0;
@@ -45,14 +49,17 @@ Page({
     loading: false,
     loadingMessage: "正在加载账户信息...",
     versionText: "",
+    unreadNotificationCount: 0,
   },
 
   onLoad() {
     const cachedUser = api.getCachedUserInfo();
     const runtimeVersion = getRuntimeVersion();
+    const cachedUnreadCount = Number(wx.getStorageSync(NOTIFICATION_COUNT_KEY)) || 0;
     this.setData({
       ...getNavMetrics(),
       versionText: runtimeVersion.displayText,
+      unreadNotificationCount: cachedUnreadCount,
       userInfo: cachedUser
         ? decorateUser(
           cachedUser,
@@ -71,13 +78,19 @@ Page({
     if (tabBar) tabBar.setData({ selected: 1 });
     const cachedUser = api.getCachedUserInfo();
     if (cachedUser) this.showUser(cachedUser);
+    if (cachedUser && cachedUser.role === "ADMIN_SUPER") {
+      this.loadUnreadNotificationCount();
+    }
     if (!cachedUser || !api.isUserInfoCacheFresh()) {
       this.loadUser({ silent: Boolean(cachedUser) });
     }
   },
 
   onPullDownRefresh() {
-    this.loadUser({ force: true, silent: true })
+    Promise.all([
+      this.loadUser({ force: true, silent: true }),
+      this.loadUnreadNotificationCount({ force: true }),
+    ])
       .finally(() => wx.stopPullDownRefresh());
   },
 
@@ -105,6 +118,11 @@ Page({
       .then((userInfo) => {
         api.cacheUserInfo(userInfo);
         this.showUser(userInfo);
+        if (userInfo && userInfo.role === "ADMIN_SUPER") {
+          this.loadUnreadNotificationCount();
+        } else {
+          this.setData({ unreadNotificationCount: 0 });
+        }
         return userInfo;
       })
       .catch((error) => {
@@ -116,6 +134,39 @@ Page({
         if (!silent) this.setData({ loading: false });
       });
     return this.userLoadPromise;
+  },
+
+  loadUnreadNotificationCount({ force = false } = {}) {
+    const userInfo = this.data.userInfo || api.getCachedUserInfo() || {};
+    if (userInfo.role !== "ADMIN_SUPER") {
+      this.setData({ unreadNotificationCount: 0 });
+      return Promise.resolve(0);
+    }
+
+    const cachedCount = Number(wx.getStorageSync(NOTIFICATION_COUNT_KEY)) || 0;
+    const cachedAt = Number(wx.getStorageSync(NOTIFICATION_COUNT_AT_KEY)) || 0;
+    if (!force && cachedAt && Date.now() - cachedAt < NOTIFICATION_COUNT_TTL_MS) {
+      this.setData({ unreadNotificationCount: cachedCount });
+      return Promise.resolve(cachedCount);
+    }
+    if (this.notificationCountPromise) return this.notificationCountPromise;
+
+    this.notificationCountPromise = api.getNotificationUnreadCount()
+      .then((result) => {
+        const count = Math.max(0, Number(result.unreadCount) || 0);
+        wx.setStorageSync(NOTIFICATION_COUNT_KEY, count);
+        wx.setStorageSync(NOTIFICATION_COUNT_AT_KEY, Date.now());
+        this.setData({ unreadNotificationCount: count });
+        return count;
+      })
+      .catch(() => {
+        this.setData({ unreadNotificationCount: cachedCount });
+        return cachedCount;
+      })
+      .finally(() => {
+        this.notificationCountPromise = null;
+      });
+    return this.notificationCountPromise;
   },
 
   onAvatarError() {
@@ -137,6 +188,14 @@ Page({
 
   openProjects() {
     wx.navigateTo({ url: "/pages/project-overview/index" });
+  },
+
+  openNotifications() {
+    wx.navigateTo({ url: "/pages/notification-list/index" });
+  },
+
+  openSystemSettings() {
+    wx.navigateTo({ url: "/pages/system-settings/index" });
   },
 
   openCreateAccount() {

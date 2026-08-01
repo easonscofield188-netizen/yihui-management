@@ -1,0 +1,57 @@
+<view class="settings-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">系统设置</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="settings-content">
+    <view class="setting-heading">首页消息悬浮按钮</view>
+    <view class="setting-description">设置超级管理员首页消息入口的显示方式，悬浮按钮的位置可直接拖动调整。</view>
+
+    <view class="option-group">
+      <view
+        wx:for="{{displayModeOptions}}"
+        wx:key="value"
+        class="option-card {{displayMode === item.value ? 'selected' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="selectDisplayMode"
+      >
+        <view class="option-icon"><t-icon name="{{item.icon}}" size="40rpx" color="{{displayMode === item.value ? '#ffffff' : '#2457a7'}}" /></view>
+        <view class="option-main">
+          <view class="option-label">{{item.label}}</view>
+          <view class="option-description">{{item.description}}</view>
+        </view>
+        <t-icon name="{{displayMode === item.value ? 'check-circle-filled' : 'circle'}}" size="38rpx" color="{{displayMode === item.value ? '#0f7a45' : '#aab1bc'}}" />
+      </view>
+    </view>
+
+    <view class="section-divider"></view>
+    <view class="setting-heading">微信订阅消息</view>
+    <view class="setting-description">项目发生重要变更时，通过微信服务通知提醒当前超级管理员。</view>
+    <view class="wechat-subscription-card {{wechatSubscription.canReceive ? 'active' : ''}}">
+      <view class="wechat-card-head">
+        <view class="wechat-card-icon"><t-icon name="logo-wechat-stroke-filled" size="46rpx" color="#ffffff" /></view>
+        <view class="wechat-card-main">
+          <view class="wechat-card-title">项目变更微信提醒</view>
+          <view class="wechat-card-status">{{wechatSubscription.statusLabel}}</view>
+        </view>
+        <view class="wechat-count"><text>{{wechatSubscription.availableCount}}</text><view>次可用</view></view>
+      </view>
+      <view class="wechat-card-note">微信提供的是一次性订阅，每同意一次可发送一条项目变更提醒；站内消息不受此次数影响。</view>
+      <t-button
+        t-class="subscribe-button"
+        theme="primary"
+        block
+        loading="{{wechatSubscriptionLoading}}"
+        disabled="{{wechatSubscriptionLoading}}"
+        bindtap="enableWechatSubscription"
+      >{{wechatSubscription.availableCount ? '再增加一次提醒机会' : '开启一次微信提醒'}}</t-button>
+    </view>
+
+    <view class="setting-tip">
+      <t-icon name="info-circle" size="28rpx" color="#697383" />
+      <text>该设置保存在当前设备，更换设备后将恢复为“仅有新消息时显示”。</text>
+    </view>
+  </view>
+</view>

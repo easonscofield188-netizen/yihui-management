@@ -164,6 +164,25 @@ page {
   font-size: 30rpx;
 }
 
+.function-side {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.notification-badge {
+  min-width: 34rpx;
+  height: 34rpx;
+  padding: 0 9rpx;
+  border-radius: 999rpx;
+  background: #ba1a1a;
+  color: #ffffff;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 34rpx;
+  text-align: center;
+}
+
 .function-icon {
   display: flex;
   width: 72rpx;

@@ -139,3 +139,8 @@ page { background: #f9f9ff; }
 .empty-title { margin-top: 20rpx; margin-bottom: 10rpx; color: #43474e; font-size: 30rpx; font-weight: 600; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 14rpx; padding: 26rpx; color: #989fa6; font-size: 24rpx; }
 .picker-confirm { color: #1a365d !important; font-weight: 700; }
+.floating-notification { position: fixed; z-index: 46; display: flex; box-sizing: border-box; width: 104rpx; height: 104rpx; align-items: center; justify-content: center; border: 4rpx solid rgba(255,255,255,.94); border-radius: 50%; background: linear-gradient(145deg, #356bb8, #002f65); box-shadow: 0 12rpx 30rpx rgba(0,32,69,.28); transition: box-shadow .16s ease, transform .16s ease; touch-action: none; }
+.floating-notification.has-unread { background: linear-gradient(145deg, #2d78c8, #073e78); box-shadow: 0 12rpx 34rpx rgba(0,54,112,.34), 0 0 0 8rpx rgba(80,139,213,.1); }
+.floating-notification.dragging { box-shadow: 0 18rpx 42rpx rgba(0,32,69,.34); transform: scale(1.06); }
+.floating-notification-glow { position: absolute; top: 12rpx; left: 19rpx; width: 34rpx; height: 17rpx; border-radius: 50%; background: rgba(255,255,255,.2); transform: rotate(-28deg); }
+.floating-notification-badge { position: absolute; top: -10rpx; right: -10rpx; min-width: 34rpx; height: 34rpx; padding: 0 8rpx; border: 3rpx solid #ffffff; border-radius: 999rpx; background: #d93025; color: #ffffff; font-size: 19rpx; font-weight: 750; line-height: 34rpx; text-align: center; box-shadow: 0 4rpx 10rpx rgba(186,26,26,.25); }

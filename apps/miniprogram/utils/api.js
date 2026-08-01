@@ -83,6 +83,8 @@ function clearSession() {
   wx.removeStorageSync(USER_KEY);
   wx.removeStorageSync(USER_CACHE_AT_KEY);
   wx.removeStorageSync(EXPIRES_KEY);
+  wx.removeStorageSync("notificationUnreadCount");
+  wx.removeStorageSync("notificationUnreadCountCachedAt");
   try {
     getApp().globalData.userInfo = null;
   } catch (error) {
@@ -208,6 +210,33 @@ function getProjectOverview(params) {
   return callFunction("projectService", "overview", params);
 }
 
+function listNotifications(params = {}) {
+  return callFunction("notificationService", "list", params).then(normalizeProjectList);
+}
+
+function getNotificationUnreadCount() {
+  return callFunction("notificationService", "unreadCount", {}).then((result = {}) => ({
+    ...result,
+    unreadCount: Math.max(0, Number(result.count) || 0),
+  }));
+}
+
+function getNotificationDetail(id) {
+  return callFunction("notificationService", "detail", { id });
+}
+
+function markAllNotificationsRead() {
+  return callFunction("notificationService", "markAllRead", {});
+}
+
+function getWechatSubscriptionStatus() {
+  return callFunction("notificationService", "getWechatSubscriptionStatus", {});
+}
+
+function saveWechatSubscription(data) {
+  return callFunction("notificationService", "saveWechatSubscription", data);
+}
+
 function quickRecord(data) {
   return callFunction("projectService", "quickRecord", data);
 }
@@ -243,14 +272,20 @@ module.exports = {
   getGlobalConfig,
   getNextEmployeeNo,
   getProjectOverview,
+  getNotificationDetail,
+  getNotificationUnreadCount,
   getServerDate,
   getToken,
   getUserInfo,
   getVouchers,
+  getWechatSubscriptionStatus,
   listProjects,
   listFinancialProjects,
+  listNotifications,
   login,
   logout,
+  markAllNotificationsRead,
+  saveWechatSubscription,
   invalidateUserInfoCache,
   isUserInfoCacheFresh,
   quickRecord,

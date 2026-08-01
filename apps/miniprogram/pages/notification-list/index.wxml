@@ -1,0 +1,51 @@
+<view class="notification-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">消息通知</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="toolbar">
+    <view class="status-tabs">
+      <view
+        wx:for="{{readStatusOptions}}"
+        wx:key="value"
+        class="status-tab {{readStatusIndex === index ? 'active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onStatusTap"
+      >{{item.label}}{{item.value === 'unread' && unreadCount ? ' (' + unreadCount + ')' : ''}}</view>
+    </view>
+    <view class="mark-all {{unreadCount ? '' : 'disabled'}}" bindtap="markAllRead">全部已读</view>
+  </view>
+
+  <view class="notification-list">
+    <view
+      wx:for="{{notifications}}"
+      wx:key="_id"
+      class="notification-card {{item.isUnread ? 'unread' : ''}}"
+      data-id="{{item._id}}"
+      bindtap="openNotification"
+    >
+      <view class="notification-icon {{item.eventType === 'project_created' ? 'created' : 'updated'}}">
+        <t-icon name="{{item.iconName}}" size="38rpx" color="{{item.iconColor}}" />
+      </view>
+      <view class="notification-main">
+        <view class="notification-head">
+          <view class="notification-title">{{item.listTitle}}</view>
+          <view wx:if="{{item.isUnread}}" class="unread-dot"></view>
+        </view>
+        <view class="notification-summary">{{item.summary}}</view>
+        <view class="notification-meta">{{item.actorName}} · {{item.timeText}}</view>
+      </view>
+      <t-icon name="chevron-right" size="34rpx" color="#989fa6" />
+    </view>
+
+    <view class="empty" wx:if="{{!loading && !notifications.length}}">
+      <t-icon name="notification" size="82rpx" color="#989fa6" />
+      <view class="empty-title">暂无消息</view>
+      <view>{{readStatusIndex === 1 ? '没有未读项目消息' : '项目变更消息会显示在这里'}}</view>
+    </view>
+    <view class="loading" wx:if="{{loading}}"><t-loading size="36rpx" theme="circular" /><text>正在加载消息...</text></view>
+    <view class="loading" wx:if="{{!loading && notifications.length && !hasMore}}">没有更多消息了</view>
+  </view>
+</view>

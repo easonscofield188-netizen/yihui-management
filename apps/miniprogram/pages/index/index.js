@@ -1,4 +1,14 @@
 const api = require("../../utils/api");
+const {
+  FLOATING_NOTIFICATION_MODE,
+  getFloatingNotificationMode,
+  getFloatingNotificationPosition,
+  setFloatingNotificationPosition,
+} = require("../../utils/notification-preferences");
+
+const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
+const NOTIFICATION_COUNT_AT_KEY = "notificationUnreadCountCachedAt";
+const NOTIFICATION_COUNT_TTL_MS = 30 * 1000;
 const STATUS_OPTIONS = [
   { label: "全部", value: "" },
   { label: "已交付", value: "completed" },
@@ -115,6 +125,12 @@ Page({
     statusBarHeight: 0,
     navHeight: 88,
     yearReady: false,
+    floatingNotificationVisible: false,
+    floatingNotificationMode: FLOATING_NOTIFICATION_MODE.UNREAD_ONLY,
+    floatingNotificationCount: 0,
+    floatingNotificationLeft: 0,
+    floatingNotificationTop: 0,
+    floatingNotificationDragging: false,
   },
 
   onLoad() {
@@ -129,7 +145,9 @@ Page({
     const contentHeight = menuButton && menuButton.height
       ? menuButton.height + Math.max(0, menuButton.top - statusBarHeight) * 2
       : 88;
-    this.setData({ statusBarHeight, navHeight: statusBarHeight + contentHeight });
+    const navHeight = statusBarHeight + contentHeight;
+    this.setData({ statusBarHeight, navHeight });
+    this.initializeFloatingNotification(systemInfo, navHeight);
   },
 
   ensureYearReady() {
@@ -169,6 +187,7 @@ Page({
     const tabBar = this.getTabBar && this.getTabBar();
     if (tabBar) tabBar.setData({ selected: 0 });
     this.ensureYearThenLoad(true);
+    this.loadFloatingNotification();
   },
 
   async ensureYearThenLoad(reset, loadingMessage = "") {
@@ -177,7 +196,10 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.ensureYearThenLoad(true).finally(() => wx.stopPullDownRefresh());
+    Promise.all([
+      this.ensureYearThenLoad(true),
+      this.loadFloatingNotification({ force: true }),
+    ]).finally(() => wx.stopPullDownRefresh());
   },
 
   onReachBottom() {
@@ -186,6 +208,124 @@ Page({
 
   onUnload() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
+    if (this.floatTapTimer) clearTimeout(this.floatTapTimer);
+  },
+
+  initializeFloatingNotification(systemInfo, navHeight) {
+    const windowWidth = Number(systemInfo.windowWidth) || 375;
+    const windowHeight = Number(systemInfo.windowHeight) || 667;
+    const size = Math.round(windowWidth * 104 / 750);
+    const edge = Math.max(10, Math.round(windowWidth * 20 / 750));
+    const tabBarReserved = Math.max(84, Math.round(windowWidth * 174 / 750));
+    const bounds = {
+      minX: edge,
+      maxX: Math.max(edge, windowWidth - size - edge),
+      minY: Math.max(navHeight + 12, edge),
+      maxY: Math.max(navHeight + 12, windowHeight - size - tabBarReserved),
+      size,
+    };
+    this.floatingNotificationBounds = bounds;
+    const saved = getFloatingNotificationPosition();
+    const xRatio = saved ? saved.xRatio : 1;
+    const yRatio = saved ? saved.yRatio : 0.55;
+    this.setData({
+      floatingNotificationLeft: bounds.minX + (bounds.maxX - bounds.minX) * xRatio,
+      floatingNotificationTop: bounds.minY + (bounds.maxY - bounds.minY) * yRatio,
+    });
+  },
+
+  updateFloatingNotificationVisibility(mode, count) {
+    const userInfo = api.getCachedUserInfo() || {};
+    const isSuperAdmin = userInfo.role === "ADMIN_SUPER";
+    const visible = isSuperAdmin
+      && (mode === FLOATING_NOTIFICATION_MODE.ALWAYS || count > 0);
+    this.setData({
+      floatingNotificationMode: mode,
+      floatingNotificationCount: count,
+      floatingNotificationVisible: visible,
+    });
+  },
+
+  loadFloatingNotification({ force = false } = {}) {
+    const mode = getFloatingNotificationMode();
+    const userInfo = api.getCachedUserInfo() || {};
+    if (userInfo.role !== "ADMIN_SUPER") {
+      this.updateFloatingNotificationVisibility(mode, 0);
+      return Promise.resolve(0);
+    }
+
+    const cachedCount = Math.max(0, Number(wx.getStorageSync(NOTIFICATION_COUNT_KEY)) || 0);
+    const cachedAt = Number(wx.getStorageSync(NOTIFICATION_COUNT_AT_KEY)) || 0;
+    this.updateFloatingNotificationVisibility(mode, cachedCount);
+    if (!force && cachedAt && Date.now() - cachedAt < NOTIFICATION_COUNT_TTL_MS) {
+      return Promise.resolve(cachedCount);
+    }
+    if (this.floatingNotificationPromise) return this.floatingNotificationPromise;
+
+    this.floatingNotificationPromise = api.getNotificationUnreadCount()
+      .then((result) => {
+        const count = Math.max(0, Number(result.unreadCount) || 0);
+        wx.setStorageSync(NOTIFICATION_COUNT_KEY, count);
+        wx.setStorageSync(NOTIFICATION_COUNT_AT_KEY, Date.now());
+        this.updateFloatingNotificationVisibility(getFloatingNotificationMode(), count);
+        return count;
+      })
+      .catch(() => cachedCount)
+      .finally(() => {
+        this.floatingNotificationPromise = null;
+      });
+    return this.floatingNotificationPromise;
+  },
+
+  onFloatingNotificationTouchStart(event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch) return;
+    this.floatingNotificationDrag = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      originLeft: this.data.floatingNotificationLeft,
+      originTop: this.data.floatingNotificationTop,
+      moved: false,
+    };
+    this.setData({ floatingNotificationDragging: true });
+  },
+
+  onFloatingNotificationTouchMove(event) {
+    const touch = event.touches && event.touches[0];
+    const drag = this.floatingNotificationDrag;
+    const bounds = this.floatingNotificationBounds;
+    if (!touch || !drag || !bounds) return;
+    const deltaX = touch.clientX - drag.startX;
+    const deltaY = touch.clientY - drag.startY;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) drag.moved = true;
+    const left = Math.min(bounds.maxX, Math.max(bounds.minX, drag.originLeft + deltaX));
+    const top = Math.min(bounds.maxY, Math.max(bounds.minY, drag.originTop + deltaY));
+    this.setData({ floatingNotificationLeft: left, floatingNotificationTop: top });
+  },
+
+  onFloatingNotificationTouchEnd() {
+    const drag = this.floatingNotificationDrag;
+    const bounds = this.floatingNotificationBounds;
+    this.floatingNotificationDrag = null;
+    this.setData({ floatingNotificationDragging: false });
+    if (!drag || !bounds || !drag.moved) return;
+    const xRange = Math.max(1, bounds.maxX - bounds.minX);
+    const yRange = Math.max(1, bounds.maxY - bounds.minY);
+    setFloatingNotificationPosition({
+      xRatio: (this.data.floatingNotificationLeft - bounds.minX) / xRange,
+      yRatio: (this.data.floatingNotificationTop - bounds.minY) / yRange,
+    });
+    this.suppressFloatingNotificationTap = true;
+    if (this.floatTapTimer) clearTimeout(this.floatTapTimer);
+    this.floatTapTimer = setTimeout(() => {
+      this.suppressFloatingNotificationTap = false;
+      this.floatTapTimer = null;
+    }, 120);
+  },
+
+  openFloatingNotifications() {
+    if (this.suppressFloatingNotificationTap) return;
+    wx.navigateTo({ url: "/pages/notification-list/index" });
   },
 
   openYearPicker() {
