@@ -17,3 +17,16 @@ page { background: #f5f7fb; }
 .option-description { margin-top: 7rpx; color: #7b8492; font-size: 22rpx; line-height: 32rpx; }
 .setting-tip { display: flex; margin-top: 30rpx; padding: 20rpx 22rpx; align-items: flex-start; gap: 12rpx; border-radius: 16rpx; background: #eef1f6; color: #697383; font-size: 22rpx; line-height: 34rpx; }
 .setting-tip text { min-width: 0; flex: 1; }
+.section-divider { height: 2rpx; margin: 44rpx 0; background: #e1e6ee; }
+.wechat-subscription-card { margin-top: 28rpx; padding: 26rpx; border: 2rpx solid #dfe5ee; border-radius: 24rpx; background: #ffffff; box-shadow: 0 9rpx 28rpx rgba(49,66,98,.06); }
+.wechat-subscription-card.active { border-color: #a9dfbe; background: linear-gradient(145deg, #ffffff, #f2fbf6); }
+.wechat-card-head { display: flex; align-items: center; gap: 18rpx; }
+.wechat-card-icon { display: flex; width: 76rpx; height: 76rpx; flex: none; align-items: center; justify-content: center; border-radius: 20rpx; background: linear-gradient(145deg, #22b35f, #079443); box-shadow: 0 8rpx 18rpx rgba(7,148,67,.2); }
+.wechat-card-main { min-width: 0; flex: 1; }
+.wechat-card-title { color: #202b3d; font-size: 28rpx; font-weight: 700; }
+.wechat-card-status { margin-top: 6rpx; color: #78818e; font-size: 22rpx; }
+.wechat-subscription-card.active .wechat-card-status { color: #0f7a45; }
+.wechat-count { flex: none; color: #7b8492; font-size: 19rpx; text-align: center; }
+.wechat-count text { display: block; color: #0f7a45; font-size: 36rpx; font-weight: 750; line-height: 42rpx; }
+.wechat-card-note { margin: 24rpx 0; padding: 18rpx 20rpx; border-radius: 14rpx; background: #f2f4f8; color: #697383; font-size: 21rpx; line-height: 34rpx; }
+.subscribe-button { --td-button-primary-bg-color: #0f7a45; --td-button-primary-border-color: #0f7a45; height: 82rpx !important; border-radius: 16rpx !important; font-weight: 700; }

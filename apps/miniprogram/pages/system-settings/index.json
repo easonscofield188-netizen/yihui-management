@@ -4,6 +4,7 @@
   "navigationBarBackgroundColor": "#f5f7fb",
   "backgroundColor": "#f5f7fb",
   "usingComponents": {
-    "t-icon": "tdesign-miniprogram/icon/icon"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-button": "tdesign-miniprogram/button/button"
   }
 }

@@ -40,6 +40,11 @@
           <view class="info-main"><view class="info-label">变更项目</view><view class="info-value">{{event.projectName}}</view></view>
         </view>
       </view>
+      <view class="delivery-row" wx:if="{{notification}}">
+        <view class="delivery-label"><t-icon name="logo-wechat-stroke-filled" size="28rpx" color="#079443" /><text>微信通知</text></view>
+        <view class="delivery-status delivery-{{notification.deliveryStatus}}">{{notification.deliveryStatusLabel || '未发送'}}</view>
+      </view>
+      <view class="delivery-reason" wx:if="{{notification.deliveryReasonLabel}}">{{notification.deliveryReasonLabel}}</view>
     </view>
 
     <view class="change-section">

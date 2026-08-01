@@ -17,6 +17,7 @@ const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const NOTIFICATION_COLLECTION = 'notifications';
+const WECHAT_SUBSCRIBE_TEMPLATE_ID = 'YQoHfMgZd9EnpJGKxzGO2yGcB0ZyK4V8_eLMpQXbrJY';
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -92,7 +93,16 @@ const NOTIFICATION_READ_STATUS = Object.freeze({
   READ: 'read'
 });
 const NOTIFICATION_DELIVERY_STATUS = Object.freeze({
-  PENDING: 'pending'
+  PENDING: 'pending',
+  SENT: 'sent',
+  FAILED: 'failed',
+  SKIPPED: 'skipped'
+});
+const NOTIFICATION_DELIVERY_STATUS_DICTIONARY = Object.freeze({
+  [NOTIFICATION_DELIVERY_STATUS.PENDING]: { value: NOTIFICATION_DELIVERY_STATUS.PENDING, label: '待发送' },
+  [NOTIFICATION_DELIVERY_STATUS.SENT]: { value: NOTIFICATION_DELIVERY_STATUS.SENT, label: '发送成功' },
+  [NOTIFICATION_DELIVERY_STATUS.FAILED]: { value: NOTIFICATION_DELIVERY_STATUS.FAILED, label: '发送失败' },
+  [NOTIFICATION_DELIVERY_STATUS.SKIPPED]: { value: NOTIFICATION_DELIVERY_STATUS.SKIPPED, label: '未发送' }
 });
 const PROJECT_CHANGE_FIELD_DICTIONARY = Object.freeze({
   name: { label: '项目名称', valueType: 'text' },
@@ -314,6 +324,89 @@ async function getActiveSuperAdmins() {
   return (result.data || []).filter(user => !user.status || user.status === 'active');
 }
 
+function truncateSubscribeValue(value, maxLength = 20) {
+  return Array.from(String(value || '').trim()).slice(0, maxLength).join('') || '未填写';
+}
+
+function formatSubscribeTime(timestamp) {
+  const chinaTime = new Date(Number(timestamp || Date.now()) + 8 * 60 * 60 * 1000);
+  return chinaTime.toISOString().slice(0, 16).replace('T', ' ');
+}
+
+function buildSubscribeChangeStatus(eventType, changes) {
+  if (eventType === PROJECT_EVENT_TYPE.CREATED) return '项目已新建';
+  const labels = Array.from(new Set((changes || []).map(item => item.fieldLabel).filter(Boolean)));
+  if (!labels.length) return '项目信息已变更';
+  const suffix = labels.length > 2 ? `等${labels.length}项` : labels.slice(0, 2).join('、');
+  return truncateSubscribeValue(`${suffix}变更`);
+}
+
+async function updateNotificationDelivery(notificationId, status, extraData = {}) {
+  await db.collection(NOTIFICATION_COLLECTION).doc(notificationId).update({
+    data: {
+      deliveryStatus: status,
+      deliveryStatusLabel: NOTIFICATION_DELIVERY_STATUS_DICTIONARY[status].label,
+      deliveryUpdatedTimestamp: Date.now(),
+      deliveryUpdatedAt: db.serverDate(),
+      ...extraData
+    }
+  });
+}
+
+async function deliverWechatSubscription({ recipient, notificationId, eventData, changes, now }) {
+  const availableCount = Math.max(0, Number(recipient.wechatSubscriptionAvailableCount) || 0);
+  if (!recipient.wechatOpenId || availableCount < 1) {
+    await updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.SKIPPED, {
+      deliveryReason: recipient.wechatOpenId ? 'no_available_subscription' : 'wechat_not_bound',
+      deliveryReasonLabel: recipient.wechatOpenId ? '没有可用订阅次数' : '未绑定微信账号'
+    });
+    return;
+  }
+
+  try {
+    const sendResult = await cloud.openapi.subscribeMessage.send({
+      touser: recipient.wechatOpenId,
+      templateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+      page: `pages/notification-detail/index?id=${notificationId}`,
+      lang: 'zh_CN',
+      data: {
+        thing1: { value: truncateSubscribeValue(eventData.projectName) },
+        thing2: { value: buildSubscribeChangeStatus(eventData.eventType, changes) },
+        time3: { value: formatSubscribeTime(now) },
+        thing4: { value: truncateSubscribeValue(`${eventData.actorName}操作，请查看详情`) }
+      }
+    });
+    await Promise.all([
+      updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.SENT, {
+        deliveryReason: '',
+        deliveryReasonLabel: '',
+        wechatTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+        wechatMessageResult: sendResult || {},
+        deliveredTimestamp: Date.now(),
+        deliveredAt: db.serverDate()
+      }),
+      db.collection('users').doc(recipient._id).update({
+        data: {
+          wechatSubscriptionAvailableCount: db.command.inc(-1),
+          wechatSubscriptionLastSentTimestamp: Date.now(),
+          wechatSubscriptionLastSentAt: db.serverDate(),
+          updateTime: db.serverDate()
+        }
+      })
+    ]);
+  } catch (error) {
+    const errorCode = Number(error.errCode || error.errcode || 0);
+    await updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.FAILED, {
+      deliveryReason: 'wechat_send_failed',
+      deliveryReasonLabel: '微信订阅消息发送失败',
+      wechatTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+      deliveryErrorCode: errorCode,
+      deliveryErrorMessage: String(error.errMsg || error.message || 'unknown').slice(0, 240)
+    });
+    console.error('微信订阅消息发送失败:', { notificationId, errorCode, message: error.message || error.errMsg });
+  }
+}
+
 async function recordProjectChangeEvent({ eventType, projectId, beforeProject, afterProject, actor, source }) {
   try {
     const isCreated = eventType === PROJECT_EVENT_TYPE.CREATED;
@@ -345,8 +438,9 @@ async function recordProjectChangeEvent({ eventType, projectId, beforeProject, a
 
     if (actor?.role !== ADMIN_SUPER_ROLE) {
       const recipients = await getActiveSuperAdmins();
-      await Promise.all(recipients.map(recipient => db.collection(NOTIFICATION_COLLECTION).add({
-        data: {
+      await Promise.all(recipients.map(async (recipient) => {
+        const notificationResult = await db.collection(NOTIFICATION_COLLECTION).add({
+          data: {
           recipientUserId: recipient._id,
           eventId: eventResult._id,
           category: 'project_change',
@@ -363,11 +457,19 @@ async function recordProjectChangeEvent({ eventType, projectId, beforeProject, a
           readStatus: NOTIFICATION_READ_STATUS.UNREAD,
           readStatusLabel: '未读',
           deliveryStatus: NOTIFICATION_DELIVERY_STATUS.PENDING,
-          deliveryStatusLabel: '待发送',
+          deliveryStatusLabel: NOTIFICATION_DELIVERY_STATUS_DICTIONARY[NOTIFICATION_DELIVERY_STATUS.PENDING].label,
           createdTimestamp: now,
           createdAt: db.serverDate()
-        }
-      })));
+          }
+        });
+        await deliverWechatSubscription({
+          recipient,
+          notificationId: notificationResult._id,
+          eventData,
+          changes,
+          now
+        });
+      }));
     }
     return eventResult._id;
   } catch (error) {

@@ -26,6 +26,29 @@
       </view>
     </view>
 
+    <view class="section-divider"></view>
+    <view class="setting-heading">微信订阅消息</view>
+    <view class="setting-description">项目发生重要变更时，通过微信服务通知提醒当前超级管理员。</view>
+    <view class="wechat-subscription-card {{wechatSubscription.canReceive ? 'active' : ''}}">
+      <view class="wechat-card-head">
+        <view class="wechat-card-icon"><t-icon name="logo-wechat-stroke-filled" size="46rpx" color="#ffffff" /></view>
+        <view class="wechat-card-main">
+          <view class="wechat-card-title">项目变更微信提醒</view>
+          <view class="wechat-card-status">{{wechatSubscription.statusLabel}}</view>
+        </view>
+        <view class="wechat-count"><text>{{wechatSubscription.availableCount}}</text><view>次可用</view></view>
+      </view>
+      <view class="wechat-card-note">微信提供的是一次性订阅，每同意一次可发送一条项目变更提醒；站内消息不受此次数影响。</view>
+      <t-button
+        t-class="subscribe-button"
+        theme="primary"
+        block
+        loading="{{wechatSubscriptionLoading}}"
+        disabled="{{wechatSubscriptionLoading}}"
+        bindtap="enableWechatSubscription"
+      >{{wechatSubscription.availableCount ? '再增加一次提醒机会' : '开启一次微信提醒'}}</t-button>
+    </view>
+
     <view class="setting-tip">
       <t-icon name="info-circle" size="28rpx" color="#697383" />
       <text>该设置保存在当前设备，更换设备后将恢复为“仅有新消息时显示”。</text>

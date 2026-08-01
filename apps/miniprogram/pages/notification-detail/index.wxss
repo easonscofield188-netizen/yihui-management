@@ -75,6 +75,13 @@ page {
 .info-main { min-width: 0; flex: 1; }
 .info-label { color: #8992a1; font-size: 19rpx; }
 .info-value { margin-top: 5rpx; overflow: hidden; color: #263143; font-size: 23rpx; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.delivery-row { display: flex; margin-top: 20rpx; padding: 18rpx 4rpx 0; align-items: center; justify-content: space-between; border-top: 2rpx solid #edf0f5; }
+.delivery-label { display: flex; align-items: center; gap: 10rpx; color: #46505f; font-size: 23rpx; }
+.delivery-status { padding: 6rpx 14rpx; border-radius: 999rpx; background: #f0f2f5; color: #697383; font-size: 20rpx; font-weight: 600; }
+.delivery-sent { background: #e6f7ed; color: #0f7a45; }
+.delivery-failed { background: #ffe9e7; color: #b3261e; }
+.delivery-pending { background: #fff2dc; color: #8a530d; }
+.delivery-reason { margin-top: 10rpx; color: #8a530d; font-size: 20rpx; line-height: 30rpx; text-align: right; }
 
 .change-section { margin-top: 34rpx; }
 .section-head { display: flex; margin-bottom: 18rpx; padding: 0 4rpx; align-items: center; justify-content: space-between; }

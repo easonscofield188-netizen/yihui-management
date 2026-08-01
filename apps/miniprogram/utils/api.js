@@ -229,6 +229,14 @@ function markAllNotificationsRead() {
   return callFunction("notificationService", "markAllRead", {});
 }
 
+function getWechatSubscriptionStatus() {
+  return callFunction("notificationService", "getWechatSubscriptionStatus", {});
+}
+
+function saveWechatSubscription(data) {
+  return callFunction("notificationService", "saveWechatSubscription", data);
+}
+
 function quickRecord(data) {
   return callFunction("projectService", "quickRecord", data);
 }
@@ -270,12 +278,14 @@ module.exports = {
   getToken,
   getUserInfo,
   getVouchers,
+  getWechatSubscriptionStatus,
   listProjects,
   listFinancialProjects,
   listNotifications,
   login,
   logout,
   markAllNotificationsRead,
+  saveWechatSubscription,
   invalidateUserInfoCache,
   isUserInfoCacheFresh,
   quickRecord,

@@ -1,0 +1,25 @@
+const PROJECT_CHANGE_TEMPLATE_ID = "YQoHfMgZd9EnpJGKxzGO2yGcB0ZyK4V8_eLMpQXbrJY";
+
+const WECHAT_SUBSCRIPTION_STATUS = Object.freeze({
+  ACCEPTED: "accepted",
+  REJECTED: "rejected",
+  BANNED: "banned",
+});
+
+const WECHAT_AUTH_RESULT = Object.freeze({
+  ACCEPT: "accept",
+  REJECT: "reject",
+  BAN: "ban",
+});
+
+function mapWechatAuthResult(value) {
+  if (value === WECHAT_AUTH_RESULT.ACCEPT) return WECHAT_SUBSCRIPTION_STATUS.ACCEPTED;
+  if (value === WECHAT_AUTH_RESULT.BAN) return WECHAT_SUBSCRIPTION_STATUS.BANNED;
+  return WECHAT_SUBSCRIPTION_STATUS.REJECTED;
+}
+
+module.exports = {
+  PROJECT_CHANGE_TEMPLATE_ID,
+  WECHAT_SUBSCRIPTION_STATUS,
+  mapWechatAuthResult,
+};

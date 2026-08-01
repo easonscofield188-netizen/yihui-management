@@ -9,12 +9,26 @@ const db = cloud.database();
 const SESSION_COLLECTION = 'auth_sessions';
 const NOTIFICATION_COLLECTION = 'notifications';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
+const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const WECHAT_SUBSCRIBE_TEMPLATE_ID = 'YQoHfMgZd9EnpJGKxzGO2yGcB0ZyK4V8_eLMpQXbrJY';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_STATUS = Object.freeze({ UNREAD: 'unread', READ: 'read' });
 const READ_STATUS_DICTIONARY = Object.freeze({
   [READ_STATUS.UNREAD]: { value: READ_STATUS.UNREAD, label: '未读' },
   [READ_STATUS.READ]: { value: READ_STATUS.READ, label: '已读' }
+});
+const WECHAT_SUBSCRIPTION_STATUS = Object.freeze({
+  NOT_BOUND: 'not_bound',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  BANNED: 'banned'
+});
+const WECHAT_SUBSCRIPTION_STATUS_DICTIONARY = Object.freeze({
+  [WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND]: { value: WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND, label: '未开启' },
+  [WECHAT_SUBSCRIPTION_STATUS.ACCEPTED]: { value: WECHAT_SUBSCRIPTION_STATUS.ACCEPTED, label: '已授权' },
+  [WECHAT_SUBSCRIPTION_STATUS.REJECTED]: { value: WECHAT_SUBSCRIPTION_STATUS.REJECTED, label: '已拒绝' },
+  [WECHAT_SUBSCRIPTION_STATUS.BANNED]: { value: WECHAT_SUBSCRIPTION_STATUS.BANNED, label: '已在微信设置中关闭' }
 });
 
 function parseBody(event) {
@@ -159,6 +173,90 @@ async function markAllRead(current) {
   return { code: 0, message: '已全部标记为已读', data: { updated: unread.length } };
 }
 
+function forbiddenSubscription() {
+  return { code: 403, message: '仅超级系统管理员可以设置微信消息提醒' };
+}
+
+function normalizeWechatSubscriptionStatus(value) {
+  return Object.prototype.hasOwnProperty.call(WECHAT_SUBSCRIPTION_STATUS_DICTIONARY, value)
+    ? value
+    : WECHAT_SUBSCRIPTION_STATUS.REJECTED;
+}
+
+function formatWechatSubscription(user) {
+  const status = normalizeWechatSubscriptionStatus(
+    user.wechatSubscriptionStatus || WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND
+  );
+  const availableCount = Math.max(0, Number(user.wechatSubscriptionAvailableCount) || 0);
+  const statusLabel = availableCount > 0
+    ? '已开启'
+    : (status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED
+      ? '提醒次数已用完'
+      : WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[status].label);
+  return {
+    templateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+    status,
+    statusLabel,
+    isBound: Boolean(user.wechatOpenId),
+    availableCount,
+    canReceive: Boolean(user.wechatOpenId && availableCount > 0)
+  };
+}
+
+async function getWechatSubscriptionStatus(current) {
+  if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
+  return {
+    code: 0,
+    message: '查询成功',
+    data: formatWechatSubscription(current.user)
+  };
+}
+
+async function saveWechatSubscription(data, current) {
+  if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
+  if (data.templateId !== WECHAT_SUBSCRIBE_TEMPLATE_ID) {
+    return { code: 400, message: '订阅消息模板不匹配' };
+  }
+  const status = normalizeWechatSubscriptionStatus(data.status);
+  const wxContext = cloud.getWXContext();
+  const openId = String(wxContext.OPENID || '').trim();
+  if (!openId) {
+    return { code: 400, message: '请在微信小程序真机环境中开启消息提醒' };
+  }
+
+  const sameWechatResult = await db.collection('users').where({ wechatOpenId: openId }).get();
+  const duplicatedUsers = (sameWechatResult.data || []).filter(user => user._id !== current.userId);
+  await Promise.all(duplicatedUsers.map(user => db.collection('users').doc(user._id).update({
+    data: {
+      wechatOpenId: db.command.remove(),
+      wechatSubscriptionStatus: WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND,
+      wechatSubscriptionStatusLabel: WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND].label,
+      wechatSubscriptionAvailableCount: 0,
+      updateTime: db.serverDate()
+    }
+  })));
+
+  const updateData = {
+    wechatOpenId: openId,
+    wechatSubscriptionTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+    wechatSubscriptionStatus: status,
+    wechatSubscriptionStatusLabel: WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[status].label,
+    wechatSubscriptionUpdatedTimestamp: Date.now(),
+    wechatSubscriptionUpdatedAt: db.serverDate(),
+    updateTime: db.serverDate()
+  };
+  if (status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED) {
+    updateData.wechatSubscriptionAvailableCount = db.command.inc(1);
+  }
+  await db.collection('users').doc(current.userId).update({ data: updateData });
+  const latest = await db.collection('users').doc(current.userId).get();
+  return {
+    code: 0,
+    message: status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? '微信提醒已开启一次' : '订阅状态已更新',
+    data: formatWechatSubscription(latest.data || {})
+  };
+}
+
 exports.main = async (event) => {
   let body;
   try {
@@ -180,6 +278,10 @@ exports.main = async (event) => {
         return await getNotificationDetail(data, current);
       case 'markAllRead':
         return await markAllRead(current);
+      case 'getWechatSubscriptionStatus':
+        return await getWechatSubscriptionStatus(current);
+      case 'saveWechatSubscription':
+        return await saveWechatSubscription(data, current);
       default:
         return { code: 400, message: '未知操作' };
     }
