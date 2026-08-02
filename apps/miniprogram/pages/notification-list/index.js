@@ -31,8 +31,8 @@ function decorateNotification(item) {
   const projectName = String(item.projectName || "未命名项目");
   const isCreated = item.eventType === "project_created";
   const listTitle = isCreated
-    ? `新建${projectName}`
-    : `${projectName}信息变更`;
+    ? `新建《${projectName}》`
+    : `《${projectName}》信息变更`;
   return {
     ...item,
     listTitle,

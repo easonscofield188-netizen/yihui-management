@@ -190,6 +190,10 @@ Page({
     wx.navigateTo({ url: "/pages/project-overview/index" });
   },
 
+  openProjectCases() {
+    wx.navigateTo({ url: "/pages/project-cases/index" });
+  },
+
   openNotifications() {
     wx.navigateTo({ url: "/pages/notification-list/index" });
   },

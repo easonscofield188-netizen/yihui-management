@@ -1,0 +1,83 @@
+<view class="cases-page">
+  <view class="cases-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="50rpx" color="#002045" />
+    </view>
+    <view class="nav-title">项目案例</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <scroll-view class="category-scroll" style="top: {{navHeight}}px;" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="category-list">
+      <view
+        wx:for="{{categories}}"
+        wx:key="value"
+        class="category-chip {{categoryIndex === index ? 'active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onCategoryTap"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="case-list">
+    <view wx:for="{{cases}}" wx:key="_id" class="case-card" data-id="{{item._id}}" bindtap="openCase">
+      <view class="case-cover">
+        <image
+          wx:if="{{item.coverDisplayUrl}}"
+          class="cover-image"
+          src="{{item.coverDisplayUrl}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          binderror="onCoverError"
+        />
+        <view wx:else class="cover-placeholder">
+          <t-icon name="image" size="78rpx" color="#86a0cd" />
+          <text>案例封面</text>
+        </view>
+        <view class="case-category">{{item.categoryLabel}}</view>
+      </view>
+
+      <view class="case-body">
+        <view class="case-heading">
+          <view class="case-title">{{item.title}}</view>
+          <t-icon name="more" size="38rpx" color="#74777f" />
+        </view>
+        <view class="case-date">
+          <t-icon name="calendar" size="34rpx" color="#5b5f61" />
+          <text>{{item.dateText}}</text>
+        </view>
+        <view class="case-amount" wx:if="{{item.showAmount}}">
+          <text class="case-info-label">案例报价：</text>
+          <text class="case-amount-value">¥ {{item.amountText}}</text>
+        </view>
+        <view class="case-summary"><text class="case-info-label">案例介绍：</text>{{item.summary}}</view>
+        <view class="case-divider"></view>
+        <view class="case-detail-link">
+          <text>详情内容</text>
+          <t-icon name="chevron-right" size="30rpx" color="#002045" />
+        </view>
+      </view>
+    </view>
+
+    <view class="case-empty" wx:if="{{!loading && !cases.length}}">
+      <view class="empty-icon"><t-icon name="folder-open" size="82rpx" color="#86a0cd" /></view>
+      <view class="empty-title">暂无项目案例</view>
+      <view class="empty-description">案例发布后会显示在这里</view>
+    </view>
+
+    <view class="case-loading" wx:if="{{loading}}">
+      <t-loading size="38rpx" theme="circular" />
+      <text>正在加载案例...</text>
+    </view>
+    <view class="case-loading" wx:if="{{!loading && cases.length && !hasMore}}">没有更多案例了</view>
+  </view>
+
+  <view wx:if="{{canManage}}" class="case-create-bar">
+    <view class="case-create-action" bindtap="createCase">
+      <view class="case-create-button">
+        <t-icon name="add" size="58rpx" color="#ffffff" />
+      </view>
+      <text>新增案例</text>
+    </view>
+  </view>
+</view>

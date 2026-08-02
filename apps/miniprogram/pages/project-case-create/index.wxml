@@ -1,0 +1,83 @@
+<page-meta page-style="{{projectSelectorVisible || categoryPickerVisible || datePickerVisible ? 'overflow: hidden;' : ''}}" />
+<view class="create-page">
+  <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#43474e" /></view>
+    <view class="nav-title">新增案例</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="form-content">
+    <view class="link-project" bindtap="openProjectSelector">
+      <view class="link-icon"><t-icon name="sitemap" size="40rpx" color="#ffffff" /></view>
+      <view class="link-main">
+        <view class="link-title">{{form.projectId ? '已关联项目' : '关联已有项目'}}</view>
+        <view class="link-tip">{{form.projectId ? form.title : '点击以同步项目基础信息'}}</view>
+      </view>
+      <view class="link-arrow"><t-icon name="chevron-right" size="34rpx" color="#31547f" /></view>
+    </view>
+
+    <view class="form-card basic-card">
+      <view class="field-block">
+        <view class="field-label">项目名称</view>
+        <t-input t-class="case-input" borderless value="{{form.title}}" placeholder="请输入案例名称" data-field="title" bindchange="onInput" />
+      </view>
+      <view class="card-divider"></view>
+      <view class="two-columns">
+        <view class="half-field" bindtap="openDatePicker">
+        <view class="field-label">交付日期</view>
+        <view class="picker-field {{form.caseDate ? '' : 'placeholder'}}">{{form.caseDate || '选择日期'}}<t-icon name="calendar" size="32rpx" color="#002045" /></view>
+        </view>
+        <view class="column-divider"></view>
+        <view class="half-field" bindtap="openCategoryPicker">
+        <view class="field-label">项目场景</view>
+        <view class="picker-field {{form.categoryCode ? '' : 'placeholder'}}">{{form.categoryLabel}}<t-icon name="chevron-down" size="32rpx" color="#43474e" /></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-card">
+      <view class="field-head"><view class="field-label strong-label">项目报价 (CNY)</view><t-switch size="small" value="{{form.amountEnabled}}" bindchange="onAmountSwitch" /></view>
+      <view class="money-field {{form.amountEnabled ? '' : 'disabled'}}"><text>¥</text><input type="digit" disabled="{{!form.amountEnabled}}" value="{{form.amount}}" placeholder="0.00" data-field="amount" bindinput="onInput" /></view>
+    </view>
+
+    <view class="form-card">
+      <view class="field-head"><view class="field-label strong-label">案例自述</view><t-switch size="small" value="{{form.descriptionEnabled}}" bindchange="onDescriptionSwitch" /></view>
+      <t-textarea wx:if="{{form.descriptionEnabled}}" t-class="case-textarea" bordered value="{{form.content}}" placeholder="请输入案例详细描述..." maxlength="3000" data-field="content" bindchange="onInput" />
+    </view>
+
+    <view class="form-card image-card">
+      <view class="field-head"><view class="field-label strong-label">项目图片</view><view class="image-limit">最多上传9张</view></view>
+      <view class="image-grid">
+        <view wx:for="{{images}}" wx:key="id" class="image-item">
+          <image src="{{item.displayUrl}}" mode="aspectFill" data-url="{{item.displayUrl}}" bindtap="previewImage" />
+          <view class="remove-image" data-id="{{item.id}}" catchtap="removeImage"><t-icon name="close" size="25rpx" color="#ffffff" /></view>
+        </view>
+        <view wx:if="{{images.length < 9}}" class="add-image" bindtap="chooseImages"><t-icon name="camera" size="46rpx" color="#002045" /><text>上传图片</text></view>
+      </view>
+      <view class="compress-note">图片上传前会自动压缩，兼顾清晰度与上传速度</view>
+    </view>
+  </view>
+
+  <view class="submit-bar"><view class="submit-button {{submitting ? 'disabled' : ''}}" bindtap="submit"><t-loading wx:if="{{submitting}}" size="34rpx" theme="circular" /><t-icon wx:else name="check-circle" size="38rpx" color="#adc7f7" /><text>{{submitText}}</text></view></view>
+
+  <t-popup visible="{{projectSelectorVisible}}" placement="bottom" bindvisible-change="closeProjectSelector">
+    <view class="project-popup">
+      <view class="popup-head"><view class="popup-title">选择已有项目</view><view bindtap="closeProjectSelector"><t-icon name="close" size="38rpx" color="#43474e" /></view></view>
+      <view class="search-shell"><t-input borderless prefix-icon="search" value="{{projectKeyword}}" placeholder="搜索项目名称、客户或编号" bindchange="onProjectKeyword" /></view>
+      <scroll-view class="project-results" scroll-y>
+        <view wx:for="{{projects}}" wx:key="_id" class="project-option" data-id="{{item._id}}" bindtap="selectProject">
+          <view class="project-option-main"><view class="project-option-title">{{item.name}}</view><view class="project-option-meta">{{item.projectCode || item.code || '暂无编号'}} · {{item.client || '暂无客户'}}</view></view>
+          <t-icon name="chevron-right" size="34rpx" color="#989fa6" />
+        </view>
+        <view class="project-empty" wx:if="{{!projectLoading && !projects.length}}">暂无匹配项目</view>
+        <view class="project-empty" wx:if="{{projectLoading}}"><t-loading size="34rpx" theme="circular" /> 正在查询项目...</view>
+      </scroll-view>
+    </view>
+  </t-popup>
+
+  <t-picker visible="{{categoryPickerVisible}}" value="{{categoryPickerValue}}" title="选择项目场景" bindconfirm="confirmCategory" bindcancel="closeCategoryPicker">
+    <t-picker-item options="{{categories}}" />
+  </t-picker>
+
+  <t-date-time-picker t-class-confirm="picker-confirm" visible="{{datePickerVisible}}" mode="date" value="{{form.caseDate || today}}" end="{{today}}" title="选择交付日期" confirm-btn="确定" bindconfirm="confirmDate" bindcancel="closeDatePicker" bindclose="closeDatePicker" />
+</view>

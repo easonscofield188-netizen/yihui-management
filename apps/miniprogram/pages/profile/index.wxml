@@ -37,6 +37,14 @@
         </view>
         <t-icon name="chevron-right" size="38rpx" color="#74777f" />
       </view>
+      <view class="function-divider"></view>
+      <view class="function-row" bindtap="openProjectCases">
+        <view class="function-main">
+          <view class="function-icon"><t-icon name="image" size="38rpx" color="#002045" /></view>
+          <text>项目案例</text>
+        </view>
+        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+      </view>
       <block wx:if="{{userInfo.role === 'ADMIN_SUPER'}}">
         <view class="function-divider"></view>
         <view class="function-row" bindtap="openNotifications">

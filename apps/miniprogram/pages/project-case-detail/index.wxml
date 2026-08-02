@@ -1,0 +1,42 @@
+<view class="detail-page">
+  <view class="detail-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
+    <view class="nav-title">案例详情</view>
+    <button class="nav-share {{sharePreparing ? 'share-disabled' : ''}}" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap"><t-icon name="share" size="42rpx" color="#002045" /></button>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="detail-content" wx:if="{{caseInfo}}">
+    <view class="case-id">CASE ID：{{caseInfo.caseCode}}</view>
+    <view class="detail-title">{{caseInfo.title}}</view>
+    <view class="detail-date">交付日期：{{caseInfo.dateText}}</view>
+    <view wx:if="{{caseInfo.amountEnabled}}" class="detail-amount">项目报价：¥ {{caseInfo.amountText}}</view>
+
+    <view class="image-grid" wx:if="{{images.length}}">
+      <image
+        wx:for="{{images}}"
+        wx:key="displayUrl"
+        class="gallery-image"
+        src="{{item.displayUrl}}"
+        mode="widthFix"
+        data-url="{{item.displayUrl}}"
+        bindtap="previewImage"
+      />
+    </view>
+
+    <view class="description-card" wx:if="{{caseInfo.descriptionEnabled && caseInfo.content}}">
+      <view class="description-title">案例自述</view>
+      <view class="description-text">{{caseInfo.content}}</view>
+    </view>
+  </view>
+
+  <view class="detail-loading" wx:if="{{loading}}"><t-loading size="42rpx" theme="circular" /><text>正在加载案例...</text></view>
+
+  <view class="bottom-actions" wx:if="{{caseInfo}}">
+    <button class="friend-share {{sharePreparing ? 'share-disabled' : ''}}" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap">
+      <t-icon name="send" size="40rpx" color="#ffffff" />
+      <text>发送给微信好友</text>
+    </button>
+    <view class="save-cover" bindtap="saveCover"><t-icon name="download" size="42rpx" color="#002045" /></view>
+  </view>
+</view>

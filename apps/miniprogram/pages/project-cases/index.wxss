@@ -1,0 +1,86 @@
+page { background: #f9f9ff; }
+
+.cases-page { min-height: 100vh; padding-bottom: calc(170rpx + env(safe-area-inset-bottom)); background: #f9f9ff; color: #121c2c; }
+.cases-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #f0f3ff; background: rgba(249,249,255,.97); }
+.nav-placeholder { width: 100%; }
+.nav-back { position: absolute; bottom: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
+.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+
+.category-scroll { position: sticky; top: 0; z-index: 8; width: 100%; padding: 28rpx 0 22rpx; background: rgba(249,249,255,.96); white-space: nowrap; }
+.category-list { display: inline-flex; padding: 0 32rpx; gap: 20rpx; }
+.category-chip { padding: 17rpx 32rpx; border: 2rpx solid transparent; border-radius: 999rpx; background: #e7eeff; color: #43474e; font-size: 25rpx; font-weight: 600; line-height: 32rpx; }
+.category-chip.active { border-color: #1a365d; background: #1a365d; color: #ffffff; }
+
+.case-list { padding: 8rpx 32rpx 30rpx; }
+.case-card { margin-bottom: 30rpx; overflow: hidden; border: 2rpx solid #e4e9f2; border-radius: 26rpx; background: #ffffff; box-shadow: 0 10rpx 28rpx rgba(26,54,93,.06); }
+.case-cover { position: relative; width: 100%; height: 356rpx; overflow: hidden; background: #e7eeff; }
+.cover-image { width: 100%; height: 100%; }
+.cover-placeholder { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 14rpx; background: linear-gradient(145deg,#dce8ff,#f0f3ff); color: #5b6f8e; font-size: 24rpx; }
+.case-category { position: absolute; top: 24rpx; right: 24rpx; padding: 10rpx 26rpx; border-radius: 999rpx; background: rgba(26,54,93,.92); color: #ffffff; font-size: 23rpx; font-weight: 600; }
+.case-body { padding: 30rpx 32rpx 26rpx; }
+.case-heading { display: flex; min-width: 0; align-items: flex-start; gap: 18rpx; }
+.case-title { min-width: 0; flex: 1; color: #002045; font-size: 36rpx; font-weight: 700; line-height: 50rpx; }
+.case-date { display: flex; margin-top: 22rpx; align-items: center; gap: 14rpx; color: #5b5f61; font-size: 26rpx; font-family: monospace; letter-spacing: 2rpx; }
+.case-amount { display: flex; margin-top: 20rpx; align-items: baseline; color: #43474e; font-size: 27rpx; line-height: 44rpx; }
+.case-amount-value { color: #002045; font-size: 27rpx; font-weight: 700; }
+.case-info-label { color: #5b6574; font-weight: 600; }
+.case-summary { display: -webkit-box; margin-top: 18rpx; overflow: hidden; color: #43474e; font-size: 27rpx; line-height: 44rpx; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.case-divider { height: 2rpx; margin-top: 25rpx; background: #edf0f5; }
+.case-detail-link { display: inline-flex; padding-top: 20rpx; align-items: center; gap: 8rpx; color: #002045; font-size: 25rpx; font-weight: 700; }
+
+.case-empty { padding: 170rpx 0 120rpx; color: #74777f; text-align: center; }
+.empty-icon { display: flex; justify-content: center; }
+.empty-title { margin-top: 20rpx; color: #43474e; font-size: 30rpx; font-weight: 700; }
+.empty-description { margin-top: 10rpx; font-size: 24rpx; }
+.case-loading { display: flex; padding: 28rpx 0; align-items: center; justify-content: center; gap: 12rpx; color: #8b919a; font-size: 23rpx; }
+
+.case-create-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  display: flex;
+  height: calc(118rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border-top: 2rpx solid #e7eeff;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 -8rpx 24rpx rgba(26, 54, 93, .05);
+}
+
+.case-create-action {
+  position: relative;
+  display: flex;
+  width: 190rpx;
+  height: 100%;
+  padding-bottom: 12rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  color: #43474e;
+  font-size: 22rpx;
+}
+
+.case-create-button {
+  position: absolute;
+  top: -56rpx;
+  display: flex;
+  width: 104rpx;
+  height: 104rpx;
+  box-sizing: content-box;
+  align-items: center;
+  justify-content: center;
+  border: 8rpx solid #ffffff;
+  border-radius: 50%;
+  background: #002045;
+  box-shadow: 0 8rpx 22rpx rgba(26, 54, 93, .2);
+}
+
+.case-create-action:active .case-create-button {
+  transform: scale(.96);
+  opacity: .92;
+}

@@ -210,6 +210,22 @@ function getProjectOverview(params) {
   return callFunction("projectService", "overview", params);
 }
 
+function listProjectCases(params = {}) {
+  return callFunction("caseService", "list", params).then(normalizeProjectList);
+}
+
+function getProjectCase(id) {
+  return callFunction("caseService", "detail", { id }, { skipAuthRedirect: true });
+}
+
+function syncProjectToCase(projectId) {
+  return callFunction("caseService", "syncProject", { projectId });
+}
+
+function createProjectCase(data) {
+  return callFunction("caseService", "create", data);
+}
+
 function listNotifications(params = {}) {
   return callFunction("notificationService", "list", params).then(normalizeProjectList);
 }
@@ -277,6 +293,7 @@ module.exports = {
   createAccount,
   createClient,
   createProject,
+  createProjectCase,
   deleteNotification,
   deleteNotifications,
   deleteVoucher,
@@ -286,6 +303,7 @@ module.exports = {
   getGlobalConfig,
   getNextEmployeeNo,
   getProjectOverview,
+  getProjectCase,
   getNotificationDetail,
   getNotificationUnreadCount,
   getServerDate,
@@ -295,12 +313,14 @@ module.exports = {
   getWechatSubscriptionStatus,
   listProjects,
   listFinancialProjects,
+  listProjectCases,
   listNotificationIds,
   listNotifications,
   login,
   logout,
   markAllNotificationsRead,
   saveWechatSubscription,
+  syncProjectToCase,
   invalidateUserInfoCache,
   isUserInfoCacheFresh,
   quickRecord,
