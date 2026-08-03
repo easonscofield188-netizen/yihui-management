@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const caseCache = require("../../utils/project-case-cache");
 
 const MAX_IMAGES = 9;
 const COMPRESS_THRESHOLD = 800 * 1024;
@@ -351,6 +352,8 @@ Page({
         images,
         clientRequestId: requestId,
       });
+      caseCache.invalidateList();
+      caseCache.invalidateDetail(result.id);
       this.pendingRequestId = "";
       wx.showToast({ title: "案例创建成功", icon: "success" });
       setTimeout(() => wx.redirectTo({ url: `/pages/project-case-detail/index?id=${result.id}` }), 500);

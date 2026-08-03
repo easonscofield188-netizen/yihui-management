@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const caseCache = require("../../utils/project-case-cache");
 const CASE_MANAGE_ROLES = new Set(["ADMIN_SUPER", "ADMIN_COM", "ADMIN"]);
 
 function getNavMetrics() {
@@ -38,11 +39,18 @@ function findCoverIndex(images, coverFileId, coverUrl) {
 async function resolveImageUrls(images) {
   const fileIds = images.map(item => item.fileId).filter(Boolean);
   const localUrlMap = {};
+  fileIds.forEach(fileId => {
+    const cachedPath = caseCache.getImagePath(fileId);
+    if (cachedPath) localUrlMap[fileId] = cachedPath;
+  });
   if (fileIds.length) {
-    await Promise.all(fileIds.map(async fileId => {
+    await Promise.all(fileIds.filter(fileId => !localUrlMap[fileId]).map(async fileId => {
       try {
         const result = await withTimeout(wx.cloud.downloadFile({ fileID: fileId }), 5000);
-        if (result.tempFilePath) localUrlMap[fileId] = result.tempFilePath;
+        if (result.tempFilePath) {
+          localUrlMap[fileId] = result.tempFilePath;
+          caseCache.setImagePath(fileId, result.tempFilePath);
+        }
       } catch (error) {
         // 统一在下一步通过临时链接兜底。
       }
@@ -55,7 +63,10 @@ async function resolveImageUrls(images) {
     try {
       const result = await withTimeout(wx.cloud.getTempFileURL({ fileList: unresolvedFileIds }), 4000);
       (result.fileList || []).forEach(item => {
-        if (item.fileID && item.tempFileURL) tempUrlMap[item.fileID] = item.tempFileURL;
+        if (item.fileID && item.tempFileURL) {
+          tempUrlMap[item.fileID] = item.tempFileURL;
+          caseCache.setImagePath(item.fileID, item.tempFileURL);
+        }
       });
     } catch (error) {
       console.warn("案例图片临时地址获取失败:", error);
@@ -74,6 +85,14 @@ async function resolveImageUrls(images) {
 async function downloadShareImage(image) {
   const fileId = image && image.fileId;
   const remoteUrl = image && (image.url || image.displayUrl);
+  const localDisplayUrl = image && image.displayUrl;
+  if (localDisplayUrl && !/^(?:https?:|cloud:)/i.test(localDisplayUrl)) {
+    return new Promise((resolve, reject) => wx.getImageInfo({
+      src: localDisplayUrl,
+      success: info => resolve(info.path || localDisplayUrl),
+      fail: reject,
+    }));
+  }
   let result;
   if (fileId) {
     try {
@@ -144,6 +163,32 @@ Page({
     }
   },
 
+  showUnavailableSharedCase() {
+    wx.showModal({
+      title: "案例已失效",
+      content: "该案例已失效，请联系重新发送。",
+      showCancel: false,
+      confirmText: "确认",
+      confirmColor: "#173d6b",
+      success: result => {
+        if (!result.confirm) return;
+        wx.exitMiniProgram({
+          fail: () => {
+            const pages = getCurrentPages();
+            if (pages.length > 1) {
+              wx.navigateBack({ delta: 1 });
+              return;
+            }
+            wx.redirectTo({
+              url: "/pages/project-cases/index",
+              fail: () => wx.reLaunch({ url: "/pages/project-cases/index" }),
+            });
+          },
+        });
+      },
+    });
+  },
+
   goBack() {
     const pages = getCurrentPages();
     const previous = pages[pages.length - 2];
@@ -173,6 +218,7 @@ Page({
   onGalleryImageError(event) {
     const index = Number(event.currentTarget.dataset.index);
     if (!Number.isInteger(index) || !this.data.images[index]) return;
+    caseCache.removeImagePath(this.data.images[index].fileId);
     this.setData({
       [`images[${index}].imageLoading`]: false,
       [`images[${index}].imageLoadFailed`]: true,
@@ -206,6 +252,18 @@ Page({
             sharePreparing: true,
             shareImageUrl: "",
           });
+          caseCache.setDetail(this.data.id, {
+            ...this.data.caseInfo,
+            images: images.map(item => ({
+              fileId: item.fileId || "",
+              url: item.url || "",
+              name: item.name || "",
+              sourceCode: item.sourceCode || "",
+            })),
+            coverFileId: cover.coverFileId || image.fileId || "",
+            coverUrl: cover.coverUrl || image.url || "",
+          });
+          caseCache.invalidateList();
           try {
             const shareImageUrl = await downloadShareImage(images[0]);
             this.setData({ shareImageUrl });
@@ -225,13 +283,17 @@ Page({
   async loadDetail(id) {
     this.setData({ loading: true, sharePreparing: true, shareImageUrl: "" });
     try {
-      const result = await api.getProjectCase(id);
+      let result = this.data.isSharedView ? null : caseCache.getDetail(id);
+      if (!result) {
+        result = await api.getProjectCase(id);
+        caseCache.setDetail(id, result);
+      }
       const resolvedImages = await resolveImageUrls(result.images || []);
       const coverIndex = findCoverIndex(resolvedImages, result.coverFileId, result.coverUrl);
       const markedImages = resolvedImages.map((item, index) => ({
         ...item,
         isCover: index === coverIndex,
-        imageLoading: true,
+        imageLoading: !item.localDisplay,
         imageLoadFailed: false,
       }));
       const images = coverIndex > 0
@@ -240,7 +302,7 @@ Page({
       const cachedUser = api.getCachedUserInfo() || {};
       const caseInfo = {
         ...result,
-        canManage: result.canManage === true || CASE_MANAGE_ROLES.has(cachedUser.role),
+        canManage: CASE_MANAGE_ROLES.has(cachedUser.role),
         amountText: money(result.amount),
         dateText: result.caseDate || "日期未设置",
       };
@@ -266,8 +328,13 @@ Page({
         }
       }
     } catch (error) {
-      wx.showToast({ title: error.message || "案例加载失败", icon: "none" });
       this.setData({ loading: false });
+      if (this.data.isSharedView && Number(error.code) === 404) {
+        caseCache.invalidateDetail(id);
+        this.showUnavailableSharedCase();
+        return;
+      }
+      wx.showToast({ title: error.message || "案例加载失败", icon: "none" });
     } finally {
       this.setData({ sharePreparing: false });
     }

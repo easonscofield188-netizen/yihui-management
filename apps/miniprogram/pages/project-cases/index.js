@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const caseCache = require("../../utils/project-case-cache");
 
 const DEFAULT_CATEGORIES = [
   { value: "", label: "全部案例" },
@@ -46,15 +47,24 @@ function withTimeout(promise, timeout = 7000) {
 async function resolveCoverPath(item) {
   const fileId = item.coverFileId || "";
   const remoteUrl = item.coverUrl || item.imageUrl || "";
+  const coverKey = fileId || remoteUrl;
+  const cachedPath = caseCache.getImagePath(coverKey);
+  if (cachedPath) return cachedPath;
   if (fileId) {
     try {
       const result = await withTimeout(wx.cloud.downloadFile({ fileID: fileId }));
-      if (result.tempFilePath) return result.tempFilePath;
+      if (result.tempFilePath) {
+        caseCache.setImagePath(coverKey, result.tempFilePath);
+        return result.tempFilePath;
+      }
     } catch (error) {
       try {
         const result = await withTimeout(wx.cloud.getTempFileURL({ fileList: [fileId] }));
         const tempUrl = result.fileList?.[0]?.tempFileURL || "";
-        if (tempUrl) return tempUrl;
+        if (tempUrl) {
+          caseCache.setImagePath(coverKey, tempUrl);
+          return tempUrl;
+        }
       } catch (fallbackError) {
         // 继续尝试数据库中保存的备用地址。
       }
@@ -86,6 +96,14 @@ function decorateCase(item) {
 async function prepareLocalShareCover(item) {
   const fileId = item.coverFileId || "";
   const remoteUrl = item.coverUrl || item.imageUrl || item.coverDisplayUrl || "";
+  const localDisplayUrl = item.coverDisplayUrl || caseCache.getImagePath(fileId || remoteUrl);
+  if (localDisplayUrl && !/^(?:https?:|cloud:)/i.test(localDisplayUrl)) {
+    return new Promise((resolve, reject) => wx.getImageInfo({
+      src: localDisplayUrl,
+      success: info => resolve(info.path || localDisplayUrl),
+      fail: reject,
+    }));
+  }
   let result;
   if (fileId) {
     try {
@@ -131,7 +149,7 @@ Page({
     const item = this.data.actionCase;
     const shareData = {
       title: item ? `项目案例｜${item.title}` : "项目案例",
-      path: item ? `/pages/project-case-detail/index?id=${item._id}` : "/pages/project-cases/index",
+      path: item ? `/pages/project-case-detail/index?id=${encodeURIComponent(item._id)}&view=shared` : "/pages/project-cases/index",
     };
     if (this.data.shareImageUrl) shareData.imageUrl = this.data.shareImageUrl;
     setTimeout(() => this.setData({ actionVisible: false }), 0);
@@ -147,12 +165,12 @@ Page({
   },
 
   onShow() {
-    if (this.hasShown) this.loadCases(true);
+    if (this.hasShown && caseCache.isListDirty()) this.loadCases(true, true);
     this.hasShown = true;
   },
 
   onPullDownRefresh() {
-    this.loadCases(true).finally(() => wx.stopPullDownRefresh());
+    this.loadCases(true, true).finally(() => wx.stopPullDownRefresh());
   },
 
   onReachBottom() {
@@ -176,6 +194,7 @@ Page({
   onCoverError(event) {
     const index = Number(event.currentTarget.dataset.index);
     if (!Number.isInteger(index) || !this.data.cases[index]) return;
+    caseCache.removeImagePath(this.data.cases[index].coverKey);
     this.setData({
       [`cases[${index}].coverDisplayUrl`]: "",
       [`cases[${index}].coverLoading`]: false,
@@ -245,9 +264,11 @@ Page({
         wx.showLoading({ title: "正在删除", mask: true });
         try {
           await api.deleteProjectCase(item._id);
+          caseCache.invalidateDetail(item._id);
+          caseCache.invalidateList();
           if (this.shareCoverCache) delete this.shareCoverCache[item._id];
           this.setData({ actionVisible: false, actionCase: null });
-          await this.loadCases(true);
+          await this.loadCases(true, true);
           wx.showToast({ title: "案例已删除", icon: "success" });
         } catch (error) {
           wx.showToast({ title: error.message || "案例删除失败", icon: "none" });
@@ -263,7 +284,7 @@ Page({
     wx.navigateTo({ url: "/pages/project-case-create/index" });
   },
 
-  async loadCases(reset) {
+  async loadCases(reset, force = false) {
     if (!reset && (this.data.loading || !this.data.hasMore)) return;
     if (reset) this.shareCoverCache = {};
     const requestId = (this.requestId || 0) + 1;
@@ -272,12 +293,21 @@ Page({
     const categoryCode = this.data.categories[this.data.categoryIndex]?.value || "";
     this.setData({ loading: true });
     try {
-      const result = await api.listProjectCases({ page, pageSize: 10, categoryCode });
+      const params = { page, pageSize: 10, categoryCode };
+      const cachedUser = api.getCachedUserInfo() || {};
+      const cacheParams = { ...params, cacheScope: cachedUser.role || "anonymous" };
+      let result = force ? null : caseCache.getList(cacheParams);
+      if (!result) {
+        result = await api.listProjectCases(params);
+        caseCache.setList(cacheParams, result);
+      }
       if (requestId !== this.requestId) return;
       this.coverDisplayCache = this.coverDisplayCache || {};
       const incoming = (result.list || []).map(item => {
         const decorated = decorateCase(item);
-        const cachedPath = this.coverDisplayCache[decorated.coverKey] || "";
+        const cachedPath = this.coverDisplayCache[decorated.coverKey]
+          || caseCache.getImagePath(decorated.coverKey)
+          || "";
         return {
           ...decorated,
           coverDisplayUrl: cachedPath,
@@ -297,6 +327,7 @@ Page({
         canManage: Boolean(result.canManage),
       });
       this.resolveCaseCovers(incoming);
+      if (reset) caseCache.markListFresh();
     } catch (error) {
       if (requestId !== this.requestId) return;
       wx.showToast({ title: error.message || "案例加载失败", icon: "none" });
@@ -317,6 +348,7 @@ Page({
           displayUrl = await resolveCoverPath(item);
           if (displayUrl && !/^https?:\/\//i.test(displayUrl)) {
             this.coverDisplayCache[item.coverKey] = displayUrl;
+            caseCache.setImagePath(item.coverKey, displayUrl);
           }
         } catch (error) {
           console.warn("案例封面加载失败:", error);
