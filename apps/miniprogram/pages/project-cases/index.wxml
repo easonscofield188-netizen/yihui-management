@@ -1,3 +1,4 @@
+<page-meta page-style="{{actionVisible ? 'overflow: hidden;' : ''}}" />
 <view class="cases-page">
   <view class="cases-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-back" bindtap="goBack">
@@ -22,15 +23,12 @@
   <view class="case-list">
     <view wx:for="{{cases}}" wx:key="_id" class="case-card" data-id="{{item._id}}" bindtap="openCase">
       <view class="case-cover">
-        <image
-          wx:if="{{item.coverDisplayUrl}}"
-          class="cover-image"
-          src="{{item.coverDisplayUrl}}"
-          mode="aspectFill"
-          data-index="{{index}}"
-          binderror="onCoverError"
-        />
-        <view wx:else class="cover-placeholder">
+        <image wx:if="{{item.coverDisplayUrl}}" class="cover-image" src="{{item.coverDisplayUrl}}" mode="aspectFill" data-index="{{index}}" bindload="onCoverLoad" binderror="onCoverError" />
+        <view class="cover-loading" wx:if="{{item.coverLoading}}">
+          <t-loading size="42rpx" theme="circular" />
+          <text>图片加载中</text>
+        </view>
+        <view wx:if="{{!item.coverLoading && !item.coverDisplayUrl}}" class="cover-placeholder">
           <t-icon name="image" size="78rpx" color="#86a0cd" />
           <text>案例封面</text>
         </view>
@@ -40,7 +38,9 @@
       <view class="case-body">
         <view class="case-heading">
           <view class="case-title">{{item.title}}</view>
-          <t-icon name="more" size="38rpx" color="#74777f" />
+          <view class="case-more" data-id="{{item._id}}" catchtap="openCaseActions">
+            <t-icon name="more" size="38rpx" color="#74777f" />
+          </view>
         </view>
         <view class="case-date">
           <t-icon name="calendar" size="34rpx" color="#5b5f61" />
@@ -59,13 +59,19 @@
       </view>
     </view>
 
+    <view class="case-initial-loading" wx:if="{{loading && !cases.length}}">
+      <view class="initial-loading-icon"><t-loading size="50rpx" theme="circular" /></view>
+      <view class="initial-loading-title">正在加载项目案例</view>
+      <view class="initial-loading-tip">请稍候...</view>
+    </view>
+
     <view class="case-empty" wx:if="{{!loading && !cases.length}}">
       <view class="empty-icon"><t-icon name="folder-open" size="82rpx" color="#86a0cd" /></view>
       <view class="empty-title">暂无项目案例</view>
       <view class="empty-description">案例发布后会显示在这里</view>
     </view>
 
-    <view class="case-loading" wx:if="{{loading}}">
+    <view class="case-loading" wx:if="{{loading && cases.length}}">
       <t-loading size="38rpx" theme="circular" />
       <text>正在加载案例...</text>
     </view>
@@ -80,4 +86,35 @@
       <text>新增案例</text>
     </view>
   </view>
+
+  <t-popup t-class-content="case-actions-popup" visible="{{actionVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="closeCaseActions">
+    <view class="case-actions">
+      <view class="action-header">
+        <view class="action-title">案例操作</view>
+        <view class="action-case-name">{{actionCase.title}}</view>
+      </view>
+      <view class="action-list">
+        <view class="action-row share-row {{sharePreparing ? 'action-disabled' : ''}}">
+          <view class="action-icon share-icon">
+            <t-icon name="share" size="36rpx" color="#1f5b9b" />
+          </view>
+          <view class="action-copy">
+            <view class="action-name">分享给微信好友</view>
+            <view class="action-tip">{{sharePreparing ? '正在准备分享封面' : '分享案例详情和项目图片'}}</view>
+          </view>
+          <t-icon name="chevron-right" size="32rpx" color="#9aa1ac" />
+          <t-button class="action-share-host" t-class="action-share-trigger" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareActionTap"></t-button>
+        </view>
+        <view wx:if="{{canManage}}" class="action-row delete-row" bindtap="deleteSelectedCase">
+          <view class="action-icon delete-icon"><t-icon name="delete" size="36rpx" color="#c7363f" /></view>
+          <view class="action-copy">
+            <view class="action-name delete-name">删除案例</view>
+            <view class="action-tip">删除后案例将不再展示</view>
+          </view>
+          <t-icon name="chevron-right" size="32rpx" color="#c9a1a4" />
+        </view>
+      </view>
+      <view class="action-cancel" bindtap="closeCaseActions">取消</view>
+    </view>
+  </t-popup>
 </view>

@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const CASE_MANAGE_ROLES = new Set(["ADMIN_SUPER", "ADMIN_COM", "ADMIN"]);
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -19,23 +20,55 @@ function displayImage(image) {
   return image.fileId || image.url || "";
 }
 
+function withTimeout(promise, timeout = 5000) {
+  return Promise.race([
+    promise,
+    new Promise((resolve, reject) => setTimeout(() => reject(new Error("图片请求超时")), timeout)),
+  ]);
+}
+
+function findCoverIndex(images, coverFileId, coverUrl) {
+  const matchedIndex = images.findIndex(image => (
+    (coverFileId && image.fileId === coverFileId)
+    || (coverUrl && image.url === coverUrl)
+  ));
+  return matchedIndex >= 0 ? matchedIndex : 0;
+}
+
 async function resolveImageUrls(images) {
   const fileIds = images.map(item => item.fileId).filter(Boolean);
-  if (!fileIds.length) {
-    return images.map(item => ({ ...item, displayUrl: displayImage(item) })).filter(item => item.displayUrl);
+  const localUrlMap = {};
+  if (fileIds.length) {
+    await Promise.all(fileIds.map(async fileId => {
+      try {
+        const result = await withTimeout(wx.cloud.downloadFile({ fileID: fileId }), 5000);
+        if (result.tempFilePath) localUrlMap[fileId] = result.tempFilePath;
+      } catch (error) {
+        // 统一在下一步通过临时链接兜底。
+      }
+    }));
   }
-  try {
-    const result = await wx.cloud.getTempFileURL({ fileList: fileIds });
-    const urlMap = {};
-    (result.fileList || []).forEach(item => {
-      if (item.fileID && item.tempFileURL) urlMap[item.fileID] = item.tempFileURL;
-    });
-    return images
-      .map(item => ({ ...item, displayUrl: urlMap[item.fileId] || displayImage(item) }))
-      .filter(item => item.displayUrl);
-  } catch (error) {
-    return images.map(item => ({ ...item, displayUrl: displayImage(item) })).filter(item => item.displayUrl);
+
+  const unresolvedFileIds = fileIds.filter(fileId => !localUrlMap[fileId]);
+  const tempUrlMap = {};
+  if (unresolvedFileIds.length) {
+    try {
+      const result = await withTimeout(wx.cloud.getTempFileURL({ fileList: unresolvedFileIds }), 4000);
+      (result.fileList || []).forEach(item => {
+        if (item.fileID && item.tempFileURL) tempUrlMap[item.fileID] = item.tempFileURL;
+      });
+    } catch (error) {
+      console.warn("案例图片临时地址获取失败:", error);
+    }
   }
+
+  return images
+    .map(item => ({
+      ...item,
+      displayUrl: localUrlMap[item.fileId] || tempUrlMap[item.fileId] || item.url || displayImage(item),
+      localDisplay: Boolean(localUrlMap[item.fileId]),
+    }))
+    .filter(item => item.displayUrl);
 }
 
 async function downloadShareImage(image) {
@@ -80,15 +113,18 @@ Page({
     images: [],
     sharePreparing: true,
     shareImageUrl: "",
+    settingCoverIndex: -1,
+    isSharedView: false,
   },
 
   onLoad(options) {
     const id = String(options.id || "").trim();
+    const isSharedView = options.view === "shared";
     if (!id) {
       wx.showToast({ title: "缺少案例 ID", icon: "none" });
       return;
     }
-    this.setData({ id });
+    this.setData({ id, isSharedView });
     this.loadDetail(id);
   },
 
@@ -96,7 +132,7 @@ Page({
     const item = this.data.caseInfo || {};
     const shareData = {
       title: item.title ? `项目案例｜${item.title}` : "项目案例",
-      path: `/pages/project-case-detail/index?id=${this.data.id}`,
+      path: `/pages/project-case-detail/index?id=${encodeURIComponent(this.data.id)}&view=shared`,
     };
     if (this.data.shareImageUrl) shareData.imageUrl = this.data.shareImageUrl;
     return shareData;
@@ -110,8 +146,16 @@ Page({
 
   goBack() {
     const pages = getCurrentPages();
-    if (pages.length > 1) wx.navigateBack();
-    else wx.navigateTo({ url: "/pages/project-cases/index" });
+    const previous = pages[pages.length - 2];
+    if (previous && previous.route === "pages/project-cases/index") {
+      wx.navigateBack({ delta: 1 });
+      return;
+    }
+    // 分享卡片或其他入口直接打开详情时，用替换方式补回案例列表，避免不断叠加页面。
+    wx.redirectTo({
+      url: "/pages/project-cases/index",
+      fail: () => wx.reLaunch({ url: "/pages/project-cases/index" }),
+    });
   },
 
   previewImage(event) {
@@ -120,49 +164,102 @@ Page({
     if (current && urls.length) wx.previewImage({ current, urls });
   },
 
-  async saveCover() {
-    const cover = this.data.images[0]?.displayUrl;
-    if (!cover) {
-      wx.showToast({ title: "暂无可保存的图片", icon: "none" });
-      return;
-    }
-    wx.showLoading({ title: "正在保存", mask: true });
-    try {
-      const filePath = cover.startsWith("cloud://")
-        ? (await wx.cloud.downloadFile({ fileID: cover })).tempFilePath
-        : (await new Promise((resolve, reject) => wx.downloadFile({ url: cover, success: resolve, fail: reject }))).tempFilePath;
-      await new Promise((resolve, reject) => wx.saveImageToPhotosAlbum({ filePath, success: resolve, fail: reject }));
-      wx.showToast({ title: "图片已保存", icon: "success" });
-    } catch (error) {
-      if (String(error.errMsg || error.message || "").includes("auth deny")) {
-        wx.showModal({
-          title: "需要相册权限",
-          content: "请在设置中允许保存图片到相册。",
-          confirmText: "去设置",
-          success: result => result.confirm && wx.openSetting(),
-        });
-      } else {
-        wx.showToast({ title: "图片保存失败", icon: "none" });
-      }
-    } finally {
-      wx.hideLoading();
-    }
+  onGalleryImageLoad(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (!Number.isInteger(index) || !this.data.images[index]) return;
+    this.setData({ [`images[${index}].imageLoading`]: false });
+  },
+
+  onGalleryImageError(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (!Number.isInteger(index) || !this.data.images[index]) return;
+    this.setData({
+      [`images[${index}].imageLoading`]: false,
+      [`images[${index}].imageLoadFailed`]: true,
+    });
+  },
+
+  setCover(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    const image = this.data.images[index];
+    if (!image || image.isCover || this.data.settingCoverIndex >= 0) return;
+    wx.showModal({
+      title: "设置案例封面",
+      content: "设置后，案例列表和微信分享将使用这张图片作为封面。",
+      confirmText: "设为封面",
+      confirmColor: "#173d6b",
+      success: async result => {
+        if (!result.confirm) return;
+        this.setData({ settingCoverIndex: index });
+        try {
+          const cover = await api.setProjectCaseCover(this.data.id, image);
+          const selectedImage = { ...image, isCover: true };
+          const images = [selectedImage].concat(
+            this.data.images
+              .filter((item, itemIndex) => itemIndex !== index)
+              .map(item => ({ ...item, isCover: false }))
+          );
+          this.setData({
+            images,
+            "caseInfo.coverFileId": cover.coverFileId || image.fileId || "",
+            "caseInfo.coverUrl": cover.coverUrl || image.url || "",
+            sharePreparing: true,
+            shareImageUrl: "",
+          });
+          try {
+            const shareImageUrl = await downloadShareImage(images[0]);
+            this.setData({ shareImageUrl });
+          } catch (error) {
+            console.warn("新封面分享图片准备失败:", error);
+          }
+          wx.showToast({ title: "封面设置成功", icon: "success" });
+        } catch (error) {
+          wx.showToast({ title: error.message || "封面设置失败", icon: "none" });
+        } finally {
+          this.setData({ settingCoverIndex: -1, sharePreparing: false });
+        }
+      },
+    });
   },
 
   async loadDetail(id) {
     this.setData({ loading: true, sharePreparing: true, shareImageUrl: "" });
     try {
       const result = await api.getProjectCase(id);
-      const images = await resolveImageUrls(result.images || []);
+      const resolvedImages = await resolveImageUrls(result.images || []);
+      const coverIndex = findCoverIndex(resolvedImages, result.coverFileId, result.coverUrl);
+      const markedImages = resolvedImages.map((item, index) => ({
+        ...item,
+        isCover: index === coverIndex,
+        imageLoading: true,
+        imageLoadFailed: false,
+      }));
+      const images = coverIndex > 0
+        ? [markedImages[coverIndex]].concat(markedImages.filter((item, index) => index !== coverIndex))
+        : markedImages;
+      const cachedUser = api.getCachedUserInfo() || {};
       const caseInfo = {
         ...result,
+        canManage: result.canManage === true || CASE_MANAGE_ROLES.has(cachedUser.role),
         amountText: money(result.amount),
         dateText: result.caseDate || "日期未设置",
       };
       this.setData({ caseInfo, images, loading: false });
-      if (images.length) {
+      images.forEach((image, index) => {
+        setTimeout(() => {
+          const current = this.data.images[index];
+          if (current && current.displayUrl === image.displayUrl && current.imageLoading) {
+            this.setData({
+              [`images[${index}].imageLoading`]: false,
+              [`images[${index}].imageLoadFailed`]: true,
+            });
+          }
+        }, 8000);
+      });
+      const coverImage = images.find(item => item.isCover) || images[0];
+      if (coverImage) {
         try {
-          const shareImageUrl = await downloadShareImage(images[0]);
+          const shareImageUrl = await downloadShareImage(coverImage);
           this.setData({ shareImageUrl });
         } catch (error) {
           console.warn("案例分享封面准备失败:", error);

@@ -6,7 +6,9 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f9f9ff",
   "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-loading": "tdesign-miniprogram/loading/loading"
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-popup": "tdesign-miniprogram/popup/popup"
   }
 }

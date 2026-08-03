@@ -126,7 +126,17 @@ Page({
   },
 
   close() {
-    wx.navigateBack({ fail: () => wx.redirectTo({ url: "/pages/project-cases/index" }) });
+    const pages = getCurrentPages();
+    const previous = pages[pages.length - 2];
+    if (previous && previous.route === "pages/project-cases/index") {
+      wx.navigateBack({ delta: 1 });
+      return;
+    }
+    // 新增页只返回案例列表，不返回到其他业务页面或继续堆叠页面层级。
+    wx.redirectTo({
+      url: "/pages/project-cases/index",
+      fail: () => wx.reLaunch({ url: "/pages/project-cases/index" }),
+    });
   },
 
   onInput(event) {

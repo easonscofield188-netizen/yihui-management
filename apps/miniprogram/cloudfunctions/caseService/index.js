@@ -10,7 +10,7 @@ const CASE_COLLECTION = 'project_cases';
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
-const CASE_STATUS = Object.freeze({ PUBLISHED: 'published', DRAFT: 'draft' });
+const CASE_STATUS = Object.freeze({ PUBLISHED: 'published', DRAFT: 'draft', DELETED: 'deleted' });
 const FALLBACK_PROJECT_SCENES = Object.freeze([
   { value: 'internal_operation', label: '内部运营' }
 ]);
@@ -166,7 +166,7 @@ function buildCaseCode(caseDate) {
   return `YH-${datePart}-${randomPart}`;
 }
 
-async function getCaseDetail(data) {
+async function getCaseDetail(data, current = null) {
   await ensureCaseCollection();
   const id = safeText(data.id, 80);
   if (!id) return { code: 400, message: '缺少案例 ID' };
@@ -183,7 +183,10 @@ async function getCaseDetail(data) {
   return {
     code: 0,
     message: '查询成功',
-    data: applySceneTranslation(formatCase(item), projectScenes)
+    data: {
+      ...applySceneTranslation(formatCase(item), projectScenes),
+      canManage: Boolean(current && MANAGE_ROLES.has(current.user.role))
+    }
   };
 }
 
@@ -322,6 +325,78 @@ async function createCase(data, current) {
   return { code: 0, message: '案例创建成功', data: { id: result._id, caseCode } };
 }
 
+async function deleteCase(data, current) {
+  if (!MANAGE_ROLES.has(current.user.role)) {
+    return { code: 403, message: '当前账号无删除案例权限' };
+  }
+  await ensureCaseCollection();
+  const id = safeText(data.id, 80);
+  if (!id) return { code: 400, message: '缺少案例 ID' };
+  let item;
+  try {
+    item = (await db.collection(CASE_COLLECTION).doc(id).get()).data;
+  } catch (error) {
+    item = null;
+  }
+  if (!item || item.status === CASE_STATUS.DELETED) {
+    return { code: 404, message: '案例不存在或已经删除' };
+  }
+  await db.collection(CASE_COLLECTION).doc(id).update({
+    data: {
+      status: CASE_STATUS.DELETED,
+      statusLabel: '已删除',
+      deletedBy: current.userId,
+      deletedByName: current.user.nickname || current.user.username || '',
+      deletedTimestamp: Date.now(),
+      deletedAt: db.serverDate(),
+      updateTime: db.serverDate()
+    }
+  });
+  return { code: 0, message: '案例删除成功', data: { id } };
+}
+
+async function setCaseCover(data, current) {
+  if (!MANAGE_ROLES.has(current.user.role)) {
+    return { code: 403, message: '当前账号无设置案例封面权限' };
+  }
+  await ensureCaseCollection();
+  const id = safeText(data.id, 80);
+  const fileId = safeText(data.fileId, 500);
+  const url = safeText(data.url, 1000);
+  if (!id) return { code: 400, message: '缺少案例 ID' };
+  if (!fileId && !url) return { code: 400, message: '请选择有效的案例图片' };
+  let item;
+  try {
+    item = (await db.collection(CASE_COLLECTION).doc(id).get()).data;
+  } catch (error) {
+    item = null;
+  }
+  if (!item || item.status !== CASE_STATUS.PUBLISHED) {
+    return { code: 404, message: '案例不存在或尚未发布' };
+  }
+  const images = Array.isArray(item.images) ? item.images : [];
+  const matchedIndex = images.findIndex(image => (
+    (fileId && (image.fileId === fileId || image.fileID === fileId))
+    || (url && (image.url === url || image.fileUrl === url))
+  ));
+  if (matchedIndex < 0) return { code: 400, message: '所选图片不属于当前案例' };
+  const matched = images[matchedIndex];
+  const reorderedImages = [matched].concat(images.filter((image, index) => index !== matchedIndex));
+  const coverFileId = safeText(matched.fileId || matched.fileID, 500);
+  const coverUrl = safeText(matched.url || matched.fileUrl, 1000);
+  await db.collection(CASE_COLLECTION).doc(id).update({
+    data: {
+      coverFileId,
+      coverUrl,
+      images: reorderedImages,
+      coverUpdatedBy: current.userId,
+      coverUpdatedTimestamp: Date.now(),
+      updateTime: db.serverDate()
+    }
+  });
+  return { code: 0, message: '案例封面设置成功', data: { id, coverFileId, coverUrl } };
+}
+
 async function listCases(data, current) {
   await ensureCaseCollection();
   const categoryCode = normalizeCategory(data.categoryCode);
@@ -364,7 +439,14 @@ exports.main = async (event) => {
   const action = body.action;
   const data = body.data || {};
   try {
-    if (action === 'detail') return await getCaseDetail(data);
+    if (action === 'detail') {
+      let current = null;
+      if (getAuthToken(event, data)) {
+        const authResult = await authenticate(event, data);
+        if (!authResult.error) current = authResult;
+      }
+      return await getCaseDetail(data, current);
+    }
     const current = await authenticate(event, data);
     if (current.error) return current.error;
     switch (action) {
@@ -374,6 +456,10 @@ exports.main = async (event) => {
         return await syncProject(data, current);
       case 'create':
         return await createCase(data, current);
+      case 'delete':
+        return await deleteCase(data, current);
+      case 'setCover':
+        return await setCaseCover(data, current);
       default:
         return { code: 400, message: '未知操作' };
     }

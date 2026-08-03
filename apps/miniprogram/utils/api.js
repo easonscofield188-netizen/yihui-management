@@ -226,6 +226,18 @@ function createProjectCase(data) {
   return callFunction("caseService", "create", data);
 }
 
+function deleteProjectCase(id) {
+  return callFunction("caseService", "delete", { id });
+}
+
+function setProjectCaseCover(id, image) {
+  return callFunction("caseService", "setCover", {
+    id,
+    fileId: image.fileId || "",
+    url: image.url || "",
+  });
+}
+
 function listNotifications(params = {}) {
   return callFunction("notificationService", "list", params).then(normalizeProjectList);
 }
@@ -294,6 +306,7 @@ module.exports = {
   createClient,
   createProject,
   createProjectCase,
+  deleteProjectCase,
   deleteNotification,
   deleteNotifications,
   deleteVoucher,
@@ -320,6 +333,7 @@ module.exports = {
   logout,
   markAllNotificationsRead,
   saveWechatSubscription,
+  setProjectCaseCover,
   syncProjectToCase,
   invalidateUserInfoCache,
   isUserInfoCacheFresh,

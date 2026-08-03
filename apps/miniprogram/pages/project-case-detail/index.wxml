@@ -1,8 +1,7 @@
 <view class="detail-page">
   <view class="detail-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
-    <view class="nav-title">案例详情</view>
-    <button class="nav-share {{sharePreparing ? 'share-disabled' : ''}}" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap"><t-icon name="share" size="42rpx" color="#002045" /></button>
+    <view class="nav-title">{{isSharedView ? '案例介绍' : '案例详情'}}</view>
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
 
@@ -13,15 +12,15 @@
     <view wx:if="{{caseInfo.amountEnabled}}" class="detail-amount">项目报价：¥ {{caseInfo.amountText}}</view>
 
     <view class="image-grid" wx:if="{{images.length}}">
-      <image
-        wx:for="{{images}}"
-        wx:key="displayUrl"
-        class="gallery-image"
-        src="{{item.displayUrl}}"
-        mode="widthFix"
-        data-url="{{item.displayUrl}}"
-        bindtap="previewImage"
-      />
+      <view wx:for="{{images}}" wx:key="displayUrl" class="gallery-item">
+        <image wx:if="{{!item.imageLoadFailed}}" class="gallery-image" src="{{item.displayUrl}}" mode="widthFix" data-index="{{index}}" data-url="{{item.displayUrl}}" bindload="onGalleryImageLoad" binderror="onGalleryImageError" bindtap="previewImage" />
+        <view wx:if="{{item.imageLoading}}" class="gallery-loading"><t-loading size="42rpx" theme="circular" /><text>图片加载中</text></view>
+        <view wx:if="{{item.imageLoadFailed}}" class="gallery-failed"><t-icon name="image-error" size="58rpx" color="#8a96aa" /><text>图片加载失败，请检查网络或 VPN 设置</text></view>
+        <view wx:if="{{!isSharedView && caseInfo.canManage && item.isCover}}" class="cover-status"><t-icon name="check-circle-filled" size="30rpx" color="#ffffff" /><text>当前封面</text></view>
+        <view wx:if="{{!isSharedView && caseInfo.canManage && !item.isCover && !item.imageLoadFailed}}" class="set-cover-position">
+          <t-button t-class="set-cover-button" size="extra-small" theme="default" variant="base" shape="round" icon="image-add" content="设为封面" aria-label="设为封面" loading="{{settingCoverIndex === index}}" disabled="{{settingCoverIndex >= 0}}" data-index="{{index}}" bindtap="setCover" />
+        </view>
+      </view>
     </view>
 
     <view class="description-card" wx:if="{{caseInfo.descriptionEnabled && caseInfo.content}}">
@@ -33,10 +32,6 @@
   <view class="detail-loading" wx:if="{{loading}}"><t-loading size="42rpx" theme="circular" /><text>正在加载案例...</text></view>
 
   <view class="bottom-actions" wx:if="{{caseInfo}}">
-    <button class="friend-share {{sharePreparing ? 'share-disabled' : ''}}" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap">
-      <t-icon name="send" size="40rpx" color="#ffffff" />
-      <text>发送给微信好友</text>
-    </button>
-    <view class="save-cover" bindtap="saveCover"><t-icon name="download" size="42rpx" color="#002045" /></view>
+    <t-button class="friend-share-host" t-class="friend-share {{sharePreparing ? 'share-disabled' : ''}}" theme="primary" shape="round" icon="send" content="发送给微信好友" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap" />
   </view>
 </view>
