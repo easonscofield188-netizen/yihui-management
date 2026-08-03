@@ -172,24 +172,32 @@ Page({
       confirmColor: "#173d6b",
       success: result => {
         if (!result.confirm) return;
-        wx.exitMiniProgram({
-          fail: () => {
-            const pages = getCurrentPages();
-            if (pages.length > 1) {
-              wx.navigateBack({ delta: 1 });
-              return;
-            }
-            wx.redirectTo({
-              url: "/pages/project-cases/index",
-              fail: () => wx.reLaunch({ url: "/pages/project-cases/index" }),
-            });
-          },
+        this.closeSharedPage();
+      },
+    });
+  },
+
+  closeSharedPage() {
+    wx.exitMiniProgram({
+      fail: () => {
+        const pages = getCurrentPages();
+        if (pages.length > 1) {
+          wx.navigateBack({ delta: 1 });
+          return;
+        }
+        wx.redirectTo({
+          url: "/pages/project-cases/index",
+          fail: () => wx.reLaunch({ url: "/pages/project-cases/index" }),
         });
       },
     });
   },
 
   goBack() {
+    if (this.data.isSharedView) {
+      this.closeSharedPage();
+      return;
+    }
     const pages = getCurrentPages();
     const previous = pages[pages.length - 2];
     if (previous && previous.route === "pages/project-cases/index") {

@@ -1,6 +1,6 @@
-<view class="detail-page">
+<view class="detail-page {{isSharedView ? 'shared-view' : ''}}">
   <view class="detail-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
-    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
+    <view class="nav-back" bindtap="goBack"><t-icon name="{{isSharedView ? 'close' : 'chevron-left'}}" size="50rpx" color="#002045" /></view>
     <view class="nav-title">{{isSharedView ? '案例介绍' : '案例详情'}}</view>
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
@@ -31,7 +31,7 @@
 
   <view class="detail-loading" wx:if="{{loading}}"><t-loading size="42rpx" theme="circular" /><text>正在加载案例...</text></view>
 
-  <view class="bottom-actions" wx:if="{{caseInfo}}">
+  <view class="bottom-actions" wx:if="{{caseInfo && !isSharedView}}">
     <t-button class="friend-share-host" t-class="friend-share {{sharePreparing ? 'share-disabled' : ''}}" theme="primary" shape="round" icon="send" content="发送给微信好友" open-type="{{sharePreparing ? '' : 'share'}}" bindtap="onShareTap" />
   </view>
 </view>
