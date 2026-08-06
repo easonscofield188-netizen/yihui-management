@@ -1,0 +1,170 @@
+<page-meta page-style="{{fullTableVisible ? 'overflow: hidden;' : ''}}" />
+<view class="client-page">
+  <image class="client-background" style="top: {{navHeight}}px; height: calc(100vh - {{navHeight}}px);" src="/images/quotation-client-bg.jpg" mode="aspectFill" />
+  <view class="client-shade"></view>
+
+  <view class="client-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-close" bindtap="closePage"><t-icon name="close" size="48rpx" color="#e9fbff" /></view>
+    <view class="nav-title">报价单详情</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view wx:if="{{quotation}}" class="client-content">
+    <view class="hero-section">
+      <view class="project-title-row">
+        <view class="project-name">{{quotation.projectName}}</view>
+        <view class="client-version-trigger {{quotation.versions.length > 1 ? 'clickable' : ''}}" bindtap="openVersionSelector">
+          <text>{{quotation.versionLabel}}</text>
+          <t-icon wx:if="{{quotation.versions.length > 1}}" name="chevron-down" size="22rpx" color="#69dfea" />
+        </view>
+      </view>
+      <view class="project-meta"><text>项目编号：{{quotation.projectCode}}</text><text>最后更新：{{quotation.updatedDate}}</text></view>
+      <view class="status-list">
+        <view class="status-chip confirmed"><t-icon name="check-circle" size="28rpx" color="#45e6a3" /><text>报价已确认</text></view>
+      </view>
+    </view>
+
+    <view class="neon-card amount-card">
+      <view class="amount-card-head">
+        <text class="amount-title">报价总金额</text>
+        <view class="hexagon-badge">
+          <text class="badge-symbol">¥</text>
+        </view>
+      </view>
+      <view class="amount-number">
+        <text class="currency">¥</text>
+        <text class="amount-int">{{quotation.amountInteger}}</text>
+        <text class="amount-dec">{{quotation.amountDecimal}}</text>
+      </view>
+      <view class="amount-card-foot">
+        <text class="amount-notice">* 报价数据仅供本次沟通使用</text>
+        <view class="detail-jump-btn" bindtap="viewQuotationItems">
+          <t-icon name="view-list" size="26rpx" color="#ffffff" />
+          <text>查看报价明细</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{drawings.length}}" class="client-section">
+      <view class="section-heading">
+        <text class="heading-title">项目设计示意图</text>
+        <view wx:if="{{drawings.length > 2}}" class="view-all-btn" bindtap="toggleAllDrawings">
+          <text>{{showAllDrawings ? '收起' : '查看全部'}}</text>
+          <t-icon name="chevron-right" class="arrow-icon {{showAllDrawings ? 'expanded' : ''}}" size="28rpx" color="#31dff4" />
+        </view>
+      </view>
+      <view class="drawing-grid">
+        <view wx:for="{{drawings}}" wx:key="displayName" wx:if="{{showAllDrawings || index < 2}}" class="drawing-item" data-index="{{index}}" bindtap="previewDrawing">
+          <image wx:if="{{item.kind === 'image'}}" class="drawing-image" src="{{item.displayUrl}}" mode="aspectFill" />
+          <view wx:else class="drawing-pdf"><t-icon name="file-pdf" size="58rpx" color="#31dff4" /><text>{{item.displayName}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <view id="client-quotation-table" class="neon-card quotation-card">
+      <view class="quotation-card-head">
+        <view class="card-title-group">
+          <text class="card-title">报价明细</text>
+          <text class="card-tip">（横屏查看效果更佳）</text>
+        </view>
+        <t-button class="client-landscape-host" t-class="client-landscape-button" size="extra-small" theme="default" variant="base" icon="mobile-vibrate" content="点击横屏" bindtap="openFullTable" />
+      </view>
+      <scroll-view class="client-table-scroll" style="height: {{quotation.tableViewportHeight}}rpx;" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="client-table {{quotation.hasLongRemarks ? 'wide' : ''}}">
+          <view class="quotation-header"><text class="quote-name">项目名称</text><text class="quote-unit">单位</text><text class="quote-subtotal">小计（¥）</text><text class="quote-remark-column">备注</text></view>
+          <scroll-view class="client-table-body {{quotation.items.length > 5 ? 'limited' : ''}}" scroll-y="{{quotation.items.length > 5}}" enhanced show-scrollbar="{{false}}">
+            <view wx:for="{{quotation.items}}" wx:key="itemCode" class="quotation-row">
+              <view class="quote-name"><view class="quote-item-name">{{item.name}}</view></view>
+              <text class="quote-unit">{{item.unitText}}</text>
+              <text class="quote-subtotal">{{item.totalText}}</text>
+              <text class="quote-remark-column">{{item.remark || '无备注'}}</text>
+            </view>
+          </scroll-view>
+          <view class="quotation-total"><text>总金额</text><text>¥ {{quotation.amountText}}</text></view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="neon-card notice-card">
+      <view class="card-title icon-title"><t-icon name="info-circle" size="34rpx" color="#22d9ef" /><text>报价须知</text></view>
+      <view wx:for="{{notices}}" wx:key="*this" class="notice-row"><text class="notice-dot">•</text><text>{{item}}</text></view>
+    </view>
+
+    <view class="neon-card company-card">
+      <view class="card-title icon-title">
+        <t-icon name="city" size="34rpx" color="#22d9ef" />
+        <text>公司信息</text>
+      </view>
+      <view class="company-content">
+        <view class="company-avatar">
+          <t-icon name="city" size="48rpx" color="#61efff" />
+        </view>
+        <view class="company-info">
+          <view class="company-row">
+            <text class="company-label">公司名称：</text>
+            <text class="company-value">杭州亿辉文化创意有限公司</text>
+          </view>
+          <view class="company-row margin-top-sm">
+            <text class="company-label">公司地址：</text>
+            <text class="company-value">浙江省杭州市萧山区长三角国际珠宝产业园</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="brand-space"></view>
+  </view>
+
+  <view wx:if="{{loading}}" class="client-loading"><t-loading size="52rpx" theme="circular" /><text>正在加载客户报价...</text></view>
+
+  <t-popup
+    t-class-content="client-version-popup"
+    visible="{{versionPickerVisible}}"
+    placement="bottom"
+    close-on-overlay-click
+    bindvisible-change="onVersionPopupChange"
+  >
+    <view class="client-version-sheet">
+      <view class="client-version-sheet-head">
+        <view>
+          <view class="client-version-sheet-title">切换报价版本</view>
+          <view class="client-version-sheet-subtitle">选择后将展示对应版本的报价信息</view>
+        </view>
+        <view class="client-version-close" bindtap="closeVersionSelector"><t-icon name="close" size="34rpx" color="#8db8c0" /></view>
+      </view>
+      <scroll-view class="client-version-list" scroll-y enhanced show-scrollbar="{{false}}">
+        <view
+          wx:for="{{quotation.versions}}"
+          wx:key="id"
+          class="client-version-item {{item.id === activeVersionId ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectVersion"
+        >
+          <view class="client-version-copy">
+            <text class="client-version-label">{{item.versionLabel}}</text>
+            <text wx:if="{{item.current}}" class="client-version-latest">最新</text>
+          </view>
+          <view class="client-version-check">
+            <t-icon wx:if="{{item.id === activeVersionId}}" name="check" size="30rpx" color="#49ecf8" />
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
+
+  <view wx:if="{{fullTableVisible}}" class="client-landscape-overlay">
+    <view class="client-landscape-panel" style="padding-right: {{landscapeBottomInset}}px; padding-left: {{landscapeTopInset}}px;">
+      <view class="client-landscape-head">
+        <view class="client-landscape-copy"><view class="client-landscape-head-icon"><t-icon name="view-list" size="34rpx" color="#42e8f8" /></view><view><view class="client-landscape-title">报价明细</view><view class="client-landscape-subtitle">上下、左右滑动查看全部报价内容</view></view></view>
+        <view class="client-landscape-close" bindtap="closeFullTable"><text>关闭</text><t-icon name="close" size="32rpx" color="#bff8ff" /></view>
+      </view>
+      <scroll-view class="client-landscape-scroll" scroll-x scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="client-landscape-table">
+          <view class="client-landscape-row client-landscape-header"><view class="client-landscape-cell client-wide-name">项目名称</view><view class="client-landscape-cell client-wide-unit">单位</view><view class="client-landscape-cell client-wide-subtotal">小计（¥）</view><view class="client-landscape-cell client-wide-remark">备注</view></view>
+          <view wx:for="{{quotation.items}}" wx:key="itemCode" class="client-landscape-row"><view class="client-landscape-cell client-wide-name">{{item.name}}</view><view class="client-landscape-cell client-wide-unit">{{item.unitText}}</view><view class="client-landscape-cell client-wide-subtotal">{{item.totalText}}</view><view class="client-landscape-cell client-wide-remark">{{item.remark || '无备注'}}</view></view>
+          <view class="client-landscape-total"><text>总金额</text><text>¥ {{quotation.amountText}}</text></view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

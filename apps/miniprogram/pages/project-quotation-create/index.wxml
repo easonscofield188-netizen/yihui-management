@@ -1,0 +1,107 @@
+<page-meta page-style="{{fileSourceVisible ? 'overflow: hidden;' : ''}}" />
+<view class="create-page">
+  <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="cancel"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">{{navTitle}}</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="form-content">
+    <view class="form-card">
+      <view class="section-title"><view class="title-line"></view><text>基础信息</text></view>
+
+      <view class="field-label">项目名称</view>
+      <view class="input-shell">
+        <t-input t-class="form-input {{editMode ? 'readonly-input' : ''}}" borderless clearable="{{!editMode}}" readonly="{{editMode}}" value="{{form.projectName}}" placeholder="请输入项目名称" maxlength="120" data-field="projectName" bindchange="onBasicInput" />
+      </view>
+
+      <view class="field-label">报价版本</view>
+      <view class="input-shell readonly-shell">
+        <t-input t-class="form-input readonly-input" borderless readonly value="{{versionLoading ? '正在自动生成...' : versionLabel}}" suffix-icon="lock-on" />
+      </view>
+      <view class="field-tip">{{editMode ? '保存后自动生成新版本，历史版本仍会保留' : '根据同名项目的历史报价自动生成'}}</view>
+
+      <view class="field-label">创建时间</view>
+      <view class="input-shell select-shell" bindtap="openDatePicker">
+        <t-input t-class="form-input" borderless readonly value="{{form.createdDate}}" placeholder="请选择创建日期" suffix-icon="calendar" />
+      </view>
+
+      <view class="field-label">项目报价总额 (CNY)</view>
+      <view class="input-shell total-shell">
+        <t-input t-class="form-input total-input" borderless readonly value="¥ {{totalText}}" suffix-icon="lock-on" />
+      </view>
+      <view class="field-tip">根据报价清单自动计算得出</view>
+    </view>
+
+    <view class="form-card quotation-section">
+      <view class="section-heading">
+        <view class="section-title"><view class="title-line"></view><text>报价清单</text></view>
+        <view class="batch-import" bindtap="importItems"><t-loading wx:if="{{importing}}" size="26rpx" theme="circular" /><t-icon wx:else name="file-excel" size="30rpx" color="#455f88" /><text>{{importing ? '正在导入' : '批量导入'}}</text></view>
+      </view>
+
+      <view wx:for="{{items}}" wx:key="localId" class="item-card">
+        <view class="item-delete" data-index="{{index}}" bindtap="deleteItem"><t-icon name="delete" size="34rpx" color="#ba1a1a" /></view>
+        <view class="item-label">类目名称</view>
+        <view class="item-input-shell name-input-shell">
+          <t-input t-class="item-input" borderless value="{{item.name}}" placeholder="请输入类目名称" maxlength="120" adjust-position="{{true}}" cursor-spacing="140" data-index="{{index}}" data-field="name" bindchange="onItemInput" />
+        </view>
+
+        <view class="item-columns">
+          <view class="item-column">
+            <view class="item-label">数量</view>
+            <view class="item-input-shell"><t-input t-class="item-input mono-input" borderless type="digit" value="{{item.quantity}}" placeholder="0" adjust-position="{{true}}" cursor-spacing="160" data-index="{{index}}" data-field="quantity" bindchange="onItemInput" /></view>
+          </view>
+          <view class="item-column">
+            <view class="item-label">单位</view>
+            <view class="item-input-shell"><t-input t-class="item-input" borderless value="{{item.unit}}" placeholder="如：项" maxlength="30" adjust-position="{{true}}" cursor-spacing="160" data-index="{{index}}" data-field="unit" bindchange="onItemInput" /></view>
+          </view>
+          <view class="item-column">
+            <view class="item-label">单价 (¥)</view>
+            <view class="item-input-shell"><t-input t-class="item-input mono-input" borderless type="digit" value="{{item.unitPrice}}" placeholder="0.00" adjust-position="{{true}}" cursor-spacing="160" data-index="{{index}}" data-field="unitPrice" bindchange="onItemInput" /></view>
+          </view>
+        </view>
+
+        <view class="item-total"><text>总价</text><text class="item-total-value">¥ {{item.totalText}}</text></view>
+
+        <view class="item-label remark-label">备注</view>
+        <view class="item-input-shell">
+          <t-input t-class="item-input" borderless value="{{item.remark}}" placeholder="选填..." maxlength="300" adjust-position="{{true}}" cursor-spacing="180" data-index="{{index}}" data-field="remark" bindchange="onItemInput" />
+        </view>
+      </view>
+
+      <t-button t-class="add-item-button" theme="default" variant="base" block icon="add-circle" content="新增报价类目" bindtap="addItem" />
+    </view>
+
+    <view class="form-card drawing-section">
+      <view class="section-title"><view class="title-line"></view><text>设计图纸上传</text></view>
+      <view class="drawing-grid">
+        <view wx:for="{{drawings}}" wx:key="localId" class="drawing-item" data-index="{{index}}" bindtap="previewDrawing">
+          <image wx:if="{{item.kind === 'image'}}" class="drawing-image" src="{{item.tempFilePath}}" mode="aspectFill" />
+          <view wx:else class="pdf-preview"><t-icon name="file-pdf" size="54rpx" color="#ba1a1a" /><text>PDF</text></view>
+          <view class="drawing-delete" data-index="{{index}}" catchtap="deleteDrawing"><t-icon name="close" size="24rpx" color="#ffffff" /></view>
+          <view class="drawing-name">{{item.name}}</view>
+        </view>
+        <view wx:if="{{drawings.length < 9}}" class="drawing-upload" bindtap="openFileSource">
+          <t-icon name="cloud-upload" size="52rpx" color="#5f6876" />
+          <text class="upload-title">点击上传图纸</text>
+          <text class="upload-tip">PNG、JPG 或 PDF</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="submit-bar">
+    <t-button class="footer-button-host" t-class="cancel-button" theme="default" variant="outline" shape="round" content="取消" disabled="{{submitting}}" bindtap="cancel" />
+    <t-button class="footer-button-host" t-class="submit-button" theme="primary" shape="round" icon="send" content="{{submitText}}" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit" />
+  </view>
+
+  <t-date-time-picker t-class-confirm="picker-confirm" visible="{{datePickerVisible}}" mode="date" value="{{form.createdDate || today}}" end="{{today}}" title="选择创建日期" confirm-btn="确定" bindconfirm="confirmDate" bindcancel="closeDatePicker" bindclose="closeDatePicker" />
+
+  <t-popup t-class-content="file-source-popup" visible="{{fileSourceVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="closeFileSource">
+    <view class="file-source-panel">
+      <view class="file-source-head"><view><view class="file-source-title">上传设计图纸</view><view class="file-source-tip">单个文件最大 10MB，最多上传 9 个</view></view><view bindtap="closeFileSource"><t-icon name="close" size="40rpx" color="#43474e" /></view></view>
+      <view class="file-source-option" bindtap="chooseDrawingImages"><view class="source-icon image-source"><t-icon name="image" size="40rpx" color="#1f5b9b" /></view><view class="source-copy"><view>上传图片</view><text>从相册选择或拍摄 JPG、PNG 图片</text></view><t-icon name="chevron-right" size="34rpx" color="#9aa1ac" /></view>
+      <view class="file-source-option" bindtap="chooseDrawingPdfs"><view class="source-icon pdf-source"><t-icon name="file-pdf" size="40rpx" color="#ba1a1a" /></view><view class="source-copy"><view>上传 PDF 文件</view><text>从微信文件中选择设计图纸</text></view><t-icon name="chevron-right" size="34rpx" color="#9aa1ac" /></view>
+    </view>
+  </t-popup>
+</view>

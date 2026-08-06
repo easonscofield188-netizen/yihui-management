@@ -194,6 +194,10 @@ Page({
     wx.navigateTo({ url: "/pages/project-cases/index" });
   },
 
+  openProjectQuotations() {
+    wx.navigateTo({ url: "/pages/project-quotations/index" });
+  },
+
   openNotifications() {
     wx.navigateTo({ url: "/pages/notification-list/index" });
   },

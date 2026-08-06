@@ -4,6 +4,7 @@ const USER_CACHE_AT_KEY = "userInfoCachedAt";
 const EXPIRES_KEY = "sessionExpiresAt";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const USER_CACHE_TTL_MS = 5 * 60 * 1000;
+const PUBLIC_ROUTES = new Set(["pages/project-quotation-client/index"]);
 
 function getStoredExpiresAt() {
   return Number(wx.getStorageSync(EXPIRES_KEY) || 0);
@@ -106,10 +107,15 @@ function ensureAuthOnShow() {
   const pages = getCurrentPages();
   const current = pages[pages.length - 1];
   const onLoginPage = current && current.route === "pages/login/index";
+  const onPublicPage = Boolean(current && PUBLIC_ROUTES.has(current.route));
   const token = wx.getStorageSync(TOKEN_KEY) || "";
-  if (!token) return false;
+  if (!token) return onPublicPage;
   const expiresAt = getStoredExpiresAt();
   if (expiresAt && Date.now() > expiresAt) {
+    if (onPublicPage) {
+      clearSession();
+      return true;
+    }
     if (!onLoginPage) redirectToLogin();
     else clearSession();
     return false;
@@ -214,6 +220,43 @@ function listProjectCases(params = {}) {
   return callFunction("caseService", "list", params).then(normalizeProjectList);
 }
 
+function listProjectQuotations(params = {}) {
+  return callFunction("quotationService", "list", params).then(normalizeProjectList);
+}
+
+function createProjectQuotation(data) {
+  return callFunction("quotationService", "create", data);
+}
+
+function createProjectQuotationVersion(data) {
+  return callFunction("quotationService", "createVersion", data);
+}
+
+function getProjectQuotation(id) {
+  return callFunction("quotationService", "detail", { id });
+}
+
+function prepareProjectQuotationShare(id) {
+  return callFunction("quotationService", "prepareShare", { id });
+}
+
+function getPublicProjectQuotation(id, shareToken, versionId = "") {
+  return callFunction(
+    "quotationService",
+    "publicDetail",
+    { id, shareToken, versionId },
+    { skipAuthRedirect: true }
+  );
+}
+
+function getNextProjectQuotationVersion(projectName) {
+  return callFunction("quotationService", "nextVersion", { projectName });
+}
+
+function parseProjectQuotationExcel(data) {
+  return callFunction("quotationService", "parseExcel", data);
+}
+
 function getProjectCase(id) {
   return callFunction("caseService", "detail", { id }, { skipAuthRedirect: true });
 }
@@ -306,6 +349,8 @@ module.exports = {
   createClient,
   createProject,
   createProjectCase,
+  createProjectQuotation,
+  createProjectQuotationVersion,
   deleteProjectCase,
   deleteNotification,
   deleteNotifications,
@@ -315,7 +360,10 @@ module.exports = {
   getCachedUserInfo,
   getGlobalConfig,
   getNextEmployeeNo,
+  getNextProjectQuotationVersion,
   getProjectOverview,
+  getProjectQuotation,
+  getPublicProjectQuotation,
   getProjectCase,
   getNotificationDetail,
   getNotificationUnreadCount,
@@ -327,6 +375,9 @@ module.exports = {
   listProjects,
   listFinancialProjects,
   listProjectCases,
+  listProjectQuotations,
+  parseProjectQuotationExcel,
+  prepareProjectQuotationShare,
   listNotificationIds,
   listNotifications,
   login,

@@ -1,0 +1,136 @@
+<page-meta page-style="{{fullTableVisible ? 'overflow: hidden;' : ''}}" />
+<view class="detail-page">
+  <view class="detail-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="{{isSharedView ? 'close' : 'chevron-left'}}" size="50rpx" color="#002045" /></view>
+    <view class="nav-title">报价详情</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view wx:if="{{quotation}}" class="detail-content">
+    <view class="project-head">
+      <view class="project-copy">
+        <view class="project-name">{{quotation.projectName}}</view>
+        <view class="project-code">项目编号：{{quotation.projectCode}}</view>
+      </view>
+      <view class="version-tag {{quotation.versionColorClass}} {{quotation.versions.length > 1 ? 'clickable' : ''}}" bindtap="openVersionSelector">
+        <text class="version-text">{{quotation.versionButtonText}}</text>
+        <t-icon wx:if="{{quotation.versions.length > 1}}" name="chevron-down" size="24rpx" color="#173d6b" class="version-arrow" />
+      </view>
+    </view>
+
+    <view class="amount-card">
+      <view class="amount-watermark"><t-icon name="money" size="180rpx" color="rgba(255,255,255,.1)" /></view>
+      <view class="amount-label">总计报价 (CNY)</view>
+      <view class="amount-value"><text class="currency">¥</text><text>{{quotation.amountText}}</text></view>
+      <view class="amount-divider"></view>
+      <view class="amount-meta"><t-icon name="time" size="28rpx" color="rgba(255,255,255,.68)" /><text>最后更新：{{quotation.updatedDate}}</text></view>
+      <view class="amount-note">注：编辑并保存将自动生成新版本</view>
+    </view>
+
+    <view class="section-head">
+      <view class="section-title">设计图纸</view>
+      <view class="section-count">{{drawings.length}} 张已上传</view>
+    </view>
+    <view wx:if="{{drawings.length}}" class="drawing-grid">
+      <view wx:for="{{drawings}}" wx:key="displayName" class="drawing-card" data-index="{{index}}" bindtap="previewDrawing">
+        <image wx:if="{{item.kind === 'image'}}" class="drawing-image" src="{{item.displayUrl}}" mode="aspectFill" />
+        <view wx:else class="pdf-card"><t-icon name="file-pdf" size="70rpx" color="#ba1a1a" /><text>{{item.displayName}}</text></view>
+      </view>
+    </view>
+    <view wx:else class="drawing-empty"><t-icon name="image-off" size="46rpx" color="#8993a4" /><text>暂无设计图纸</text></view>
+
+    <view class="section-head quotation-heading"><view class="section-title">报价清单</view></view>
+    <view class="landscape-tip">
+      <view class="tip-copy"><view class="rotate-icon"><t-icon name="mobile-vibrate" size="34rpx" color="#455f88" /></view><text>点击全屏横屏观看体验更佳</text></view>
+      <t-button t-class="fullscreen-button" size="extra-small" theme="default" variant="base" icon="fullscreen" content="全屏" bindtap="openFullTable" />
+    </view>
+    <view class="quotation-table-frame">
+      <scroll-view class="quotation-table-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="quotation-table">
+        <view class="table-row table-header"><view class="cell name-cell">项目名称</view><view class="cell price-cell">单价 (¥)</view><view class="cell quantity-cell">数量</view><view class="cell subtotal-cell">小计 (¥)</view><view class="cell remark-cell">备注</view></view>
+        <view wx:for="{{quotation.items}}" wx:key="itemCode" class="table-row">
+          <view class="cell name-cell"><view class="item-name">{{item.name}}</view></view>
+          <view class="cell price-cell">{{item.unitPriceText}}</view>
+          <view class="cell quantity-cell">{{item.quantityUnitText}}</view>
+          <view class="cell subtotal-cell">{{item.totalText}}</view>
+          <view class="cell remark-cell"><view class="item-remark">{{item.remark || '无备注'}}</view></view>
+        </view>
+        <view class="table-total"><text>各项费用总和 (CNY)</text><text class="total-number">¥ {{quotation.amountText}}</text></view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="version-history">
+      <view class="history-title"><t-icon name="history" size="30rpx" color="#74777f" /><text>版本记录</text></view>
+      <view wx:for="{{quotation.versions}}" wx:key="id" class="history-row {{item.current ? 'current' : ''}}">
+        <view class="history-version">{{item.versionDisplayLabel}}</view>
+        <view class="history-meta">{{item.updatedDateTime}} 由 {{item.updatedByName}} {{item.versionSequence === 1 ? '创建' : '修改'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading && !quotation}}" class="detail-loading"><t-loading size="48rpx" theme="circular" /><text>正在加载报价详情...</text></view>
+
+  <view wx:if="{{loading && quotation}}" class="version-loading-mask">
+    <view class="version-loading-card">
+      <t-loading size="44rpx" theme="circular" />
+      <text class="version-loading-text">正在加载版本数据...</text>
+    </view>
+  </view>
+
+  <view wx:if="{{quotation && !isSharedView}}" class="bottom-actions {{quotation.canManage && quotation.isCurrentVersion ? 'two-actions' : 'one-action'}}">
+    <t-button class="footer-host" t-class="share-button" theme="default" variant="outline" shape="round" icon="share" content="分享给客户" open-type="{{clientShareReady ? 'share' : ''}}" bindtap="onShareTap" />
+    <t-button wx:if="{{quotation.canManage && quotation.isCurrentVersion}}" class="footer-host" t-class="edit-button" theme="primary" shape="round" icon="edit" content="编辑" bindtap="editQuotation" />
+  </view>
+
+  <view wx:if="{{fullTableVisible}}" class="landscape-overlay">
+    <view class="landscape-panel" style="padding-right: {{landscapeBottomInset}}px; padding-left: {{landscapeTopInset}}px;">
+      <view class="landscape-head">
+        <view class="landscape-head-copy">
+          <view class="landscape-head-icon"><t-icon name="view-list" size="34rpx" color="#455f88" /></view>
+          <view><view class="landscape-title">报价清单</view><view class="landscape-subtitle">上下滑动查看全部报价类目</view></view>
+        </view>
+        <view class="landscape-close-action" aria-label="关闭横屏报价清单" bindtap="closeFullTable"><text>关闭</text><t-icon name="close" size="32rpx" color="#002045" /></view>
+      </view>
+      <scroll-view class="landscape-table-scroll" scroll-x scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="landscape-table">
+          <view class="landscape-row landscape-header"><view class="landscape-cell landscape-name">项目名称</view><view class="landscape-cell landscape-price">单价 (¥)</view><view class="landscape-cell landscape-quantity">数量</view><view class="landscape-cell landscape-subtotal">小计 (¥)</view><view class="landscape-cell landscape-remark">备注</view></view>
+          <view wx:for="{{quotation.items}}" wx:key="itemCode" class="landscape-row">
+            <view class="landscape-cell landscape-name"><view class="item-name">{{item.name}}</view></view>
+            <view class="landscape-cell landscape-price">{{item.unitPriceText}}</view>
+            <view class="landscape-cell landscape-quantity">{{item.quantityUnitText}}</view>
+            <view class="landscape-cell landscape-subtotal">{{item.totalText}}</view>
+            <view class="landscape-cell landscape-remark"><view class="item-remark">{{item.remark || '无备注'}}</view></view>
+          </view>
+          <view class="landscape-total"><text>各项费用总和 (CNY)</text><text>¥ {{quotation.amountText}}</text></view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 版本切换弹窗 -->
+  <view wx:if="{{versionPickerVisible}}" class="version-picker-mask" bindtap="closeVersionSelector">
+    <view class="version-picker-sheet" catchtap="true">
+      <view class="version-picker-header">
+        <text class="version-picker-title">切换报价版本</text>
+        <view class="version-picker-close" bindtap="closeVersionSelector">
+          <t-icon name="close" size="36rpx" color="#74777f" />
+        </view>
+      </view>
+      <view class="version-picker-list">
+        <view
+          wx:for="{{quotation.versions}}"
+          wx:key="id"
+          class="version-picker-item {{item.id === id ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onSelectVersionItem"
+        >
+          <view class="version-item-left">
+            <text class="version-item-label">{{item.versionDisplayLabel}}</text>
+          </view>
+          <t-icon wx:if="{{item.id === id}}" name="check" size="36rpx" color="#0052d9" />
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,63 @@
+<view class="quotation-page">
+  <view class="quotation-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
+    <view class="nav-title">报价单列表</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="quotation-tools">
+    <view class="search-shell">
+      <t-input t-class="quotation-search" borderless clearable prefix-icon="search" value="{{keyword}}" placeholder="输入项目名称搜索" bindchange="onKeywordChange" />
+    </view>
+    <scroll-view class="year-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="year-list">
+        <view wx:for="{{yearOptions}}" wx:key="value" class="year-chip {{yearIndex === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onYearTap">{{item.label}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="quotation-list">
+    <view wx:for="{{quotations}}" wx:key="_id" class="quotation-card" data-id="{{item._id}}" bindtap="openQuotation">
+      <view class="card-head">
+        <view class="card-heading">
+          <view class="project-name">{{item.projectName}}</view>
+          <view class="project-meta">
+            <text class="version-badge {{item.versionColorClass}}">{{item.versionLabel}}</text>
+            <text class="project-code">项目代码：{{item.projectCode}}</text>
+          </view>
+        </view>
+        <t-icon name="chevron-right" size="40rpx" color="#74777f" />
+      </view>
+      <view class="card-divider"></view>
+      <view class="card-foot">
+        <view class="amount-block">
+          <view class="data-label">报价总额</view>
+          <view class="quotation-amount">¥ {{item.amountText}}</view>
+        </view>
+        <view class="date-block">
+          <view class="data-label">创建日期</view>
+          <view class="created-date">{{item.createdDate}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="initial-loading" wx:if="{{loading && !quotations.length}}">
+      <t-loading size="50rpx" theme="circular" />
+      <view class="state-title">正在加载项目报价</view>
+      <view class="state-description">请稍候...</view>
+    </view>
+
+    <view class="empty-state" wx:if="{{!loading && !quotations.length}}">
+      <view class="empty-icon"><t-icon name="file-paste" size="84rpx" color="#86a0cd" /></view>
+      <view class="state-title">{{keyword || yearIndex > 0 ? '暂无匹配报价单' : '暂无项目报价'}}</view>
+      <view class="state-description">{{keyword || yearIndex > 0 ? '请更换项目名称或年度后重试' : '创建报价单后会显示在这里'}}</view>
+    </view>
+
+    <view class="list-loading" wx:if="{{loading && quotations.length}}"><t-loading size="36rpx" theme="circular" /><text>正在加载报价单...</text></view>
+    <view class="list-loading" wx:if="{{!loading && quotations.length && !hasMore}}">没有更多报价单了</view>
+  </view>
+
+  <view wx:if="{{canManage}}" class="create-bar">
+    <t-button t-class="create-button" theme="primary" shape="round" icon="add" content="新建报价单" bindtap="createQuotation" />
+  </view>
+</view>
