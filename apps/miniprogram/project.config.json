@@ -44,7 +44,7 @@
     "swc": false,
     "disableSWC": true
   },
-  "appid": "wxe7b415a037d54048",
+  "appid": "wxf72d676d77e11904",
   "projectname": "yihui-mobile-accounting",
   "libVersion": "3.15.2",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
@@ -63,14 +63,14 @@
   "srcMiniprogramRoot": "/",
   "packOptions": {
     "ignore": [
-  {
-    "type": "folder",
-    "value": "scripts"
-  },
-  {
-    "type": "folder",
-    "value": "pages/example"
-  },
+      {
+        "type": "folder",
+        "value": "scripts"
+      },
+      {
+        "type": "folder",
+        "value": "pages/example"
+      },
       {
         "type": "folder",
         "value": "components/cloudTipModal"
