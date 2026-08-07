@@ -17,9 +17,15 @@ page { background: #f9f9ff; }
 .amount-currency { color: #343943; font-size: 58rpx; }
 .amount-input { flex: 1; min-height: 130rpx; color: #002045; font-size: 58rpx; font-weight: 700; line-height: 130rpx; }
 .recommend-row { display: flex; padding-top: 24rpx; align-items: center; justify-content: space-between; border-top: 2rpx solid #c4c6cf; color: #43474e; font-size: 25rpx; }
+.money-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
+.settled-control { display: flex; align-items: center; gap: 12rpx; }
+.settled-text { color: #43474e; font-size: 26rpx; }
 .received-card { padding-bottom: 28rpx; }
 .received-row { min-height: 110rpx; }
-.received-input { flex: 1; min-height: 96rpx; color: #002045; font-size: 40rpx; font-weight: 600; line-height: 96rpx; }
+.received-input { --td-input-disabled-text-color: #5a606d; flex: 1; min-height: 96rpx; color: #002045; font-size: 40rpx; font-weight: 600; line-height: 96rpx; }
+.received-input.disabled { opacity: 1; color: #5a606d !important; -webkit-text-fill-color: #5a606d !important; }
+.received-input.disabled .t-input__control,
+.received-input.disabled .t-input__control--disabled { color: #5a606d !important; -webkit-text-fill-color: #5a606d !important; opacity: 1 !important; }
 .staff-head { display: flex; margin-bottom: 28rpx; align-items: flex-start; justify-content: space-between; }
 .staff-subtitle { margin-top: 4rpx; color: #343943; font-size: 34rpx; }
 .staff-icon { display: flex; width: 88rpx; height: 88rpx; align-items: center; justify-content: center; border-radius: 18rpx; background: #e7ebf0; }

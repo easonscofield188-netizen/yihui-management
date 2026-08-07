@@ -21,11 +21,17 @@
       <view class="recommend-row"><text>根据项目规模推荐的基础配置</text><t-icon name="info-circle" size="34rpx" color="#002045" bindtap="showRecommendation" /></view>
     </view>
 
-    <view class="money-card received-card">
-      <view class="card-label">已收金额</view>
+    <view id="money-received" class="money-card received-card">
+      <view class="money-label-row">
+        <view class="card-label">已收金额</view>
+        <view class="settled-control">
+          <text class="settled-text">已结清</text>
+          <t-switch size="small" value="{{isFullySettled}}" bindchange="onFullySettledChange" />
+        </view>
+      </view>
       <view class="amount-row received-row">
         <text class="currency">¥</text>
-        <t-input t-class="received-input" borderless type="digit" value="{{form.receivedAmount}}" placeholder="输入金额" placeholder-style="color: #c9ccd3" data-field="receivedAmount" bindchange="onMoneyChange" />
+        <t-input t-class="received-input {{isFullySettled ? 'disabled' : ''}}" borderless type="digit" disabled="{{isFullySettled}}" value="{{form.receivedAmount}}" placeholder="输入金额" placeholder-style="color: #c9ccd3" data-field="receivedAmount" bindchange="onMoneyChange" />
       </view>
     </view>
 

@@ -19,6 +19,13 @@ function cleanMoney(value) {
   return `${whole}.${source.slice(firstDot + 1).replace(/\./g, "").slice(0, 2)}`;
 }
 
+function toCents(value) {
+  const cleaned = cleanMoney(value);
+  if (!cleaned) return 0;
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? Math.round(num * 100) : 0;
+}
+
 function asMoney(value) {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
@@ -31,6 +38,7 @@ Page({
     pageTitle: "新建项目",
     isEditMode: false,
     isClosedEdit: false,
+    isFullySettled: false,
     form: {
       amount: "",
       receivedAmount: "",
@@ -47,14 +55,21 @@ Page({
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
     const isEditMode = draft._mode === "edit";
+    const amountStr = draft.amount === undefined ? "" : String(draft.amount);
+    const receivedStr = draft.receivedAmount === undefined ? "" : String(draft.receivedAmount);
+    const amountCents = toCents(amountStr);
+    const receivedCents = toCents(receivedStr);
+    const isFullySettled = amountCents > 0 && amountCents === receivedCents;
+
     this.setData({
       ...getNavMetrics(),
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       isEditMode,
       isClosedEdit: isEditMode && ["closed", "archived"].includes(draft._originalStatus || draft.status),
+      isFullySettled,
       form: {
-        amount: draft.amount === undefined ? "" : String(draft.amount),
-        receivedAmount: draft.receivedAmount === undefined ? "" : String(draft.receivedAmount),
+        amount: amountStr,
+        receivedAmount: receivedStr,
         staffCount: Math.min(99, Math.max(1, Number(draft.staffCount) || 1)),
       },
     });
@@ -63,7 +78,63 @@ Page({
   onMoneyChange(event) {
     const field = event.currentTarget.dataset.field;
     if (this.data.isClosedEdit && field === "amount") return;
-    this.setData({ [`form.${field}`]: cleanMoney(event.detail.value) });
+    if (this.data.isFullySettled && field === "receivedAmount") return;
+
+    const value = cleanMoney(event.detail.value);
+
+    if (field === "amount") {
+      let isFullySettled = this.data.isFullySettled;
+      let nextReceived = this.data.form.receivedAmount;
+
+      // 开关打开的情况下，如果修改了订单金额：自动开关关闭，已收金额变成0(清空)
+      if (isFullySettled) {
+        isFullySettled = false;
+        nextReceived = "";
+      } else {
+        const amountCents = toCents(value);
+        const receivedCents = toCents(nextReceived);
+        isFullySettled = amountCents > 0 && amountCents === receivedCents;
+      }
+
+      this.setData({
+        "form.amount": value,
+        "form.receivedAmount": nextReceived,
+        isFullySettled,
+      });
+      return;
+    }
+
+    if (field === "receivedAmount") {
+      const amountCents = toCents(this.data.form.amount);
+      const receivedCents = toCents(value);
+      const isFullySettled = amountCents > 0 && amountCents === receivedCents;
+
+      this.setData({
+        "form.receivedAmount": value,
+        isFullySettled,
+      });
+    }
+  },
+
+  onFullySettledChange(event) {
+    const isFullySettled = Boolean(event.detail && event.detail.value);
+    if (!isFullySettled) {
+      this.setData({ isFullySettled: false });
+      return;
+    }
+
+    const amount = cleanMoney(this.data.form.amount);
+    if (toCents(amount) <= 0) {
+      this.setData({ isFullySettled: false });
+      wx.showToast({ title: "请先填写订单金额", icon: "none" });
+      return;
+    }
+
+    wx.hideKeyboard();
+    this.setData({
+      isFullySettled: true,
+      "form.receivedAmount": amount,
+    });
   },
 
   onStaffChange(event) {
