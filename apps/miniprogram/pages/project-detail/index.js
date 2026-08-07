@@ -363,13 +363,17 @@ Page({
       uploadedFileId = uploadResult.fileID;
       const urlResult = await wx.cloud.getTempFileURL({ fileList: [uploadedFileId] });
       const fileUrl = urlResult.fileList[0].tempFileURL;
+      const seqIndex = (this.data.vouchers || []).length + 1;
+      const seqStr = String(seqIndex).padStart(2, "0");
+      const formattedFileName = `成本凭证_${seqStr}${extension}`;
       await api.addVoucher({
         projectId: this.data.projectId,
-        fileName: cloudPath.split("/").pop(),
+        fileName: formattedFileName,
         fileId: uploadedFileId,
         fileUrl,
         fileSize: file.size || 0,
         mimeType: file.fileType === "video" ? "video/mp4" : "image/jpeg",
+        uploadSeq: seqIndex,
       });
       wx.showToast({ title: "凭证已上传", icon: "success" });
       await this.loadDetail();

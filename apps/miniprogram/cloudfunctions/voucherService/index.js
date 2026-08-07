@@ -327,7 +327,8 @@ async function addVoucher(params) {
     uploadTime = Date.now(),
     fileSize,
     mimeType,
-    clientUploadId
+    clientUploadId,
+    uploadSeq
   } = params;
 
   if (!fileId || !fileUrl) {
@@ -340,6 +341,23 @@ async function addVoucher(params) {
   try {
     const projectResult = await db.collection('projects').doc(projectId).get();
     if (!projectResult.data) return { code: 404, message: '项目不存在' };
+
+    // 提取扩展名 (如 .png, .jpg, .pdf)
+    const rawName = fileName || fileUrl || fileId || '';
+    const extMatch = String(rawName).match(/\.[a-zA-Z0-9]+$/);
+    const ext = extMatch ? extMatch[0].toLowerCase() : (mimeType && mimeType.includes('pdf') ? '.pdf' : '.png');
+
+    // 格式化 fileName：成本凭证_上传顺序数字(保留两位).扩展名（如 成本凭证_01.png）
+    let seqNum = 1;
+    if (uploadSeq && Number(uploadSeq) > 0) {
+      seqNum = Number(uploadSeq);
+    } else {
+      const countRes = await db.collection('project_vouchers').where({ projectId }).count();
+      seqNum = ((countRes && countRes.total) || 0) + 1;
+    }
+    const seqStr = String(seqNum).padStart(2, '0');
+    const formattedFileName = `成本凭证_${seqStr}${ext}`;
+
     const idempotencySource = `${projectId}:${clientUploadId || fileId}`;
     const voucherId = crypto.createHash('sha256').update(idempotencySource).digest('hex');
     const voucherRef = db.collection('project_vouchers').doc(voucherId);
@@ -353,7 +371,7 @@ async function addVoucher(params) {
     await voucherRef.set({
       data: {
         projectId,
-        fileName,
+        fileName: formattedFileName,
         fileId,
         fileUrl,
         clientUploadId: clientUploadId || '',
@@ -364,7 +382,7 @@ async function addVoucher(params) {
         updateTime: db.serverDate()
       }
     });
-    return { code: 0, message: 'success', data: { id: voucherId, existed: Boolean(existingData) } };
+    return { code: 0, message: 'success', data: { id: voucherId, existed: Boolean(existingData), fileName: formattedFileName } };
   } catch (err) {
     console.error('添加凭证失败:', err);
     return { code: 500, message: '添加失败', error: err.message };

@@ -427,6 +427,12 @@ Page({
 
   async uploadVoucherOnce(projectId, file) {
     const extension = fileExtension(file.tempFilePath);
+    const existingCount = (this.data.files || []).filter((item) => item.isExisting).length;
+    const pendingIndex = (this.data.files || []).findIndex((item) => item.id === file.id);
+    const seqIndex = existingCount + (pendingIndex >= 0 ? pendingIndex : 0) + 1;
+    const seqStr = String(seqIndex).padStart(2, "0");
+    const extDot = extension.startsWith(".") ? extension : `.${extension}`;
+    const formattedFileName = `成本凭证_${seqStr}${extDot}`;
     const pathInfo = buildVoucherCloudPath(this.data.projectName, extension, file.cloudFileName);
     file.cloudFileName = pathInfo.fileName;
     if (!this.data.files.find((item) => item.id === file.id && item.cloudFileName === pathInfo.fileName)) {
@@ -437,28 +443,29 @@ Page({
       const uploadResult = await withTimeout(
         wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
         UPLOAD_TIMEOUT_MS,
-        `${file.name} 上传超时`
+        `${formattedFileName} 上传超时`
       );
       const fileId = uploadResult.fileID;
       const urlResult = await withTimeout(
         wx.cloud.getTempFileURL({ fileList: [fileId] }),
         SAVE_VOUCHER_TIMEOUT_MS,
-        `${file.name} 获取地址超时`
+        `${formattedFileName} 获取地址超时`
       );
       const fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
-      if (!fileUrl) throw new Error(`${file.name} 获取访问地址失败`);
+      if (!fileUrl) throw new Error(`${formattedFileName} 获取访问地址失败`);
       const voucher = await withTimeout(
         api.addVoucher({
           projectId,
-          fileName: file.name,
+          fileName: formattedFileName,
           fileId,
           fileUrl,
           fileSize: file.size,
           mimeType: file.isImage ? `image/${extension === "jpg" ? "jpeg" : extension}` : "application/pdf",
           clientUploadId: file.id,
+          uploadSeq: seqIndex,
         }),
         SAVE_VOUCHER_TIMEOUT_MS,
-        `${file.name} 保存记录超时`
+        `${formattedFileName} 保存记录超时`
       );
       return { success: true, fileId, voucherId: voucher && voucher.id };
     } catch (error) {
