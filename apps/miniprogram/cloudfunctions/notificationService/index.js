@@ -10,7 +10,19 @@ const SESSION_COLLECTION = 'auth_sessions';
 const NOTIFICATION_COLLECTION = 'notifications';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
-const WECHAT_SUBSCRIBE_TEMPLATE_ID = 'YQoHfMgZd9EnpJGKxzGO2yGcB0ZyK4V8_eLMpQXbrJY';
+
+async function getWechatSubscribeTemplateId() {
+  try {
+    const res = await db.collection('system_configs').where({ key: 'wechat_subscribe_template_id', isActive: true }).limit(1).get();
+    if (res.data && res.data[0] && res.data[0].value) {
+      return String(res.data[0].value).trim();
+    }
+  } catch (err) {
+    console.error('获取订阅模板配置失败:', err);
+  }
+  return process.env.WECHAT_SUBSCRIBE_TEMPLATE_ID || 'AzJTLvxbpAoCM3IoQYfp5DsSKM4IjqCAwmsD1F_oXqA';
+}
+
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_STATUS = Object.freeze({ UNREAD: 'unread', READ: 'read' });
@@ -223,7 +235,8 @@ function normalizeWechatSubscriptionStatus(value) {
     : WECHAT_SUBSCRIPTION_STATUS.REJECTED;
 }
 
-function formatWechatSubscription(user) {
+async function formatWechatSubscription(user) {
+  const templateId = await getWechatSubscribeTemplateId();
   const status = normalizeWechatSubscriptionStatus(
     user.wechatSubscriptionStatus || WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND
   );
@@ -234,7 +247,7 @@ function formatWechatSubscription(user) {
       ? '提醒次数已用完'
       : WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[status].label);
   return {
-    templateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+    templateId,
     status,
     statusLabel,
     isBound: Boolean(user.wechatOpenId),
@@ -245,16 +258,18 @@ function formatWechatSubscription(user) {
 
 async function getWechatSubscriptionStatus(current) {
   if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
+  const formatted = await formatWechatSubscription(current.user);
   return {
     code: 0,
     message: '查询成功',
-    data: formatWechatSubscription(current.user)
+    data: formatted
   };
 }
 
 async function saveWechatSubscription(data, current) {
   if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
-  if (data.templateId !== WECHAT_SUBSCRIBE_TEMPLATE_ID) {
+  const templateId = await getWechatSubscribeTemplateId();
+  if (data.templateId !== templateId) {
     return { code: 400, message: '订阅消息模板不匹配' };
   }
   const status = normalizeWechatSubscriptionStatus(data.status);
@@ -278,7 +293,7 @@ async function saveWechatSubscription(data, current) {
 
   const updateData = {
     wechatOpenId: openId,
-    wechatSubscriptionTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+    wechatSubscriptionTemplateId: templateId,
     wechatSubscriptionStatus: status,
     wechatSubscriptionStatusLabel: WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[status].label,
     wechatSubscriptionUpdatedTimestamp: Date.now(),
@@ -290,10 +305,11 @@ async function saveWechatSubscription(data, current) {
   }
   await db.collection('users').doc(current.userId).update({ data: updateData });
   const latest = await db.collection('users').doc(current.userId).get();
+  const formatted = await formatWechatSubscription(latest.data || {});
   return {
     code: 0,
     message: status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? '微信提醒已开启一次' : '订阅状态已更新',
-    data: formatWechatSubscription(latest.data || {})
+    data: formatted
   };
 }
 

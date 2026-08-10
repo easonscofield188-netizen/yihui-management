@@ -15,10 +15,20 @@ cloud.init({
 const db = cloud.database();
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
+const SESSION_COLLECTION = 'auth_sessions';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const NOTIFICATION_COLLECTION = 'notifications';
-const WECHAT_SUBSCRIBE_TEMPLATE_ID = 'YQoHfMgZd9EnpJGKxzGO2yGcB0ZyK4V8_eLMpQXbrJY';
-const SESSION_COLLECTION = 'auth_sessions';
+async function getWechatSubscribeTemplateId() {
+  try {
+    const res = await db.collection('system_configs').where({ key: 'wechat_subscribe_template_id', isActive: true }).limit(1).get();
+    if (res.data && res.data[0] && res.data[0].value) {
+      return String(res.data[0].value).trim();
+    }
+  } catch (err) {
+    console.error('获取订阅模板配置失败:', err);
+  }
+  return process.env.WECHAT_SUBSCRIBE_TEMPLATE_ID || 'AzJTLvxbpAoCM3IoQYfp5DsSKM4IjqCAwmsD1F_oXqA';
+}
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
@@ -363,10 +373,11 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
     return;
   }
 
+  const wechatTemplateId = await getWechatSubscribeTemplateId();
   try {
     const sendResult = await cloud.openapi.subscribeMessage.send({
       touser: recipient.wechatOpenId,
-      templateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+      templateId: wechatTemplateId,
       page: `pages/notification-detail/index?id=${notificationId}`,
       lang: 'zh_CN',
       data: {
@@ -380,7 +391,7 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
       updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.SENT, {
         deliveryReason: '',
         deliveryReasonLabel: '',
-        wechatTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+        wechatTemplateId,
         wechatMessageResult: sendResult || {},
         deliveredTimestamp: Date.now(),
         deliveredAt: db.serverDate()
@@ -399,7 +410,7 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
     await updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.FAILED, {
       deliveryReason: 'wechat_send_failed',
       deliveryReasonLabel: '微信订阅消息发送失败',
-      wechatTemplateId: WECHAT_SUBSCRIBE_TEMPLATE_ID,
+      wechatTemplateId,
       deliveryErrorCode: errorCode,
       deliveryErrorMessage: String(error.errMsg || error.message || 'unknown').slice(0, 240)
     });
