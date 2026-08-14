@@ -1,6 +1,6 @@
 const CLOUD_ENV = {
   development: "cloud1-d9gziwjita22c3efa",
-  production: "welfare-management-8dbfp80560715",
+  production: "yihui-management-d0ecax6657aaed0",
 };
 
 function getRuntimeEnvironment() {
