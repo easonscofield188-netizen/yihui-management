@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const { getRuntimeVersion } = require("../../utils/app-version");
+const { openPrivacyContract } = require("../../utils/privacy-contract");
 
 const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
 const NOTIFICATION_COUNT_AT_KEY = "notificationUnreadCountCachedAt";
@@ -214,6 +215,8 @@ Page({
     }
     wx.navigateTo({ url: "/pages/account-create/index" });
   },
+
+  openPrivacyContract,
 
   logout() {
     wx.showModal({

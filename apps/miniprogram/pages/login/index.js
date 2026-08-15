@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const { openPrivacyContract } = require("../../utils/privacy-contract");
 
 Page({
   data: {
@@ -32,6 +33,8 @@ Page({
     if (event.detail && event.detail.trigger !== "suffix-icon") return;
     this.setData({ showPassword: !this.data.showPassword });
   },
+
+  openPrivacyContract,
 
   async submit() {
     const { username, password, loading } = this.data;

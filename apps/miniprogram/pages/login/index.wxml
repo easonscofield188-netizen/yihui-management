@@ -56,5 +56,9 @@
     </view>
 
     <view class="help">忘记密码？请登录电脑端管理后台进行重置</view>
+    <view class="privacy-tip">
+      <text>登录前请阅读</text>
+      <text class="privacy-link" bindtap="openPrivacyContract">《隐私保护指引》</text>
+    </view>
   </view>
 </view>

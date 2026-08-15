@@ -84,6 +84,19 @@
       </block>
     </view>
 
+    <view class="function-card agreement-card">
+      <view class="function-row" bindtap="openPrivacyContract">
+        <view class="function-main">
+          <view class="function-icon"><t-icon name="secured" size="38rpx" color="#002045" /></view>
+          <view class="function-copy">
+            <text>隐私保护指引</text>
+            <text class="function-description">查看隐私规则及补充说明</text>
+          </view>
+        </view>
+        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+      </view>
+    </view>
+
     <button class="logout-button" bindtap="logout">
       <t-icon name="logout" size="34rpx" color="#ba1a1a" />
       <text>退出登录</text>
