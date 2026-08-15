@@ -377,6 +377,35 @@ page {
   opacity: .7;
 }
 
+.submit-loading-mask {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 25, 39, .38);
+  backdrop-filter: blur(5rpx);
+}
+
+.submit-loading-card {
+  display: flex;
+  width: 390rpx;
+  min-height: 240rpx;
+  padding: 34rpx 30rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid rgba(255, 255, 255, .85);
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 24rpx 60rpx rgba(0, 32, 69, .2);
+}
+
+.submit-loading-title { margin-top: 24rpx; color: #002045; font-size: 29rpx; font-weight: 700; text-align: center; }
+.submit-loading-tip { margin-top: 12rpx; color: #7b8493; font-size: 21rpx; line-height: 32rpx; text-align: center; }
+
 .project-popup {
   height: 72vh;
   padding: 30rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));

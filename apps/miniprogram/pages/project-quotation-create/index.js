@@ -137,6 +137,7 @@ Page({
     fileSourceVisible: false,
     importing: false,
     submitting: false,
+    submissionComplete: false,
     submitText: "确认提交",
   },
 
@@ -536,7 +537,7 @@ Page({
   },
 
   cancel() {
-    if (this.data.submitting) return;
+    if (this.data.submitting || this.data.submissionComplete) return;
     wx.showModal({
       title: this.data.editMode ? "取消编辑报价单" : "取消新增报价单",
       content: this.data.editMode ? "当前修改不会保存，确定返回吗？" : "当前内容已经保存为草稿，确定返回吗？",
@@ -609,7 +610,7 @@ Page({
   },
 
   async submit() {
-    if (this.data.submitting) return;
+    if (this.data.submitting || this.data.submissionComplete) return;
     const validationMessage = this.validate();
     if (validationMessage) {
       wx.showToast({ title: validationMessage, icon: "none" });
@@ -651,11 +652,23 @@ Page({
         wx.setStorageSync(DETAIL_REFRESH_KEY, { id: result.id || "", createdAt: Date.now() });
       }
       this.pendingRequestId = "";
-      wx.showToast({ title: this.data.editMode ? "新版本创建成功" : "报价单创建成功", icon: "success" });
-      setTimeout(() => this.leavePage(), 500);
+      this.setData({
+        submitting: false,
+        submissionComplete: true,
+        submitText: "确认提交",
+      }, () => {
+        wx.showToast({
+          title: this.data.editMode ? "新版本创建成功" : "报价单创建成功",
+          icon: "success",
+          duration: 1000,
+        });
+        setTimeout(() => this.leavePage(), 1000);
+      });
     } catch (error) {
       wx.showToast({ title: error.message || "报价单创建失败", icon: "none" });
       this.setData({ submitting: false, submitText: "确认提交" });
     }
   },
+
+  preventInteraction() {},
 });

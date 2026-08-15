@@ -5,7 +5,13 @@
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
 
-  <view class="quotation-tools">
+  <view class="selection-toolbar" wx:if="{{selectionMode}}">
+    <view class="selection-cancel" bindtap="cancelSelection">取消</view>
+    <view class="selection-count">已选择 {{selectedIds.length}} 份</view>
+    <view class="selection-action" bindtap="toggleSelectAll">{{allSelected ? '取消全选' : '全选'}}</view>
+    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelected">{{deleting ? '删除中' : '删除'}}</view>
+  </view>
+  <view class="quotation-tools" wx:else>
     <view class="search-shell">
       <t-input t-class="quotation-search" borderless clearable prefix-icon="search" value="{{keyword}}" placeholder="输入项目名称搜索" bindchange="onKeywordChange" />
     </view>
@@ -17,8 +23,9 @@
   </view>
 
   <view class="quotation-list">
-    <view wx:for="{{quotations}}" wx:key="_id" class="quotation-card" data-id="{{item._id}}" bindtap="openQuotation">
+    <view wx:for="{{quotations}}" wx:key="_id" class="quotation-card {{selectionMode ? 'selecting' : ''}} {{item.selected ? 'selected' : ''}}" data-id="{{item._id}}" bindtap="openQuotation" bindlongpress="enterSelectionMode">
       <view class="card-head">
+        <view wx:if="{{selectionMode}}" class="selection-check"><t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? '#1a365d' : '#a9b0bb'}}" /></view>
         <view class="card-heading">
           <view class="project-name">{{item.projectName}}</view>
           <view class="project-meta">
@@ -26,7 +33,7 @@
             <text class="project-code">项目代码：{{item.projectCode}}</text>
           </view>
         </view>
-        <t-icon name="chevron-right" size="40rpx" color="#74777f" />
+        <t-icon wx:if="{{!selectionMode}}" name="chevron-right" size="40rpx" color="#74777f" />
       </view>
       <view class="card-divider"></view>
       <view class="card-foot">
@@ -54,10 +61,10 @@
     </view>
 
     <view class="list-loading" wx:if="{{loading && quotations.length}}"><t-loading size="36rpx" theme="circular" /><text>正在加载报价单...</text></view>
-    <view class="list-loading" wx:if="{{!loading && quotations.length && !hasMore}}">没有更多报价单了</view>
+    <view class="list-loading" wx:if="{{!loading && quotations.length && !hasMore && !selectionMode}}">没有更多报价单了</view>
   </view>
 
-  <view wx:if="{{canManage}}" class="create-bar">
+  <view wx:if="{{canManage && !selectionMode}}" class="create-bar">
     <t-button t-class="create-button" theme="primary" shape="round" icon="add" content="新建报价单" bindtap="createQuotation" />
   </view>
 </view>

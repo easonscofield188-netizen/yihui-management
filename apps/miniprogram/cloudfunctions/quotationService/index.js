@@ -88,6 +88,49 @@ function safeText(value, maxLength = 200) {
   return String(value == null ? '' : value).trim().slice(0, maxLength);
 }
 
+function drawingFileId(drawing) {
+  return safeText(drawing && (drawing.fileId || drawing.fileID), 500);
+}
+
+function collectQuotationFileIds(items) {
+  const fileIds = [];
+  (items || []).forEach(item => {
+    const files = ['drawings', 'images', 'attachments', 'files']
+      .reduce((list, field) => list.concat(Array.isArray(item[field]) ? item[field] : []), []);
+    files.forEach(drawing => {
+      fileIds.push(drawingFileId(drawing));
+    });
+  });
+  return new Set(fileIds.filter(Boolean));
+}
+
+function isMissingCloudFileError(item) {
+  const message = safeText(item && (item.errMsg || item.message), 500);
+  return /not\s*(exist|found)|不存在/i.test(message);
+}
+
+async function deleteCloudFiles(fileIds) {
+  const uniqueIds = Array.from(new Set((fileIds || []).filter(Boolean)));
+  const batchSize = 50;
+  for (let index = 0; index < uniqueIds.length; index += batchSize) {
+    const batch = uniqueIds.slice(index, index + batchSize);
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const result = await cloud.deleteFile({ fileList: batch });
+        const failed = (result.fileList || []).filter(item => Number(item.status) !== 0 && !isMissingCloudFileError(item));
+        if (failed.length) throw new Error(`有 ${failed.length} 个报价单文件清理失败`);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+  }
+  return uniqueIds.length;
+}
+
 function rawDate(value) {
   if (value && value.$date) return value.$date;
   return value;
@@ -689,6 +732,24 @@ async function listQuotations(data, current) {
   await ensureQuotationCollection();
   const page = Math.max(1, Number(data.page) || 1);
   const pageSize = Math.min(30, Math.max(1, Number(data.pageSize) || 10));
+  const { filtered, years } = await getFilteredQuotationList(data);
+  const start = (page - 1) * pageSize;
+  return {
+    code: 0,
+    message: '查询成功',
+    data: {
+      list: filtered.slice(start, start + pageSize),
+      total: filtered.length,
+      page,
+      pageSize,
+      hasMore: page * pageSize < filtered.length,
+      years,
+      canManage: MANAGE_ROLES.has(current.user.role)
+    }
+  };
+}
+
+async function getFilteredQuotationList(data = {}) {
   const keyword = safeText(data.keyword, 120).toLowerCase();
   const year = safeText(data.year, 4);
   const result = await db.collection(QUOTATION_COLLECTION).limit(1000).get();
@@ -711,20 +772,116 @@ async function listQuotations(data, current) {
     if (!keyword) return true;
     return [item.projectName, item.projectCode].some(value => value.toLowerCase().includes(keyword));
   });
-  const start = (page - 1) * pageSize;
+  return { filtered, years };
+}
+
+async function listQuotationIds(data, current) {
+  if (!MANAGE_ROLES.has(current.user.role)) {
+    return { code: 403, message: '当前账号无管理项目报价权限' };
+  }
+  await ensureQuotationCollection();
+  const { filtered } = await getFilteredQuotationList(data);
   return {
     code: 0,
     message: '查询成功',
     data: {
-      list: filtered.slice(start, start + pageSize),
+      ids: filtered.map(item => item._id),
       total: filtered.length,
-      page,
-      pageSize,
-      hasMore: page * pageSize < filtered.length,
-      years,
-      canManage: MANAGE_ROLES.has(current.user.role)
     }
   };
+}
+
+async function deleteQuotations(data, current) {
+  if (!MANAGE_ROLES.has(current.user.role)) {
+    return { code: 403, message: '当前账号无删除项目报价权限' };
+  }
+  await ensureQuotationCollection();
+  const ids = Array.from(new Set((Array.isArray(data.ids) ? data.ids : [])
+    .map(id => safeText(id, 80))
+    .filter(Boolean)))
+    .slice(0, 1000);
+  if (!ids.length) return { code: 400, message: '请选择要删除的报价单' };
+
+  const selectedIdValues = new Set(ids);
+  const allResult = await db.collection(QUOTATION_COLLECTION).limit(1000).get();
+  const allRecords = allResult.data || [];
+  const selectedRecords = allRecords.filter(item => item && selectedIdValues.has(item._id));
+  if (!selectedRecords.length) return { code: 404, message: '所选报价单不存在' };
+
+  const selectedIds = new Set(selectedRecords.map(item => item._id));
+  const projectNameKeys = new Set(selectedRecords
+    .map(item => safeText(item.projectNameKey || item.projectName || item.title || item.name, 120).toLowerCase())
+    .filter(Boolean));
+  const rootIds = new Set(selectedRecords
+    .map(item => safeText(item.rootQuotationId || item.quotationGroupId || item._id, 80))
+    .filter(Boolean));
+  const recordsInGroups = allRecords.filter(item => {
+    if (!item) return false;
+    if (selectedIds.has(item._id)) return true;
+    const projectNameKey = safeText(item.projectNameKey || item.projectName || item.title || item.name, 120).toLowerCase();
+    const rootId = safeText(item.rootQuotationId || item.quotationGroupId || item._id, 80);
+    return (projectNameKey && projectNameKeys.has(projectNameKey)) || (rootId && rootIds.has(rootId));
+  });
+  const groupRecordIds = new Set(recordsInGroups.map(item => item._id));
+  const referencedByOtherQuotations = collectQuotationFileIds(allRecords
+    .filter(item => !groupRecordIds.has(item._id) && item.status !== QUOTATION_STATUS.DELETED));
+  const fileIds = Array.from(collectQuotationFileIds(recordsInGroups))
+    .filter(fileId => !referencedByOtherQuotations.has(fileId));
+  const recordsToDelete = recordsInGroups.filter(item => item.status !== QUOTATION_STATUS.DELETED);
+  const deletedTimestamp = Date.now();
+  const batchSize = 20;
+  for (let index = 0; index < recordsToDelete.length; index += batchSize) {
+    const batch = recordsToDelete.slice(index, index + batchSize);
+    await Promise.all(batch.map(item =>
+      db.collection(QUOTATION_COLLECTION).doc(item._id).update({
+        data: {
+          status: QUOTATION_STATUS.DELETED,
+          statusLabel: '已删除',
+          clientShareEnabled: false,
+          deletedBy: current.userId,
+          deletedTimestamp,
+          deletedAt: db.serverDate(),
+          storageCleanupStatus: fileIds.length ? 'pending' : 'not_needed',
+          updateTime: db.serverDate()
+        }
+      })
+    ));
+  }
+
+  try {
+    const deletedFiles = await deleteCloudFiles(fileIds);
+    for (let index = 0; index < recordsInGroups.length; index += batchSize) {
+      const batch = recordsInGroups.slice(index, index + batchSize);
+      await Promise.all(batch.map(item =>
+        db.collection(QUOTATION_COLLECTION).doc(item._id).update({
+          data: {
+            storageCleanupStatus: fileIds.length ? 'completed' : 'not_needed',
+            storageCleanupFileCount: deletedFiles,
+            storageCleanupTimestamp: Date.now(),
+            storageCleanupAt: db.serverDate(),
+            updateTime: db.serverDate()
+          }
+        })
+      ));
+    }
+    return {
+      code: 0,
+      message: '删除成功',
+      data: { deleted: selectedRecords.length, deletedVersions: recordsToDelete.length, deletedFiles }
+    };
+  } catch (error) {
+    await Promise.all(recordsInGroups.map(item =>
+      db.collection(QUOTATION_COLLECTION).doc(item._id).update({
+        data: {
+          storageCleanupStatus: 'failed',
+          storageCleanupError: safeText(error.message, 300),
+          storageCleanupTimestamp: Date.now(),
+          updateTime: db.serverDate()
+        }
+      }).catch(() => {})
+    ));
+    throw error;
+  }
 }
 
 exports.main = async event => {
@@ -741,6 +898,8 @@ exports.main = async event => {
     const current = await authenticate(event, data);
     if (current.error) return current.error;
     if (action === 'list') return await listQuotations(data, current);
+    if (action === 'listIds') return await listQuotationIds(data, current);
+    if (action === 'deleteBatch') return await deleteQuotations(data, current);
     if (action === 'detail') return await getQuotationDetail(data, current);
     if (action === 'prepareShare') return await ensureQuotationShare(data, current);
     if (action === 'create') return await createQuotation(data, current);

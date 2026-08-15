@@ -155,6 +155,58 @@ function safeText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function imageFileId(image) {
+  return safeText(image && (image.fileId || image.fileID), 500);
+}
+
+function collectCaseOwnedFileIds(item) {
+  const images = Array.isArray(item && item.images) ? item.images : [];
+  const fileIds = images.filter(image => {
+    const fileId = imageFileId(image);
+    if (!fileId || image.sourceCode === 'linked_project') return false;
+    return image.sourceCode === 'case_upload' || fileId.includes('/project-cases/');
+  }).map(imageFileId);
+  const coverFileId = safeText(item && (item.coverFileId || item.imageFileId), 500);
+  if (coverFileId.includes('/project-cases/')) fileIds.push(coverFileId);
+  return Array.from(new Set(fileIds));
+}
+
+function collectReferencedCaseFileIds(items) {
+  const fileIds = [];
+  (items || []).forEach(item => {
+    (Array.isArray(item.images) ? item.images : []).forEach(image => fileIds.push(imageFileId(image)));
+    fileIds.push(safeText(item.coverFileId || item.imageFileId, 500));
+  });
+  return new Set(fileIds.filter(Boolean));
+}
+
+function isMissingCloudFileError(item) {
+  const message = safeText(item && (item.errMsg || item.message), 500);
+  return /not\s*(exist|found)|不存在/i.test(message);
+}
+
+async function deleteCloudFiles(fileIds) {
+  const uniqueIds = Array.from(new Set((fileIds || []).filter(Boolean)));
+  const batchSize = 50;
+  for (let index = 0; index < uniqueIds.length; index += batchSize) {
+    const batch = uniqueIds.slice(index, index + batchSize);
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const result = await cloud.deleteFile({ fileList: batch });
+        const failed = (result.fileList || []).filter(item => Number(item.status) !== 0 && !isMissingCloudFileError(item));
+        if (failed.length) throw new Error(`有 ${failed.length} 个案例文件清理失败`);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+  }
+  return uniqueIds.length;
+}
+
 function dateOnly(value) {
   const matched = safeText(value, 40).match(/^\d{4}-\d{2}-\d{2}/);
   return matched ? matched[0] : '';
@@ -338,21 +390,52 @@ async function deleteCase(data, current) {
   } catch (error) {
     item = null;
   }
-  if (!item || item.status === CASE_STATUS.DELETED) {
-    return { code: 404, message: '案例不存在或已经删除' };
+  if (!item) {
+    return { code: 404, message: '案例不存在' };
   }
-  await db.collection(CASE_COLLECTION).doc(id).update({
-    data: {
-      status: CASE_STATUS.DELETED,
-      statusLabel: '已删除',
-      deletedBy: current.userId,
-      deletedByName: current.user.nickname || current.user.username || '',
-      deletedTimestamp: Date.now(),
-      deletedAt: db.serverDate(),
-      updateTime: db.serverDate()
-    }
-  });
-  return { code: 0, message: '案例删除成功', data: { id } };
+  const allCases = await db.collection(CASE_COLLECTION).limit(1000).get();
+  const referencedByOtherCases = collectReferencedCaseFileIds((allCases.data || [])
+    .filter(caseItem => caseItem._id !== id && caseItem.status !== CASE_STATUS.DELETED));
+  const fileIds = collectCaseOwnedFileIds(item).filter(fileId => !referencedByOtherCases.has(fileId));
+
+  if (item.status !== CASE_STATUS.DELETED) {
+    await db.collection(CASE_COLLECTION).doc(id).update({
+      data: {
+        status: CASE_STATUS.DELETED,
+        statusLabel: '已删除',
+        deletedBy: current.userId,
+        deletedByName: current.user.nickname || current.user.username || '',
+        deletedTimestamp: Date.now(),
+        deletedAt: db.serverDate(),
+        storageCleanupStatus: fileIds.length ? 'pending' : 'not_needed',
+        updateTime: db.serverDate()
+      }
+    });
+  }
+
+  try {
+    const deletedFiles = await deleteCloudFiles(fileIds);
+    await db.collection(CASE_COLLECTION).doc(id).update({
+      data: {
+        storageCleanupStatus: fileIds.length ? 'completed' : 'not_needed',
+        storageCleanupFileCount: deletedFiles,
+        storageCleanupTimestamp: Date.now(),
+        storageCleanupAt: db.serverDate(),
+        updateTime: db.serverDate()
+      }
+    });
+    return { code: 0, message: '案例删除成功', data: { id, deletedFiles } };
+  } catch (error) {
+    await db.collection(CASE_COLLECTION).doc(id).update({
+      data: {
+        storageCleanupStatus: 'failed',
+        storageCleanupError: safeText(error.message, 300),
+        storageCleanupTimestamp: Date.now(),
+        updateTime: db.serverDate()
+      }
+    }).catch(() => {});
+    throw error;
+  }
 }
 
 async function setCaseCover(data, current) {

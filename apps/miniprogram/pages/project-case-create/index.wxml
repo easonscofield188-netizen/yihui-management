@@ -1,4 +1,4 @@
-<page-meta page-style="{{projectSelectorVisible || categoryPickerVisible || datePickerVisible ? 'overflow: hidden;' : ''}}" />
+<page-meta page-style="{{projectSelectorVisible || categoryPickerVisible || datePickerVisible || submitting ? 'overflow: hidden;' : ''}}" />
 <view class="create-page">
   <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#43474e" /></view>
@@ -58,7 +58,15 @@
     </view>
   </view>
 
-  <view class="submit-bar"><view class="submit-button {{submitting ? 'disabled' : ''}}" bindtap="submit"><t-loading wx:if="{{submitting}}" size="34rpx" theme="circular" /><t-icon wx:else name="check-circle" size="38rpx" color="#adc7f7" /><text>{{submitText}}</text></view></view>
+  <view class="submit-bar"><view class="submit-button {{submitting || submissionComplete ? 'disabled' : ''}}" bindtap="submit"><t-icon name="check-circle" size="38rpx" color="#adc7f7" /><text>确认新增</text></view></view>
+
+  <view wx:if="{{submitting}}" class="submit-loading-mask" catchtap="preventInteraction" catchtouchmove="preventInteraction">
+    <view class="submit-loading-card">
+      <t-loading size="58rpx" theme="circular" />
+      <view class="submit-loading-title">{{submitText}}</view>
+      <view class="submit-loading-tip">请稍候，请勿关闭页面或重复操作</view>
+    </view>
+  </view>
 
   <t-popup visible="{{projectSelectorVisible}}" placement="bottom" bindvisible-change="closeProjectSelector">
     <view class="project-popup">

@@ -4,6 +4,11 @@ page { background: #f9f9ff; }
 .nav-placeholder { width: 100%; }
 .nav-back { position: absolute; bottom: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
 .nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.selection-toolbar { display: flex; min-height: 88rpx; padding: 0 32rpx; align-items: center; gap: 24rpx; border-bottom: 2rpx solid #dce5f6; background: #fff; }
+.selection-cancel, .selection-action { color: #1a365d; font-size: 25rpx; font-weight: 600; }
+.selection-count { min-width: 0; flex: 1; color: #43474e; font-size: 25rpx; text-align: center; }
+.selection-delete { padding: 10rpx 22rpx; border-radius: 999rpx; background: #c62828; color: #fff; font-size: 24rpx; font-weight: 600; }
+.selection-delete.disabled { background: #d9dce1; color: #8b919a; }
 .quotation-tools { padding: 24rpx 32rpx 10rpx; }
 .search-shell { overflow: hidden; border: 2rpx solid rgba(196,198,207,.45); border-radius: 22rpx; background: #ffffff; box-shadow: 0 8rpx 22rpx rgba(26,54,93,.05); }
 .quotation-search { min-height: 94rpx !important; padding: 0 26rpx !important; background: transparent !important; color: #121c2c !important; font-size: 28rpx !important; }
@@ -13,7 +18,10 @@ page { background: #f9f9ff; }
 .year-chip.active { border-color: #173d6b; background: #173d6b; color: #ffffff; box-shadow: 0 6rpx 14rpx rgba(23,61,107,.18); }
 .quotation-list { padding: 18rpx 32rpx 30rpx; }
 .quotation-card { margin-bottom: 26rpx; padding: 30rpx 32rpx 28rpx; border: 2rpx solid rgba(196,198,207,.28); border-radius: 24rpx; background: #ffffff; box-shadow: 0 10rpx 26rpx rgba(26,54,93,.06); }
+.quotation-card.selecting { transition: border-color .15s ease, background .15s ease; }
+.quotation-card.selected { border-color: #9cb3da; background: #f3f7ff; }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18rpx; }
+.selection-check { display: flex; width: 44rpx; flex: none; align-items: center; justify-content: center; }
 .card-heading { min-width: 0; flex: 1; }
 .project-name { overflow: hidden; color: #121c2c; font-size: 31rpx; font-weight: 700; line-height: 44rpx; text-overflow: ellipsis; white-space: nowrap; }
 .project-meta { display: flex; margin-top: 10rpx; align-items: center; gap: 14rpx; }

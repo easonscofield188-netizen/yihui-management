@@ -255,7 +255,7 @@ Page({
     if (!item || this.data.deleting) return;
     wx.showModal({
       title: "删除案例",
-      content: `确定删除《${item.title}》吗？删除后将不再展示。`,
+      content: `确定删除《${item.title}》吗？案例独立上传的图片也会一并删除，且无法恢复。`,
       confirmText: "删除",
       confirmColor: "#c7363f",
       success: async result => {

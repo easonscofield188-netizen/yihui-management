@@ -224,6 +224,14 @@ function listProjectQuotations(params = {}) {
   return callFunction("quotationService", "list", params).then(normalizeProjectList);
 }
 
+function listProjectQuotationIds(params = {}) {
+  return callFunction("quotationService", "listIds", params);
+}
+
+function deleteProjectQuotations(ids) {
+  return callFunction("quotationService", "deleteBatch", { ids });
+}
+
 function createProjectQuotation(data) {
   return callFunction("quotationService", "create", data);
 }
@@ -351,6 +359,7 @@ module.exports = {
   createProjectCase,
   createProjectQuotation,
   createProjectQuotationVersion,
+  deleteProjectQuotations,
   deleteProjectCase,
   deleteNotification,
   deleteNotifications,
@@ -375,6 +384,7 @@ module.exports = {
   listProjects,
   listFinancialProjects,
   listProjectCases,
+  listProjectQuotationIds,
   listProjectQuotations,
   parseProjectQuotationExcel,
   prepareProjectQuotationShare,

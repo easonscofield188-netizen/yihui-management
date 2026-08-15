@@ -1,4 +1,4 @@
-<page-meta page-style="{{fileSourceVisible ? 'overflow: hidden;' : ''}}" />
+<page-meta page-style="{{fileSourceVisible || submitting ? 'overflow: hidden;' : ''}}" />
 <view class="create-page">
   <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-back" bindtap="cancel"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
@@ -91,8 +91,16 @@
   </view>
 
   <view class="submit-bar">
-    <t-button class="footer-button-host" t-class="cancel-button" theme="default" variant="outline" shape="round" content="取消" disabled="{{submitting}}" bindtap="cancel" />
-    <t-button class="footer-button-host" t-class="submit-button" theme="primary" shape="round" icon="send" content="{{submitText}}" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit" />
+    <t-button class="footer-button-host" t-class="cancel-button" theme="default" variant="outline" shape="round" content="取消" disabled="{{submitting || submissionComplete}}" bindtap="cancel" />
+    <t-button class="footer-button-host" t-class="submit-button" theme="primary" shape="round" icon="send" content="确认提交" disabled="{{submitting || submissionComplete}}" bindtap="submit" />
+  </view>
+
+  <view wx:if="{{submitting}}" class="submit-loading-mask" catchtap="preventInteraction" catchtouchmove="preventInteraction">
+    <view class="submit-loading-card">
+      <t-loading size="58rpx" theme="circular" />
+      <view class="submit-loading-title">{{submitText}}</view>
+      <view class="submit-loading-tip">请稍候，请勿关闭页面或重复操作</view>
+    </view>
   </view>
 
   <t-date-time-picker t-class-confirm="picker-confirm" visible="{{datePickerVisible}}" mode="date" value="{{form.createdDate || today}}" end="{{today}}" title="选择创建日期" confirm-btn="确定" bindconfirm="confirmDate" bindcancel="closeDatePicker" bindclose="closeDatePicker" />

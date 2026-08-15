@@ -66,6 +66,10 @@ Page({
     hasMore: true,
     loading: true,
     canManage: false,
+    deleting: false,
+    selectionMode: false,
+    selectedIds: [],
+    allSelected: false,
   },
 
   onLoad() {
@@ -91,14 +95,19 @@ Page({
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
     if (this.refreshRetryTimer) clearTimeout(this.refreshRetryTimer);
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
   },
 
   onPullDownRefresh() {
+    if (this.data.selectionMode) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     this.loadQuotations(true).finally(() => wx.stopPullDownRefresh());
   },
 
   onReachBottom() {
-    if (!this.data.loading && this.data.hasMore) this.loadQuotations(false);
+    if (!this.data.selectionMode && !this.data.loading && this.data.hasMore) this.loadQuotations(false);
   },
 
   goBack() {
@@ -115,7 +124,7 @@ Page({
 
   onKeywordChange(event) {
     const keyword = String(event.detail.value || "");
-    this.setData({ keyword });
+    this.setData({ keyword, selectionMode: false, selectedIds: [], allSelected: false });
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.loadQuotations(true), 300);
   },
@@ -123,13 +132,120 @@ Page({
   onYearTap(event) {
     const index = Number(event.currentTarget.dataset.index);
     if (!this.data.yearOptions[index] || index === this.data.yearIndex) return;
-    this.setData({ yearIndex: index }, () => this.loadQuotations(true));
+    this.setData({
+      yearIndex: index,
+      selectionMode: false,
+      selectedIds: [],
+      allSelected: false,
+    }, () => this.loadQuotations(true));
   },
 
   openQuotation(event) {
     const id = String(event.currentTarget.dataset.id || "");
     if (!id) return;
+    if (this.longPressedId === id) {
+      this.longPressedId = "";
+      return;
+    }
+    if (this.data.selectionMode) {
+      this.toggleSelectionById(id);
+      return;
+    }
     wx.navigateTo({ url: `/pages/project-quotation-detail/index?id=${encodeURIComponent(id)}` });
+  },
+
+  enterSelectionMode(event) {
+    if (!this.data.canManage) return;
+    const id = String(event.currentTarget.dataset.id || "");
+    if (!id) return;
+    this.longPressedId = id;
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+    this.longPressTimer = setTimeout(() => {
+      this.longPressedId = "";
+    }, 700);
+    if (wx.vibrateShort) wx.vibrateShort({ type: "light" });
+    if (this.data.selectionMode) {
+      this.toggleSelectionById(id);
+      return;
+    }
+    this.applySelection([id], true);
+  },
+
+  toggleSelectionById(id) {
+    const selectedIds = this.data.selectedIds.includes(id)
+      ? this.data.selectedIds.filter(item => item !== id)
+      : this.data.selectedIds.concat(id);
+    this.applySelection(selectedIds, true);
+  },
+
+  applySelection(selectedIds, selectionMode = this.data.selectionMode) {
+    const selectedSet = new Set(selectedIds);
+    const total = Number(this.data.total) || this.data.quotations.length;
+    this.setData({
+      selectionMode,
+      selectedIds,
+      allSelected: total > 0 && selectedIds.length === total,
+      quotations: this.data.quotations.map(item => ({
+        ...item,
+        selected: selectedSet.has(item._id),
+      })),
+    });
+  },
+
+  cancelSelection() {
+    this.applySelection([], false);
+  },
+
+  async toggleSelectAll() {
+    if (this.data.deleting || !this.data.total) return;
+    if (this.data.allSelected) {
+      this.applySelection([], true);
+      return;
+    }
+    try {
+      this.setData({ loading: true });
+      const year = this.data.yearOptions[this.data.yearIndex]?.value || "";
+      const result = await api.listProjectQuotationIds({
+        keyword: this.data.keyword.trim(),
+        year,
+      });
+      this.applySelection(Array.isArray(result.ids) ? result.ids : [], true);
+    } catch (error) {
+      wx.showToast({ title: error.message || "全选失败", icon: "none" });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  deleteSelected() {
+    if (!this.data.selectedIds.length || this.data.deleting) return;
+    const count = this.data.selectedIds.length;
+    wx.showModal({
+      title: count > 1 ? "批量删除报价单" : "删除报价单",
+      content: count > 1
+        ? `确定删除选中的 ${count} 份报价单吗？相关历史版本、图片及附件也会一并删除，且无法恢复。`
+        : "确定删除这份报价单吗？相关历史版本、图片及附件也会一并删除，且无法恢复。",
+      confirmText: "删除",
+      confirmColor: "#c62828",
+      success: result => {
+        if (result.confirm) this.performDelete(this.data.selectedIds.slice());
+      },
+    });
+  },
+
+  async performDelete(ids) {
+    if (this.data.deleting) return;
+    this.setData({ deleting: true });
+    try {
+      await api.deleteProjectQuotations(ids);
+      wx.showToast({ title: "删除成功", icon: "success" });
+      this.setData({ selectionMode: false, selectedIds: [], allSelected: false });
+      await this.loadQuotations(true);
+    } catch (error) {
+      wx.showToast({ title: error.message || "删除失败", icon: "none" });
+    } finally {
+      this.setData({ deleting: false });
+    }
   },
 
   createQuotation() {
@@ -160,7 +276,11 @@ Page({
         year,
       });
       if (requestId !== this.requestId) return;
-      const incoming = (result.list || []).map(decorateQuotation);
+      const selectedSet = new Set(this.data.selectedIds);
+      const incoming = (result.list || []).map(item => ({
+        ...decorateQuotation(item),
+        selected: selectedSet.has(item._id),
+      }));
       const remoteYears = Array.isArray(result.years) ? result.years : [];
       const yearValues = Array.from(new Set(defaultYears().concat(remoteYears)))
         .sort((left, right) => Number(right) - Number(left));

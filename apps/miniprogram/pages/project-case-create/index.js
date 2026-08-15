@@ -105,6 +105,7 @@ Page({
     projectLoading: false,
     images: [],
     submitting: false,
+    submissionComplete: false,
     submitText: "确认新增",
   },
 
@@ -127,6 +128,7 @@ Page({
   },
 
   close() {
+    if (this.data.submitting || this.data.submissionComplete) return;
     const pages = getCurrentPages();
     const previous = pages[pages.length - 2];
     if (previous && previous.route === "pages/project-cases/index") {
@@ -328,7 +330,7 @@ Page({
   },
 
   async submit() {
-    if (this.data.submitting) return;
+    if (this.data.submitting || this.data.submissionComplete) return;
     const form = this.data.form;
     if (!form.title.trim()) return wx.showToast({ title: "请输入案例名称", icon: "none" });
     if (!form.caseDate) return wx.showToast({ title: "请选择交付日期", icon: "none" });
@@ -355,8 +357,17 @@ Page({
       caseCache.invalidateList();
       caseCache.invalidateDetail(result.id);
       this.pendingRequestId = "";
-      wx.showToast({ title: "案例创建成功", icon: "success" });
-      setTimeout(() => wx.redirectTo({ url: `/pages/project-case-detail/index?id=${result.id}` }), 500);
+      this.setData({
+        submitting: false,
+        submissionComplete: true,
+        submitText: "确认新增",
+      }, () => {
+        wx.showToast({ title: "案例创建成功", icon: "success", duration: 1000 });
+        setTimeout(() => wx.redirectTo({
+          url: `/pages/project-case-detail/index?id=${result.id}`,
+          fail: () => this.setData({ submissionComplete: false }),
+        }), 1000);
+      });
     } catch (error) {
       wx.showToast({ title: error.message || "案例创建失败", icon: "none" });
       this.setData({ submitting: false, submitText: "确认新增" });
@@ -366,4 +377,6 @@ Page({
   onUnload() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
   },
+
+  preventInteraction() {},
 });
