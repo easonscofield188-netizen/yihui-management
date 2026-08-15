@@ -3,7 +3,13 @@
   <view class="top-bar" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="brand"><t-icon name="wallet" size="48rpx" color="#002045" /><text>亿辉艺术</text></view>
   </view>
-  <view class="filter-panel">
+  <view class="selection-toolbar" wx:if="{{selectionMode}}">
+    <view class="selection-cancel" bindtap="cancelProjectSelection">取消</view>
+    <view class="selection-count">已选择 {{selectedIds.length}} 个</view>
+    <view class="selection-action" bindtap="toggleSelectAllProjects">{{allSelected ? '取消全选' : '全选'}}</view>
+    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelectedProjects">删除</view>
+  </view>
+  <view class="filter-panel" wx:else>
     <view class="search-box">
       <t-icon name="search" size="40rpx" color="#74777f" bindclick="onSearch" />
       <input
@@ -47,11 +53,16 @@
     </view>
   </view>
   <view class="project-list">
-    <view wx:for="{{projects}}" wx:key="_id" class="project-card {{item.isClosed ? 'closed-card' : ''}}" data-id="{{item._id}}" bindtap="openProject">
+    <view wx:for="{{projects}}" wx:key="_id" class="project-card {{item.isClosed ? 'closed-card' : ''}} {{selectionMode ? 'selecting' : ''}} {{item.selected ? 'selected' : ''}}" data-id="{{item._id}}" bindtap="openProject" bindlongpress="enterProjectSelection">
       <view class="card-accent"></view>
       <view class="card-body">
         <view class="project-meta">
-          <text class="project-code">{{item.createDateText}}</text>
+          <view class="project-meta-left">
+            <view wx:if="{{selectionMode}}" class="selection-check" data-id="{{item._id}}" catchtap="onProjectSelectionTap">
+              <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? '#1a365d' : '#a9b0bb'}}" />
+            </view>
+            <text class="project-code">{{item.createDateText}}</text>
+          </view>
           <view class="status-badge status-{{item.status}}">
             <t-icon wx:if="{{item.usesCheckIcon}}" name="check-circle" size="25rpx" color="{{item.statusIconColor}}" />
             <view wx:else class="status-dot"></view><text>{{item.statusLabel}}</text>
@@ -87,7 +98,7 @@
   </view>
 
   <view
-    wx:if="{{floatingNotificationVisible}}"
+    wx:if="{{floatingNotificationVisible && !selectionMode}}"
     class="floating-notification {{floatingNotificationCount ? 'has-unread' : ''}} {{floatingNotificationDragging ? 'dragging' : ''}}"
     style="left: {{floatingNotificationLeft}}px; top: {{floatingNotificationTop}}px;"
     bindtouchstart="onFloatingNotificationTouchStart"

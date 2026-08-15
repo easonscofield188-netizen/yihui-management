@@ -554,6 +554,9 @@ exports.main = async (event, context) => {
         });
       case 'list':
         return await listProjects(data);
+      case 'listIds':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await listProjectIds(data);
       case 'financialList':
         return await listFinancialProjects(data);
       case 'overview':
@@ -572,8 +575,9 @@ exports.main = async (event, context) => {
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await quickRecord(data, auth.user);
       case 'delete':
-        if (!ADMIN_ROLES.has(auth.user.role)) return forbidden();
-        return await deleteProject(data);
+      case 'deleteBatch':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await deleteProjects(data, auth.user);
       case 'syncFinancials':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await syncFinancials(data);
@@ -847,18 +851,139 @@ function normalizeSupplier(value) {
   return emptyValues.has(supplier.toLowerCase()) ? '无' : supplier;
 }
 
-async function deleteProject(params) {
-  const { id } = params;
-  if (!id) {
-    return { code: 400, message: '缺少项目 ID' };
+function normalizeProjectDeleteIds(params = {}) {
+  const values = Array.isArray(params.ids) ? params.ids : [params.id];
+  return Array.from(new Set(values
+    .map(value => String(value || '').trim().slice(0, 80))
+    .filter(Boolean)));
+}
+
+function collectCloudFileIds(value, target = new Set(), visited = new Set()) {
+  if (typeof value === 'string') {
+    if (value.startsWith('cloud://')) target.add(value);
+    return target;
   }
+  if (!value || typeof value !== 'object' || visited.has(value)) return target;
+  visited.add(value);
+  if (Array.isArray(value)) {
+    value.forEach(item => collectCloudFileIds(item, target, visited));
+    return target;
+  }
+  Object.keys(value).forEach(key => collectCloudFileIds(value[key], target, visited));
+  return target;
+}
+
+function isMissingProjectFileError(item) {
+  const message = String(item && (item.errMsg || item.message) || '');
+  return /not\s*(exist|found)|不存在/i.test(message);
+}
+
+async function deleteProjectCloudFiles(fileIds) {
+  const uniqueIds = Array.from(new Set(fileIds || []));
+  const batchSize = 50;
+  for (let index = 0; index < uniqueIds.length; index += batchSize) {
+    const batch = uniqueIds.slice(index, index + batchSize);
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const result = await cloud.deleteFile({ fileList: batch });
+        const failed = (result.fileList || [])
+          .filter(item => Number(item.status) !== 0 && !isMissingProjectFileError(item));
+        if (failed.length) throw new Error(`有 ${failed.length} 个项目文件清理失败`);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+  }
+  return uniqueIds.length;
+}
+
+async function getRecordsByValues(collectionName, field, values) {
+  const records = [];
+  const batchSize = 20;
+  const pageSize = 1000;
+  const _ = db.command;
+  for (let index = 0; index < values.length; index += batchSize) {
+    const batch = values.slice(index, index + batchSize);
+    let offset = 0;
+    while (true) {
+      const result = await db.collection(collectionName)
+        .where({ [field]: _.in(batch) })
+        .skip(offset)
+        .limit(pageSize)
+        .get();
+      const page = result.data || [];
+      records.push(...page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+  }
+  return records;
+}
+
+async function removeRecords(collectionName, records) {
+  const ids = Array.from(new Set((records || []).map(item => item && item._id).filter(Boolean)));
+  const batchSize = 20;
+  for (let index = 0; index < ids.length; index += batchSize) {
+    const batch = ids.slice(index, index + batchSize);
+    await Promise.all(batch.map(id => db.collection(collectionName).doc(id).remove()));
+  }
+  return ids.length;
+}
+
+async function deleteProjects(params, currentUser) {
+  const ids = normalizeProjectDeleteIds(params);
+  if (!ids.length) return { code: 400, message: '请选择要删除的项目' };
+  if (ids.length > 1000) return { code: 400, message: '单次最多删除 1000 个项目' };
 
   try {
-    await db.collection('projects').doc(id).remove();
-    return { code: 0, message: '删除成功' };
+    const projects = await getRecordsByValues('projects', '_id', ids);
+    if (!projects.length) return { code: 404, message: '所选项目不存在或已删除' };
+    const projectIds = projects.map(item => item._id);
+    const relatedCollectionNames = [
+      'project_vouchers',
+      'project_contracts',
+      'project_previews',
+      'project_cases',
+      'project_quotations',
+      PROJECT_CHANGE_EVENT_COLLECTION,
+      NOTIFICATION_COLLECTION
+    ];
+    const relatedEntries = await Promise.all(relatedCollectionNames.map(async collectionName => ({
+      collectionName,
+      records: await getRecordsByValues(collectionName, 'projectId', projectIds)
+    })));
+
+    const fileIds = new Set();
+    projects.forEach(project => collectCloudFileIds(project, fileIds));
+    relatedEntries.forEach(entry => entry.records.forEach(record => collectCloudFileIds(record, fileIds)));
+
+    // 云文件先清理；如失败则保留数据库记录，管理员可直接重试删除。
+    const deletedFiles = await deleteProjectCloudFiles(Array.from(fileIds));
+    const deletedRelated = {};
+    for (const entry of relatedEntries) {
+      deletedRelated[entry.collectionName] = await removeRecords(entry.collectionName, entry.records);
+    }
+    const deletedProjects = await removeRecords('projects', projects);
+
+    console.log('超级管理员批量删除项目完成', {
+      operatorId: currentUser.id,
+      projectIds,
+      deletedProjects,
+      deletedFiles,
+      deletedRelated
+    });
+    return {
+      code: 0,
+      message: '项目删除成功',
+      data: { deletedProjects, deletedFiles, deletedRelated }
+    };
   } catch (err) {
-    console.error('删除项目失败:', err);
-    return { code: 500, message: '删除失败', error: err.message };
+    console.error('批量删除项目失败:', err);
+    return { code: 500, message: `删除失败：${err.message || '未知错误'}`, error: err.message };
   }
 }
 
@@ -1622,6 +1747,30 @@ async function listProjects(params) {
     };
   } catch (err) {
     console.error('查询项目列表失败:', err);
+    return { code: 500, message: '查询失败', error: err.message };
+  }
+}
+
+async function listProjectIds(params = {}) {
+  try {
+    const ids = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      const result = await listProjects({ ...params, page, pageSize: 50 });
+      if (!result || result.code !== 0) return result;
+      const data = result.data || {};
+      ids.push(...(data.list || []).map(item => item._id).filter(Boolean));
+      hasMore = Boolean(data.hasMore);
+      page += 1;
+    }
+    return {
+      code: 0,
+      message: '查询成功',
+      data: { ids, total: ids.length }
+    };
+  } catch (err) {
+    console.error('查询项目 ID 列表失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
   }
 }

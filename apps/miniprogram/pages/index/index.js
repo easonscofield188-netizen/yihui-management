@@ -131,6 +131,11 @@ Page({
     floatingNotificationLeft: 0,
     floatingNotificationTop: 0,
     floatingNotificationDragging: false,
+    isSuperAdmin: false,
+    deleting: false,
+    selectionMode: false,
+    selectedIds: [],
+    allSelected: false,
   },
 
   onLoad() {
@@ -186,6 +191,8 @@ Page({
     }
     const tabBar = this.getTabBar && this.getTabBar();
     if (tabBar) tabBar.setData({ selected: 0 });
+    const userInfo = api.getCachedUserInfo() || {};
+    this.setData({ isSuperAdmin: userInfo.role === "ADMIN_SUPER" });
     this.ensureYearThenLoad(true);
     this.loadFloatingNotification();
   },
@@ -196,6 +203,10 @@ Page({
   },
 
   onPullDownRefresh() {
+    if (this.data.selectionMode || this.data.deleting) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     Promise.all([
       this.ensureYearThenLoad(true),
       this.loadFloatingNotification({ force: true }),
@@ -203,12 +214,17 @@ Page({
   },
 
   onReachBottom() {
-    if (this.data.hasMore) this.loadProjects(false);
+    if (!this.data.selectionMode && !this.data.deleting && this.data.hasMore) this.loadProjects(false);
+  },
+
+  onHide() {
+    if (this.data.selectionMode && !this.data.deleting) this.applyProjectSelection([], false);
   },
 
   onUnload() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.floatTapTimer) clearTimeout(this.floatTapTimer);
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
   },
 
   initializeFloatingNotification(systemInfo, navHeight) {
@@ -364,6 +380,9 @@ Page({
       filterYear: nextYear,
       filterYearText: yearChipText(nextYear),
       yearPickerValue: [String(nextYear)],
+      selectionMode: false,
+      selectedIds: [],
+      allSelected: false,
     }, () => {
       this.loadProjects(true, `正在加载${loadingYearText(nextYear)}项目...`);
     });
@@ -371,7 +390,7 @@ Page({
 
   onKeywordInput(event) {
     const keyword = event.detail.value;
-    this.setData({ keyword });
+    this.setData({ keyword, selectionMode: false, selectedIds: [], allSelected: false });
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
       this.searchTimer = null;
@@ -400,7 +419,7 @@ Page({
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
     }
-    this.setData({ keyword: "" }, () => {
+    this.setData({ keyword: "", selectionMode: false, selectedIds: [], allSelected: false }, () => {
       this.loadProjects(true, `正在加载${loadingYearText(this.data.filterYear)}项目...`);
     });
   },
@@ -409,13 +428,129 @@ Page({
     const statusIndex = Number(event.currentTarget.dataset.index);
     if (statusIndex === this.data.statusIndex) return;
     const statusLabel = this.data.statusOptions[statusIndex].label;
-    this.setData({ statusIndex }, () => {
+    this.setData({ statusIndex, selectionMode: false, selectedIds: [], allSelected: false }, () => {
       this.loadProjects(true, `正在筛选“${statusLabel}”项目...`);
     });
   },
 
   openProject(event) {
-    wx.navigateTo({ url: `/pages/project-detail/index?id=${event.currentTarget.dataset.id}` });
+    const id = String(event.currentTarget.dataset.id || "");
+    if (!id) return;
+    if (this.longPressedId === id) {
+      this.longPressedId = "";
+      return;
+    }
+    if (this.data.selectionMode) {
+      this.toggleProjectSelection(id);
+      return;
+    }
+    wx.navigateTo({ url: `/pages/project-detail/index?id=${id}` });
+  },
+
+  enterProjectSelection(event) {
+    if (!this.data.isSuperAdmin || this.data.deleting) return;
+    const id = String(event.currentTarget.dataset.id || "");
+    if (!id) return;
+    this.longPressedId = id;
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+    this.longPressTimer = setTimeout(() => {
+      this.longPressedId = "";
+    }, 700);
+    if (wx.vibrateShort) wx.vibrateShort({ type: "light" });
+    if (this.data.selectionMode) {
+      this.toggleProjectSelection(id);
+      return;
+    }
+    this.applyProjectSelection([id], true);
+  },
+
+  toggleProjectSelection(id) {
+    const selectedIds = this.data.selectedIds.includes(id)
+      ? this.data.selectedIds.filter(item => item !== id)
+      : this.data.selectedIds.concat(id);
+    this.applyProjectSelection(selectedIds, true);
+  },
+
+  onProjectSelectionTap(event) {
+    if (!this.data.selectionMode || this.data.deleting) return;
+    const id = String(event.currentTarget.dataset.id || "");
+    if (id) this.toggleProjectSelection(id);
+  },
+
+  applyProjectSelection(selectedIds, selectionMode = this.data.selectionMode) {
+    const selectedSet = new Set(selectedIds);
+    const total = Number(this.data.total) || this.data.projects.length;
+    this.setData({
+      selectionMode,
+      selectedIds,
+      allSelected: total > 0 && selectedIds.length === total,
+      projects: this.data.projects.map(item => ({
+        ...item,
+        selected: selectedSet.has(item._id),
+      })),
+    });
+  },
+
+  cancelProjectSelection() {
+    this.applyProjectSelection([], false);
+  },
+
+  async toggleSelectAllProjects() {
+    if (this.data.deleting || !this.data.total) return;
+    if (this.data.allSelected) {
+      this.applyProjectSelection([], true);
+      return;
+    }
+    try {
+      this.setData({ loading: true });
+      const status = this.data.statusOptions[this.data.statusIndex].value;
+      const year = this.data.filterYear === ALL_YEARS_VALUE ? undefined : Number(this.data.filterYear);
+      const result = await api.listProjectIds({
+        keyword: this.data.keyword.trim(),
+        status,
+        ...(year ? { year } : {}),
+      });
+      this.applyProjectSelection(Array.isArray(result.ids) ? result.ids : [], true);
+    } catch (error) {
+      wx.showToast({ title: error.message || "全选失败", icon: "none" });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  deleteSelectedProjects() {
+    if (!this.data.selectedIds.length || this.data.deleting) return;
+    const count = this.data.selectedIds.length;
+    wx.showModal({
+      title: count > 1 ? "批量删除项目" : "删除项目",
+      content: count > 1
+        ? `确定删除选中的 ${count} 个项目吗？关联凭证、合同、预览图、案例、报价、通知及云文件会一并删除，且无法恢复。`
+        : "确定删除这个项目吗？关联凭证、合同、预览图、案例、报价、通知及云文件会一并删除，且无法恢复。",
+      confirmText: "删除",
+      confirmColor: "#c62828",
+      success: result => {
+        if (result.confirm) this.performProjectDelete(this.data.selectedIds.slice());
+      },
+    });
+  },
+
+  async performProjectDelete(ids) {
+    if (this.data.deleting) return;
+    this.setData({
+      deleting: true,
+      queryLoading: true,
+      loadingMessage: "正在删除项目及关联文件...",
+    });
+    try {
+      await api.deleteProjects(ids);
+      this.setData({ selectionMode: false, selectedIds: [], allSelected: false });
+      await this.loadProjects(true);
+      wx.showToast({ title: ids.length > 1 ? "项目已批量删除" : "项目已删除", icon: "success" });
+    } catch (error) {
+      wx.showToast({ title: error.message || "项目删除失败", icon: "none" });
+    } finally {
+      this.setData({ deleting: false, queryLoading: false });
+    }
   },
 
   stopPropagation() {},
@@ -443,7 +578,11 @@ Page({
         status,
         ...(yearParam ? { year: yearParam } : {}),
       });
-      const incoming = (result.list || []).map(decorateProject);
+      const selectedSet = new Set(this.data.selectedIds);
+      const incoming = (result.list || []).map(item => ({
+        ...decorateProject(item),
+        selected: selectedSet.has(item._id),
+      }));
       if (requestId !== this.projectRequestId) return;
       this.setData({
         projects: reset ? incoming : this.data.projects.concat(incoming),

@@ -184,6 +184,14 @@ function listProjects(params) {
   return callFunction("projectService", "list", params).then(normalizeProjectList);
 }
 
+function listProjectIds(params = {}) {
+  return callFunction("projectService", "listIds", params);
+}
+
+function deleteProjects(ids) {
+  return callFunction("projectService", "deleteBatch", { ids });
+}
+
 function listFinancialProjects(params) {
   return callFunction("projectService", "financialList", params).then(normalizeProjectList);
 }
@@ -359,6 +367,7 @@ module.exports = {
   createProjectCase,
   createProjectQuotation,
   createProjectQuotationVersion,
+  deleteProjects,
   deleteProjectQuotations,
   deleteProjectCase,
   deleteNotification,
@@ -382,6 +391,7 @@ module.exports = {
   getVouchers,
   getWechatSubscriptionStatus,
   listProjects,
+  listProjectIds,
   listFinancialProjects,
   listProjectCases,
   listProjectQuotationIds,
