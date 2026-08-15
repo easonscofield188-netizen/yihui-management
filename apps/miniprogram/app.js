@@ -9,7 +9,7 @@ function getRuntimeEnvironment() {
     const envVersion = accountInfo.miniProgram.envVersion;
     return {
       envVersion,
-      cloudEnv: ["trial", "release"].includes(envVersion)
+      cloudEnv: envVersion === "release"
         ? CLOUD_ENV.production
         : CLOUD_ENV.development,
     };
