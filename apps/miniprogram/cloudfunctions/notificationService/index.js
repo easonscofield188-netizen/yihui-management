@@ -257,9 +257,57 @@ async function formatWechatSubscription(user) {
   };
 }
 
+async function reconcileProjectSubscriptionCount(user) {
+  const availableCount = Math.max(0, Number(user.wechatSubscriptionAvailableCount) || 0);
+  if (!availableCount || !user._id) return user;
+  const notifications = await getUserNotifications(user._id);
+  const latestInvalid = notifications.find(item => (
+    item.category === 'project_change'
+    && (
+      Number(item.deliveryErrorCode) === 43101
+      || /43101|user\s+refuse|未订阅|拒绝接收/i.test(String(item.deliveryErrorMessage || ''))
+    )
+  ));
+  const invalidTimestamp = Number(latestInvalid?.deliveryUpdatedTimestamp || latestInvalid?.createdTimestamp || 0);
+  const authorizedTimestamp = Number(user.wechatSubscriptionUpdatedTimestamp || 0);
+  if (!invalidTimestamp || invalidTimestamp <= authorizedTimestamp) return user;
+  await db.collection('users').doc(user._id).update({
+    data: {
+      wechatSubscriptionAvailableCount: 0,
+      wechatSubscriptionInvalidTimestamp: invalidTimestamp,
+      updateTime: db.serverDate()
+    }
+  });
+  return { ...user, wechatSubscriptionAvailableCount: 0 };
+}
+
+async function reconcileCategoryReviewSubscriptionCount(user) {
+  const availableCount = Math.max(0, Number(user.costCategoryReviewSubscriptionAvailableCount) || 0);
+  if (!availableCount || !user._id) return user;
+  const notifications = await getUserNotifications(user._id);
+  const latestInvalid = notifications.find(item => (
+    item.notificationType === 'cost_category_review'
+    && /43101|user\s+refuse|未订阅|拒绝接收/i.test(String(
+      item.deliveryErrorMessage || item.deliveryReasonLabel || ''
+    ))
+  ));
+  const invalidTimestamp = Number(latestInvalid?.deliveryUpdatedTimestamp || latestInvalid?.createdTimestamp || 0);
+  const authorizedTimestamp = Number(user.costCategoryReviewSubscriptionUpdatedTimestamp || 0);
+  if (!invalidTimestamp || invalidTimestamp <= authorizedTimestamp) return user;
+  await db.collection('users').doc(user._id).update({
+    data: {
+      costCategoryReviewSubscriptionAvailableCount: 0,
+      costCategoryReviewSubscriptionInvalidTimestamp: invalidTimestamp,
+      updateTime: db.serverDate()
+    }
+  });
+  return { ...user, costCategoryReviewSubscriptionAvailableCount: 0 };
+}
+
 async function getWechatSubscriptionStatus(current) {
   if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
-  const formatted = await formatWechatSubscription(current.user);
+  const reconciledUser = await reconcileProjectSubscriptionCount(current.user);
+  const formatted = await formatWechatSubscription(reconciledUser);
   return {
     code: 0,
     message: '查询成功',
@@ -331,7 +379,8 @@ async function formatCategoryReviewSubscription(user) {
 
 async function getCategoryReviewSubscriptionStatus(current) {
   if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
-  return { code: 0, message: '查询成功', data: await formatCategoryReviewSubscription(current.user) };
+  const reconciledUser = await reconcileCategoryReviewSubscriptionCount(current.user);
+  return { code: 0, message: '查询成功', data: await formatCategoryReviewSubscription(reconciledUser) };
 }
 
 async function saveCategoryReviewSubscription(data, current) {

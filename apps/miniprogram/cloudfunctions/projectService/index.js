@@ -414,13 +414,26 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
     ]);
   } catch (error) {
     const errorCode = Number(error.errCode || error.errcode || 0);
-    await updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.FAILED, {
-      deliveryReason: 'wechat_send_failed',
-      deliveryReasonLabel: '微信订阅消息发送失败',
-      wechatTemplateId,
-      deliveryErrorCode: errorCode,
-      deliveryErrorMessage: String(error.errMsg || error.message || 'unknown').slice(0, 240)
-    });
+    const errorMessage = String(error.errMsg || error.message || 'unknown').slice(0, 240);
+    const subscriptionExpired = errorCode === 43101 || /43101|user\s+refuse|未订阅|拒绝接收/i.test(errorMessage);
+    await Promise.all([
+      updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.FAILED, {
+        deliveryReason: subscriptionExpired ? 'subscription_expired' : 'wechat_send_failed',
+        deliveryReasonLabel: subscriptionExpired ? '微信订阅次数已失效，系统已自动清零' : '微信订阅消息发送失败',
+        wechatTemplateId,
+        deliveryErrorCode: errorCode,
+        deliveryErrorMessage: errorMessage
+      }),
+      subscriptionExpired
+        ? db.collection('users').doc(recipient._id).update({
+          data: {
+            wechatSubscriptionAvailableCount: 0,
+            wechatSubscriptionInvalidTimestamp: Date.now(),
+            updateTime: db.serverDate()
+          }
+        })
+        : Promise.resolve()
+    ]);
     console.error('微信订阅消息发送失败:', { notificationId, errorCode, message: error.message || error.errMsg });
   }
 }

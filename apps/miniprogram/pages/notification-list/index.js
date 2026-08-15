@@ -1,4 +1,6 @@
 const api = require("../../utils/api");
+const { CATEGORY_REVIEW_TEMPLATE_ID, PROJECT_CHANGE_TEMPLATE_ID } = require("../../utils/wechat-subscription");
+const { requestLowCountSubscriptions } = require("../../utils/subscription-auto-prompt");
 
 const READ_STATUS_OPTIONS = [
   { label: "全部", value: "" },
@@ -61,6 +63,8 @@ Page({
     selectionMode: false,
     selectedIds: [],
     allSelected: false,
+    projectSubscription: null,
+    categoryReviewSubscription: null,
   },
 
   onShow() {
@@ -68,6 +72,7 @@ Page({
       wx.reLaunch({ url: "/pages/login/index" });
       return;
     }
+    this.loadSubscriptionStatuses();
     this.loadNotifications(true);
   },
 
@@ -118,11 +123,53 @@ Page({
       return;
     }
     const notification = this.data.notifications.find(item => item._id === id);
-    if (notification && notification.notificationType === "cost_category_review" && notification.reviewRequestId) {
-      wx.navigateTo({ url: `/pages/category-review-detail/index?id=${notification.reviewRequestId}&notificationId=${id}` });
+    if (!notification) return;
+    const navigate = () => {
+      if (notification.notificationType === "cost_category_review" && notification.reviewRequestId) {
+        wx.navigateTo({ url: `/pages/category-review-detail/index?id=${notification.reviewRequestId}&notificationId=${id}` });
+        return;
+      }
+      wx.navigateTo({ url: `/pages/notification-detail/index?id=${id}` });
+    };
+    this.requestNotificationSubscription(notification, navigate);
+  },
+
+  async loadSubscriptionStatuses() {
+    try {
+      const [projectSubscription, categoryReviewSubscription] = await Promise.all([
+        api.getWechatSubscriptionStatus(),
+        api.getCategoryReviewSubscriptionStatus(),
+      ]);
+      this.setData({ projectSubscription, categoryReviewSubscription });
+    } catch (error) {}
+  },
+
+  requestNotificationSubscription(notification, complete) {
+    const isCategoryReview = notification.notificationType === "cost_category_review";
+    const statusKey = isCategoryReview ? "categoryReviewSubscription" : "projectSubscription";
+    const status = this.data[statusKey];
+    if (!status || this.subscriptionPromptInFlight) {
+      complete();
       return;
     }
-    wx.navigateTo({ url: `/pages/notification-detail/index?id=${id}` });
+    this.subscriptionPromptInFlight = true;
+    requestLowCountSubscriptions([{
+      templateId: isCategoryReview ? CATEGORY_REVIEW_TEMPLATE_ID : PROJECT_CHANGE_TEMPLATE_ID,
+      status,
+      save: subscriptionStatus => {
+        const request = isCategoryReview
+          ? api.saveCategoryReviewSubscription({ templateId: CATEGORY_REVIEW_TEMPLATE_ID, status: subscriptionStatus })
+          : api.saveWechatSubscription({ templateId: PROJECT_CHANGE_TEMPLATE_ID, status: subscriptionStatus });
+        return request.then(result => {
+          this.setData({ [statusKey]: result });
+          return result;
+        });
+      },
+    }], () => {
+      this.subscriptionPromptInFlight = false;
+      this.loadSubscriptionStatuses();
+      complete();
+    });
   },
 
   enterSelectionMode(event) {

@@ -387,8 +387,25 @@ async function sendCategoryReviewWechat(admin, notificationId, review, miniProgr
     });
     return { status: 'sent', reason: '' };
   } catch (error) {
+    const errorCode = Number(error.errCode || error.errcode || 0);
+    const errorMessage = String(error.errMsg || error.message || '');
+    const subscriptionExpired = errorCode === 43101 || /43101|user\s+refuse|未订阅|拒绝接收/i.test(errorMessage);
+    if (subscriptionExpired) {
+      await db.collection('users').doc(admin._id).update({
+        data: {
+          costCategoryReviewSubscriptionAvailableCount: 0,
+          costCategoryReviewSubscriptionInvalidTimestamp: Date.now(),
+          updateTime: db.serverDate()
+        }
+      }).catch(resetError => console.error('类目审核订阅次数自动清零失败:', resetError));
+    }
     console.error('类目审核微信通知发送失败:', error);
-    return { status: 'failed', reason: safeText(error.message || error.errMsg, 120) };
+    return {
+      status: 'failed',
+      reason: subscriptionExpired
+        ? '微信订阅次数已失效，系统已自动清零'
+        : safeText(error.message || error.errMsg, 120)
+    };
   }
 }
 
