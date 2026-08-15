@@ -378,7 +378,7 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
     const sendResult = await cloud.openapi.subscribeMessage.send({
       touser: recipient.wechatOpenId,
       templateId: wechatTemplateId,
-      page: `pages/notification-detail/index?id=${notificationId}`,
+      page: `pages/notification-detail/index?id=${notificationId}&source=wechat_subscribe`,
       lang: 'zh_CN',
       data: {
         thing1: { value: truncateSubscribeValue(eventData.projectName) },

@@ -41,6 +41,8 @@ page { background: #f9f9ff; }
 .new-client { display: flex; align-items: center; gap: 14rpx; color: #43474e; font-size: 26rpx; }
 .client-list { position: relative; z-index: 3; box-sizing: border-box; width: 100%; max-height: 260rpx; margin-top: -2rpx; border: 2rpx solid #d9e3f9; border-radius: 0 0 14rpx 14rpx; background: #fff; box-shadow: 0 10rpx 24rpx rgba(26,54,93,.12); }
 .client-option { padding: 22rpx 28rpx; border-bottom: 2rpx solid #f0f3ff; color: #242c3a; font-size: 27rpx; }
+.client-list-state { display: flex; min-height: 82rpx; padding: 0 24rpx; align-items: center; justify-content: center; gap: 12rpx; color: #697383; font-size: 24rpx; }
+.client-list-empty { cursor: pointer; }
 .wizard-footer { position: relative; z-index: 8; display: flex; box-sizing: border-box; width: 100%; height: calc(142rpx + env(safe-area-inset-bottom)); padding: 18rpx 30rpx calc(18rpx + env(safe-area-inset-bottom)); flex: none; align-items: center; justify-content: space-between; border-top: 2rpx solid #f0f3ff; background: rgba(249,249,255,.98); }
 .footer-text-button { width: 130rpx; color: #43474e; font-size: 22rpx; }
 .disabled-button { color: #989fa6; }

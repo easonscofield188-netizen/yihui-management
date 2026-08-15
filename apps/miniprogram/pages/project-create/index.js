@@ -63,6 +63,8 @@ Page({
     sourceIndex: 0,
     clients: [],
     showClientList: false,
+    clientLoading: false,
+    clientLoadFailed: false,
     pickerVisible: false,
     pickerField: "",
     pickerTitle: "",
@@ -99,7 +101,7 @@ Page({
   onLoad() {
     wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#f9f9ff" });
     const savedDraft = wx.getStorageSync(DRAFT_KEY) || {};
-    const isEditMode = savedDraft._mode === "edit";
+    const isEditMode = savedDraft._mode === "edit" && Boolean(savedDraft._projectId);
     const form = {
       ...this.data.form,
       ...savedDraft,
@@ -155,12 +157,24 @@ Page({
     }
   },
 
-  async loadClients(keyword = "") {
+  async loadClients(keyword = "", { showError = false } = {}) {
+    const requestId = (this.clientRequestId || 0) + 1;
+    this.clientRequestId = requestId;
+    this.setData({ clientLoading: true, clientLoadFailed: false });
     try {
       const clients = await api.queryClients(keyword);
-      this.setData({ clients: Array.isArray(clients) ? clients : [] });
+      if (requestId !== this.clientRequestId) return;
+      this.setData({
+        clients: Array.isArray(clients) ? clients : [],
+        clientLoading: false,
+        clientLoadFailed: false,
+      });
     } catch (error) {
-      this.setData({ clients: [] });
+      if (requestId !== this.clientRequestId) return;
+      this.setData({ clients: [], clientLoading: false, clientLoadFailed: true });
+      if (showError) {
+        wx.showToast({ title: error.message || "客户列表加载失败", icon: "none" });
+      }
     }
   },
 
@@ -176,15 +190,44 @@ Page({
   onClientInput(event) {
     if (this.data.isClosedEdit) return;
     const value = event.detail.value;
-    this.setData({ "form.client": value, "form.clientId": "", showClientList: !this.data.form.createClient });
+    this.clientRequestId = (this.clientRequestId || 0) + 1;
+    this.setData({
+      "form.client": value,
+      "form.clientId": "",
+      showClientList: !this.data.form.createClient,
+      clientLoading: false,
+      clientLoadFailed: false,
+    });
     clearTimeout(this.clientSearchTimer);
     this.clientSearchTimer = setTimeout(() => this.loadClients(value), 250);
   },
 
   showClientSuggestions() {
     if (!this.data.isClosedEdit && !this.data.form.createClient) {
+      clearTimeout(this.clientBlurTimer);
+      this.clientListInteracting = false;
       this.setData({ showClientList: true });
+      const keyword = this.data.form.clientId ? "" : this.data.form.client;
+      this.loadClients(keyword, { showError: true });
     }
+  },
+
+  clearClient() {
+    if (this.data.isClosedEdit) return;
+    clearTimeout(this.clientSearchTimer);
+    this.setData({
+      "form.client": "",
+      "form.clientId": "",
+      showClientList: true,
+    });
+    this.loadClients("", { showError: true });
+  },
+
+  retryLoadClients() {
+    clearTimeout(this.clientSearchTimer);
+    clearTimeout(this.clientBlurTimer);
+    const keyword = this.data.form.clientId ? "" : this.data.form.client;
+    this.loadClients(keyword, { showError: true });
   },
 
   hideClientSuggestions() {
@@ -223,9 +266,11 @@ Page({
       sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === source)),
       showClientList: false,
     });
+    this.loadClients("");
   },
 
   onUnload() {
+    this.clientRequestId = (this.clientRequestId || 0) + 1;
     clearTimeout(this.clientSearchTimer);
     clearTimeout(this.clientBlurTimer);
     clearTimeout(this.clientListTouchTimer);

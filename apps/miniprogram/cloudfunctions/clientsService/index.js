@@ -128,13 +128,20 @@ exports.main = async (event, context) => {
       });
     }
 
-    // 执行查询，按创建时间倒序排列，限制返回 50 条
-    const res = await query.orderBy('createdAt', 'desc').limit(50).get();
+    // 在内存中排序以兼容历史迁移数据缺少 createdAt 的情况，避免这些客户被排序查询漏掉。
+    const res = await query.limit(1000).get();
+    const clients = (res.data || [])
+      .sort((a, b) => {
+        const timeA = new Date(a.createdAt?.$date || a.createdAt || 0).getTime() || 0;
+        const timeB = new Date(b.createdAt?.$date || b.createdAt || 0).getTime() || 0;
+        return timeB - timeA;
+      })
+      .slice(0, 50);
 
     return {
       code: 0,
       message: '查询成功',
-      data: res.data
+      data: clients
     };
   } catch (err) {
     console.error('查询客户数据库错误:', err);

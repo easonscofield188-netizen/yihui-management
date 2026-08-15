@@ -7,6 +7,23 @@ const CHANGE_TYPE_LABELS = {
   removed: "已删除",
 };
 
+const WECHAT_SERVICE_NOTIFICATION_SCENES = new Set([1014]);
+
+function isWechatServiceNotificationEntry(options = {}) {
+  if (options.source === "wechat_subscribe") return true;
+  if (getCurrentPages().length !== 1) return false;
+
+  try {
+    const enterOptions = typeof wx.getEnterOptionsSync === "function"
+      ? wx.getEnterOptionsSync()
+      : wx.getLaunchOptionsSync();
+    return WECHAT_SERVICE_NOTIFICATION_SCENES.has(Number(enterOptions?.scene));
+  } catch (error) {
+    console.warn("读取小程序进入场景失败", error);
+    return false;
+  }
+}
+
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
   const statusBarHeight = systemInfo.statusBarHeight || 0;
@@ -65,11 +82,13 @@ Page({
     changes: [],
     timeText: "",
     loading: true,
+    isServiceNotificationEntry: false,
   },
 
   onLoad(options = {}) {
     const notificationId = String(options.id || "").trim();
-    this.setData({ notificationId });
+    const isServiceNotificationEntry = isWechatServiceNotificationEntry(options);
+    this.setData({ notificationId, isServiceNotificationEntry });
     if (!notificationId) {
       wx.showToast({ title: "消息参数错误", icon: "none" });
       return;
@@ -78,9 +97,16 @@ Page({
   },
 
   goBack() {
+    if (this.data.isServiceNotificationEntry) {
+      wx.exitMiniProgram({
+        fail: () => wx.switchTab({ url: "/pages/profile/index" }),
+      });
+      return;
+    }
+
     const pages = getCurrentPages();
     if (pages.length > 1) wx.navigateBack();
-    else wx.navigateTo({ url: "/pages/notification-list/index" });
+    else wx.redirectTo({ url: "/pages/notification-list/index" });
   },
 
   openProject() {
