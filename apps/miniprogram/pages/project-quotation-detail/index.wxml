@@ -78,9 +78,17 @@
     </view>
   </view>
 
-  <view wx:if="{{quotation && !isSharedView}}" class="bottom-actions {{quotation.canManage && quotation.isCurrentVersion ? 'two-actions' : 'one-action'}}">
-    <t-button class="footer-host" t-class="share-button" theme="default" variant="outline" shape="round" icon="share" content="分享给客户" open-type="{{clientShareReady ? 'share' : ''}}" bindtap="onShareTap" />
+  <view wx:if="{{quotation && !isSharedView}}" class="bottom-actions {{quotation.canManage && quotation.isCurrentVersion ? 'three-actions' : 'two-actions'}}">
+    <t-button class="footer-host" t-class="share-button" theme="default" variant="outline" shape="round" icon="share" content="页面分享" open-type="{{clientShareReady ? 'share' : ''}}" bindtap="onShareTap" />
+    <t-button class="footer-host" t-class="pdf-button" theme="default" variant="outline" shape="round" icon="file-pdf" content="PDF报价单" bindtap="onQuotationPdfTap" />
     <t-button wx:if="{{quotation.canManage && quotation.isCurrentVersion}}" class="footer-host" t-class="edit-button" theme="primary" shape="round" icon="edit" content="编辑" bindtap="editQuotation" />
+  </view>
+
+  <view wx:if="{{pdfBusy}}" class="version-loading-mask">
+    <view class="version-loading-card">
+      <t-loading size="44rpx" theme="circular" />
+      <text class="version-loading-text">正在准备报价单 PDF...</text>
+    </view>
   </view>
 
   <view wx:if="{{fullTableVisible}}" class="landscape-overlay">

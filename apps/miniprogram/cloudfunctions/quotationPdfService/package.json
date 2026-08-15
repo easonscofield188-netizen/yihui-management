@@ -1,0 +1,11 @@
+{
+  "name": "quotationPdfService",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "@openfonts/noto-sans-sc_chinese-simplified": "^1.44.10",
+    "pdfkit": "^0.17.2",
+    "wx-server-sdk": "latest"
+  }
+}

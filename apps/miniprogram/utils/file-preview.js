@@ -43,13 +43,12 @@ function downloadByUrl(url) {
   });
 }
 
-function openLocalDocument(filePath) {
+function openLocalDocument(filePath, showMenu = false) {
   return new Promise((resolve, reject) => {
     wx.openDocument({
       filePath,
       fileType: "pdf",
-      // 隐藏保存、转发等菜单，只在微信临时目录中预览。
-      showMenu: false,
+      showMenu: Boolean(showMenu),
       success: resolve,
       fail: (error) => reject(error || new Error("无法打开 PDF")),
     });
@@ -73,7 +72,7 @@ async function resolvePdfLocalPath({ filePath, fileId, fileUrl } = {}) {
 
 async function openPdfFile(options = {}) {
   const localPath = await resolvePdfLocalPath(options);
-  await openLocalDocument(localPath);
+  await openLocalDocument(localPath, options.showMenu);
   return localPath;
 }
 
