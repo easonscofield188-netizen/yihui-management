@@ -120,6 +120,12 @@ Page({
     try {
       const result = await api.getNotificationDetail(this.data.notificationId);
       const notification = result.notification || null;
+      if (notification?.notificationType === "cost_category_review" && notification.reviewRequestId) {
+        wx.redirectTo({
+          url: `/pages/category-review-detail/index?id=${notification.reviewRequestId}&notificationId=${this.data.notificationId}${this.data.isServiceNotificationEntry ? "&source=wechat_subscribe" : ""}`,
+        });
+        return;
+      }
       const event = result.event || null;
       const changes = (event?.changes || []).map(decorateChange);
       wx.removeStorageSync("notificationUnreadCountCachedAt");

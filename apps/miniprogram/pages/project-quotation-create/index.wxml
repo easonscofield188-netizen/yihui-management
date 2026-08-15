@@ -41,7 +41,7 @@
 
       <view wx:for="{{items}}" wx:key="localId" class="item-card">
         <view class="item-delete" data-index="{{index}}" bindtap="deleteItem"><t-icon name="delete" size="34rpx" color="#ba1a1a" /></view>
-        <view class="item-label">类目名称</view>
+        <view class="item-label-row"><view class="item-label">类目名称</view><view class="category-select-link" data-index="{{index}}" bindtap="openCategoryPicker"><text>选择已有成本类型</text><t-icon name="chevron-right" size="25rpx" color="#315b8f" /></view></view>
         <view class="item-input-shell name-input-shell">
           <t-input t-class="item-input" borderless value="{{item.name}}" placeholder="请输入类目名称" maxlength="120" adjust-position="{{true}}" cursor-spacing="140" data-index="{{index}}" data-field="name" bindchange="onItemInput" />
         </view>
@@ -110,6 +110,21 @@
       <view class="file-source-head"><view><view class="file-source-title">上传设计图纸</view><view class="file-source-tip">单个文件最大 10MB，最多上传 9 个</view></view><view bindtap="closeFileSource"><t-icon name="close" size="40rpx" color="#43474e" /></view></view>
       <view class="file-source-option" bindtap="chooseDrawingImages"><view class="source-icon image-source"><t-icon name="image" size="40rpx" color="#1f5b9b" /></view><view class="source-copy"><view>上传图片</view><text>从相册选择或拍摄 JPG、PNG 图片</text></view><t-icon name="chevron-right" size="34rpx" color="#9aa1ac" /></view>
       <view class="file-source-option" bindtap="chooseDrawingPdfs"><view class="source-icon pdf-source"><t-icon name="file-pdf" size="40rpx" color="#ba1a1a" /></view><view class="source-copy"><view>上传 PDF 文件</view><text>从微信文件中选择设计图纸</text></view><t-icon name="chevron-right" size="34rpx" color="#9aa1ac" /></view>
+    </view>
+  </t-popup>
+
+  <t-popup t-class-content="category-picker-popup" visible="{{categoryPickerVisible}}" placement="bottom" close-on-overlay-click bindvisible-change="closeCategoryPicker">
+    <view class="category-picker-panel">
+      <view class="category-picker-head"><view><view class="category-picker-title">选择成本类型</view><view class="category-picker-tip">选择后自动填充类目名称和常用单位，仍可继续修改</view></view><view bindtap="closeCategoryPicker"><t-icon name="close" size="40rpx" color="#43474e" /></view></view>
+      <scroll-view class="category-picker-list" scroll-y>
+        <view class="category-option" wx:for="{{costCategories}}" wx:key="value" wx:for-index="categoryIndex" data-category-index="{{categoryIndex}}" bindtap="selectCostCategory">
+          <view class="category-option-index">{{categoryIndex + 1}}</view>
+          <view class="category-option-main"><view class="category-option-name">{{item.label}}</view><view class="category-option-code">标识：{{item.value}}</view></view>
+          <view class="category-option-unit">{{item.commonUnit || '项'}}</view>
+          <t-icon name="chevron-right" size="30rpx" color="#8b94a2" />
+        </view>
+      </scroll-view>
+      <view class="category-picker-note">也可以关闭窗口后直接手动填写类目名称和单位。</view>
     </view>
   </t-popup>
 </view>

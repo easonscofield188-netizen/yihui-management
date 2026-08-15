@@ -8,9 +8,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const QUOTATION_COLLECTION = 'project_quotations';
+const CONFIG_COLLECTION = 'system_configs';
+const REVIEW_COLLECTION = 'config_review_requests';
+const NOTIFICATION_COLLECTION = 'notifications';
+const CATEGORY_REVIEW_TEMPLATE_ID = 'osXcvIp2RwA4HpYNqVienL9R3gq-PNw5iDe0LQprkok';
+const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+const MINI_PROGRAM_STATES = new Set(['developer', 'trial', 'formal']);
 const QUOTATION_STATUS = Object.freeze({ DELETED: 'deleted' });
 const READ_ROLES = new Set([
   'ADMIN_SUPER',
@@ -25,6 +31,7 @@ const MANAGE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
 const VERSION_DIGITS = Object.freeze(['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']);
 
 let collectionReady = false;
+let reviewCollectionReady = false;
 
 function parseBody(event) {
   if (event.body) return typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
@@ -240,6 +247,7 @@ function normalizeItem(item, index) {
   return {
     itemCode: safeText(item.itemCode, 40) || `ITEM_${index + 1}`,
     name: safeText(item.name, 120),
+    categoryConfigValue: safeText(item.categoryConfigValue, 80),
     quantity,
     unit: safeText(item.unit, 30),
     unitPrice,
@@ -269,6 +277,231 @@ function dateOnly(value) {
 function buildProjectCode(createdDate) {
   const year = (createdDate || new Date().toISOString()).slice(0, 4);
   return `YH-${year}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+}
+
+function normalizeCategoryName(value) {
+  return safeText(value, 120).normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+}
+
+function normalizeMergeName(value) {
+  return safeText(value, 120).normalize('NFKC').toLowerCase().replace(/[\s\-_/\\·,，.。()（）【】\[\]{}]/g, '');
+}
+
+function canonicalMergeUnit(value) {
+  const unit = normalizeMergeName(value).replace(/²/g, '2').replace(/³/g, '3');
+  const aliases = { 米: 'm', 公尺: 'm', 平方米: 'm2', '㎡': 'm2', 'm²': 'm2', 立方米: 'm3', 'm³': 'm3', 公斤: 'kg', 千克: 'kg', 克: 'g', 吨: 't', 升: 'l', 毫升: 'ml' };
+  return aliases[unit] || unit;
+}
+
+function categoryNamesAreRelated(left, right) {
+  const firstName = normalizeMergeName(left);
+  const secondName = normalizeMergeName(right);
+  if (!firstName || !secondName) return false;
+  if (firstName === secondName) return true;
+  const shorter = firstName.length <= secondName.length ? firstName : secondName;
+  const longer = firstName.length > secondName.length ? firstName : secondName;
+  if (shorter.length >= 2 && longer.includes(shorter)) return true;
+  let longest = 0;
+  for (let i = 0; i < firstName.length; i += 1) {
+    for (let j = 0; j < secondName.length; j += 1) {
+      let size = 0;
+      while (firstName[i + size] && firstName[i + size] === secondName[j + size]) size += 1;
+      if (size > longest) longest = size;
+    }
+  }
+  if (longest >= 2 && longest / shorter.length >= 0.6) return true;
+  const bigrams = value => Array.from({ length: Math.max(0, value.length - 1) }, (_, index) => value.slice(index, index + 2));
+  const firstBigrams = bigrams(firstName);
+  const remaining = bigrams(secondName);
+  let matches = 0;
+  firstBigrams.forEach(item => {
+    const index = remaining.indexOf(item);
+    if (index >= 0) {
+      matches += 1;
+      remaining.splice(index, 1);
+    }
+  });
+  const denominator = firstBigrams.length + bigrams(secondName).length;
+  return denominator > 0 && (2 * matches) / denominator >= 0.4;
+}
+
+function validateCategoryMerge(review, config) {
+  const reasons = [];
+  if (!categoryNamesAreRelated(review.proposedLabel, config.label)) {
+    reasons.push(`名称差异过大：“${review.proposedLabel}”与“${config.label}”不属于明显近似类目`);
+  }
+  const targetUnit = canonicalMergeUnit(config.commonUnit);
+  const sourceUnits = Array.from(new Set([
+    review.proposedUnit,
+    ...(review.unitCandidates || []),
+    ...(review.sources || []).map(item => item.originalUnit)
+  ].map(canonicalMergeUnit).filter(Boolean)));
+  if (!targetUnit || !sourceUnits.length) reasons.push('申请或已有配置缺少单位');
+  else if (sourceUnits.some(unit => unit !== targetUnit)) {
+    reasons.push(`单位不一致：申请为“${sourceUnits.join('、')}”，配置为“${config.commonUnit}”`);
+  }
+  return { allowed: reasons.length === 0, reason: reasons.join('；') };
+}
+
+function normalizeMiniProgramState(value) {
+  const state = safeText(value, 20).toLowerCase();
+  return MINI_PROGRAM_STATES.has(state) ? state : 'formal';
+}
+
+function formatReviewTime(timestamp) {
+  const date = new Date(timestamp || Date.now());
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+async function ensureReviewCollection() {
+  if (reviewCollectionReady) return;
+  try {
+    await db.createCollection(REVIEW_COLLECTION);
+  } catch (error) {
+    if (!/exist|存在/i.test(String(error.message || error.errMsg || ''))) throw error;
+  }
+  reviewCollectionReady = true;
+}
+
+async function sendCategoryReviewWechat(admin, notificationId, review, miniProgramState) {
+  const availableCount = Math.max(0, Number(admin.costCategoryReviewSubscriptionAvailableCount) || 0);
+  if (!admin.wechatOpenId || availableCount < 1) return { status: 'skipped', reason: '未开启类目审核微信提醒' };
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: admin.wechatOpenId,
+      templateId: CATEGORY_REVIEW_TEMPLATE_ID,
+      page: `pages/notification-detail/index?id=${notificationId}&source=wechat_subscribe`,
+      miniprogramState: normalizeMiniProgramState(miniProgramState),
+      lang: 'zh_CN',
+      data: {
+        thing1: { value: safeText(`新增类目：${review.proposedLabel}`, 20) },
+        thing2: { value: safeText(review.projectName || '报价项目', 20) },
+        name3: { value: safeText(review.submittedByName || '系统用户', 10) },
+        thing4: { value: safeText(`建议单位：${review.proposedUnit || '未填写'}`, 20) },
+        date6: { value: formatReviewTime(review.createdTimestamp) }
+      }
+    });
+    await db.collection('users').doc(admin._id).update({
+      data: { costCategoryReviewSubscriptionAvailableCount: db.command.inc(-1), updateTime: db.serverDate() }
+    });
+    return { status: 'sent', reason: '' };
+  } catch (error) {
+    console.error('类目审核微信通知发送失败:', error);
+    return { status: 'failed', reason: safeText(error.message || error.errMsg, 120) };
+  }
+}
+
+async function notifyCategoryReview(review, current, miniProgramState) {
+  const adminResult = await db.collection('users').where({ role: ADMIN_SUPER_ROLE }).limit(100).get();
+  const admins = (adminResult.data || []).filter(user => !user.status || user.status === 'active');
+  const targetMiniProgramState = normalizeMiniProgramState(miniProgramState);
+  await Promise.all(admins.map(async admin => {
+    const createdTimestamp = Date.now();
+    const notificationResult = await db.collection(NOTIFICATION_COLLECTION).add({
+      data: {
+        notificationType: 'cost_category_review',
+        eventType: 'cost_category_review',
+        reviewRequestId: review._id,
+        projectName: review.projectName,
+        proposedLabel: review.proposedLabel,
+        proposedUnit: review.proposedUnit,
+        summary: `发现新报价类目“${review.proposedLabel}”，等待审核`,
+        actorUserId: current.userId,
+        actorName: review.submittedByName,
+        recipientUserId: admin._id,
+        readStatus: 'unread',
+        readStatusLabel: '未读',
+        deliveryStatus: 'pending',
+        deliveryStatusLabel: '待发送',
+        targetMiniProgramState,
+        createdTimestamp,
+        createdAt: db.serverDate()
+      }
+    });
+    const delivery = await sendCategoryReviewWechat(admin, notificationResult._id, review, targetMiniProgramState);
+    await db.collection(NOTIFICATION_COLLECTION).doc(notificationResult._id).update({
+      data: {
+        deliveryStatus: delivery.status,
+        deliveryStatusLabel: delivery.status === 'sent' ? '发送成功' : delivery.status === 'failed' ? '发送失败' : '未发送',
+        deliveryReasonLabel: delivery.reason,
+        updateTime: db.serverDate()
+      }
+    });
+  }));
+}
+
+async function captureCategoryReviewSuggestions(quotation, current, miniProgramState) {
+  if (current.user.role === ADMIN_SUPER_ROLE) return;
+  await ensureReviewCollection();
+  const configResult = await db.collection(CONFIG_COLLECTION).where({ group: 'COST_CATEGORY' }).limit(1000).get();
+  const existingNames = new Set((configResult.data || []).map(item => normalizeCategoryName(item.label)).filter(Boolean));
+  const candidates = new Map();
+  (quotation.items || []).forEach((item, itemIndex) => {
+    const normalizedName = normalizeCategoryName(item.name);
+    if (!normalizedName || item.categoryConfigValue || existingNames.has(normalizedName)) return;
+    if (!candidates.has(normalizedName)) candidates.set(normalizedName, { item, itemIndex });
+  });
+  for (const [normalizedName, candidate] of candidates) {
+    const source = {
+      quotationId: quotation._id,
+      quotationVersion: quotation.versionLabel || quotation.version || '',
+      itemIndex: candidate.itemIndex,
+      originalName: candidate.item.name,
+      originalUnit: candidate.item.unit,
+      submittedBy: current.userId,
+      submittedByName: safeText(current.user.nickname || current.user.username, 80),
+      submittedTimestamp: Date.now()
+    };
+    const historyResult = await db.collection(REVIEW_COLLECTION).where({ normalizedName }).limit(100).get();
+    const history = (historyResult.data || []).filter(item => item.group === 'COST_CATEGORY');
+    const pending = history.find(item => item.status === 'PENDING');
+    if (pending) {
+      const units = Array.from(new Set([...(pending.unitCandidates || []), candidate.item.unit].filter(Boolean))).slice(0, 20);
+      await db.collection(REVIEW_COLLECTION).doc(pending._id).update({
+        data: {
+          occurrenceCount: Number(pending.occurrenceCount || 1) + 1,
+          unitCandidates: units,
+          sources: [...(pending.sources || []), source].slice(-50),
+          latestTimestamp: Date.now(),
+          updateTime: db.serverDate()
+        }
+      });
+      continue;
+    }
+    const rejectedInCooldown = history.find(item => item.status === 'REJECTED' && Date.now() - Number(item.latestTimestamp || item.reviewedTimestamp || 0) < 30 * 24 * 60 * 60 * 1000);
+    if (rejectedInCooldown) {
+      await db.collection(REVIEW_COLLECTION).doc(rejectedInCooldown._id).update({ data: {
+        occurrenceCount: Number(rejectedInCooldown.occurrenceCount || 1) + 1,
+        unitCandidates: Array.from(new Set([...(rejectedInCooldown.unitCandidates || []), candidate.item.unit].filter(Boolean))).slice(0, 20),
+        sources: [...(rejectedInCooldown.sources || []), source].slice(-50),
+        latestTimestamp: Date.now(),
+        updateTime: db.serverDate()
+      }});
+      continue;
+    }
+    const createdTimestamp = Date.now();
+    const reviewData = {
+      group: 'COST_CATEGORY',
+      normalizedName,
+      proposedLabel: safeText(candidate.item.name, 80),
+      proposedUnit: safeText(candidate.item.unit, 30),
+      unitCandidates: [safeText(candidate.item.unit, 30)].filter(Boolean),
+      projectName: quotation.projectName,
+      occurrenceCount: 1,
+      sources: [source],
+      submittedBy: current.userId,
+      submittedByName: source.submittedByName,
+      status: 'PENDING',
+      statusLabel: '待审核',
+      createdTimestamp,
+      latestTimestamp: createdTimestamp,
+      createdAt: db.serverDate(),
+      updateTime: db.serverDate()
+    };
+    const result = await db.collection(REVIEW_COLLECTION).add({ data: reviewData });
+    await notifyCategoryReview({ ...reviewData, _id: result._id }, current, miniProgramState);
+  }
 }
 
 async function createQuotation(data, current) {
@@ -355,6 +588,9 @@ async function createQuotation(data, current) {
       updateTime: db.serverDate()
     }
   });
+  await captureCategoryReviewSuggestions({ ...record, _id: result._id }, current, data._miniProgramState).catch(error => {
+    console.error('生成成本类目审核申请失败:', error);
+  });
   return {
     code: 0,
     message: '报价单创建成功',
@@ -438,11 +674,152 @@ async function createQuotationVersion(data, current) {
     updateTime: db.serverDate()
   };
   const result = await db.collection(QUOTATION_COLLECTION).add({ data: record });
+  await captureCategoryReviewSuggestions({ ...record, _id: result._id }, current, data._miniProgramState).catch(error => {
+    console.error('生成成本类目审核申请失败:', error);
+  });
   return {
     code: 0,
     message: '报价新版本创建成功',
     data: { id: result._id, version: nextVersion.value, versionLabel: nextVersion.label }
   };
+}
+
+function ensureSuperAdmin(current) {
+  return current.user.role === ADMIN_SUPER_ROLE;
+}
+
+async function recoverStaleCategoryReviews() {
+  const result = await db.collection(REVIEW_COLLECTION).where({ status: 'PROCESSING' }).limit(100).get();
+  const stale = (result.data || []).filter(item => Date.now() - Number(item.processingTimestamp || 0) > 5 * 60 * 1000);
+  await Promise.all(stale.map(item => db.collection(REVIEW_COLLECTION).doc(item._id).update({ data: {
+    status: 'PENDING',
+    processingBy: db.command.remove(),
+    processingTimestamp: db.command.remove(),
+    updateTime: db.serverDate()
+  }})));
+}
+
+async function getReviewRecord(id) {
+  try {
+    return (await db.collection(REVIEW_COLLECTION).doc(id).get()).data || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function listCategoryReviews(data, current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可审核类目' };
+  await ensureReviewCollection();
+  await recoverStaleCategoryReviews();
+  const status = safeText(data.status, 20) || 'PENDING';
+  const page = Math.max(1, Number(data.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(data.pageSize) || 20));
+  const result = await db.collection(REVIEW_COLLECTION).limit(1000).get();
+  const filtered = (result.data || [])
+    .filter(item => status === 'ALL' || item.status === status)
+    .sort((a, b) => Number(b.latestTimestamp || b.createdTimestamp) - Number(a.latestTimestamp || a.createdTimestamp));
+  const start = (page - 1) * pageSize;
+  return { code: 0, message: '查询成功', data: { list: filtered.slice(start, start + pageSize), total: filtered.length, page, pageSize, hasMore: page * pageSize < filtered.length } };
+}
+
+async function getCategoryReviewDetail(data, current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可审核类目' };
+  const review = await getReviewRecord(safeText(data.id, 80));
+  if (!review) return { code: 404, message: '审核申请不存在' };
+  return { code: 0, message: '查询成功', data: review };
+}
+
+async function getCategoryReviewPendingCount(current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可查看审核数量' };
+  await ensureReviewCollection();
+  await recoverStaleCategoryReviews();
+  const result = await db.collection(REVIEW_COLLECTION).where({ status: 'PENDING' }).count();
+  return { code: 0, message: '查询成功', data: { count: Number(result.total) || 0 } };
+}
+
+async function claimCategoryReview(id, current) {
+  const result = await db.collection(REVIEW_COLLECTION).where({ _id: id, status: 'PENDING' }).update({
+    data: { status: 'PROCESSING', processingBy: current.userId, processingTimestamp: Date.now(), updateTime: db.serverDate() }
+  });
+  return Number(result.stats?.updated) > 0;
+}
+
+async function finishCategoryReview(id, data, current) {
+  await db.collection(REVIEW_COLLECTION).doc(id).update({
+    data: {
+      ...data,
+      reviewedBy: current.userId,
+      reviewedByName: safeText(current.user.nickname || current.user.username, 80),
+      reviewedTimestamp: Date.now(),
+      reviewedAt: db.serverDate(),
+      updateTime: db.serverDate()
+    }
+  });
+  const notifications = await db.collection(NOTIFICATION_COLLECTION).where({ reviewRequestId: id }).limit(100).get();
+  await Promise.all((notifications.data || []).map(item => db.collection(NOTIFICATION_COLLECTION).doc(item._id).update({
+    data: { reviewStatus: data.status, reviewStatusLabel: data.statusLabel, updateTime: db.serverDate() }
+  })));
+  await db.collection('operation_logs').add({ data: {
+    uid: current.userId,
+    un: safeText(current.user.nickname || current.user.username, 20),
+    username: safeText(current.user.username, 80),
+    m: '成本类目审核',
+    a: safeText(data.status, 30).toLowerCase(),
+    c: `审核申请 ${id}：${data.statusLabel}`,
+    s: '成功',
+    createdTimestamp: Date.now(),
+    createdAt: db.serverDate()
+  }}).catch(error => console.error('记录类目审核日志失败:', error));
+}
+
+async function reviewCategoryRequest(data, current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可审核类目' };
+  const id = safeText(data.id, 80);
+  const action = safeText(data.reviewAction, 20).toUpperCase();
+  if (!id || !['APPROVE', 'MERGE', 'REJECT'].includes(action)) return { code: 400, message: '审核参数无效' };
+  const review = await getReviewRecord(id);
+  if (!review) return { code: 404, message: '审核申请不存在' };
+  if (review.status !== 'PENDING') return { code: 409, message: '该申请已被其他管理员处理' };
+  if (!(await claimCategoryReview(id, current))) return { code: 409, message: '该申请已被其他管理员处理' };
+  try {
+    if (action === 'REJECT') {
+      const reason = safeText(data.reason, 200);
+      await finishCategoryReview(id, { status: 'REJECTED', statusLabel: '已驳回', reviewRemark: reason }, current);
+      return { code: 0, message: '已驳回', data: { id, status: 'REJECTED' } };
+    }
+    if (action === 'MERGE') {
+      const configId = safeText(data.configId, 80);
+      const config = configId ? (await db.collection(CONFIG_COLLECTION).doc(configId).get()).data : null;
+      if (!config || config.group !== 'COST_CATEGORY') throw Object.assign(new Error('请选择有效的成本配置'), { businessCode: 400 });
+      const mergeValidation = validateCategoryMerge(review, config);
+      if (!mergeValidation.allowed) {
+        throw Object.assign(new Error(`不能合并：${mergeValidation.reason}。请改选更接近的已有类目，或使用“通过新增”`), { businessCode: 422 });
+      }
+      if (data.reactivate && config.isActive === false) {
+        const active = await db.collection(CONFIG_COLLECTION).where({ group: 'COST_CATEGORY', isActive: true }).orderBy('sortOrder', 'desc').limit(1).get();
+        const sortOrder = (Number(active.data?.[0]?.sortOrder) || 0) + 1;
+        await db.collection(CONFIG_COLLECTION).doc(configId).update({ data: { isActive: true, sortOrder, updateTime: db.serverDate() } });
+      }
+      await finishCategoryReview(id, { status: 'MERGED', statusLabel: '已合并', approvedConfigId: configId, approvedLabel: config.label, reviewRemark: safeText(data.reason, 200) }, current);
+      return { code: 0, message: '已合并到现有配置', data: { id, status: 'MERGED', configId } };
+    }
+    const label = safeText(data.label, 80);
+    const commonUnit = safeText(data.commonUnit, 30);
+    const description = safeText(data.description, 240);
+    if (!label || !commonUnit) throw Object.assign(new Error('请填写配置名称和常用单位'), { businessCode: 400 });
+    const allConfigs = await db.collection(CONFIG_COLLECTION).where({ group: 'COST_CATEGORY' }).limit(1000).get();
+    const duplicated = (allConfigs.data || []).find(item => normalizeCategoryName(item.label) === normalizeCategoryName(label));
+    if (duplicated) throw Object.assign(new Error('同名或近似配置已存在，请选择合并'), { businessCode: 409, data: { configId: duplicated._id } });
+    let value = `review_${crypto.createHash('sha1').update(`${review.normalizedName}_${Date.now()}`).digest('hex').slice(0, 12)}`;
+    const last = await db.collection(CONFIG_COLLECTION).where({ group: 'COST_CATEGORY' }).orderBy('sortOrder', 'desc').limit(1).get();
+    const sortOrder = (Number(last.data?.[0]?.sortOrder) || 0) + 1;
+    const configResult = await db.collection(CONFIG_COLLECTION).add({ data: { group: 'COST_CATEGORY', label, value, commonUnit, description, sortOrder, isActive: true, source: 'REVIEW_APPROVED', reviewRequestId: id, createdAt: db.serverDate(), updateTime: db.serverDate() } });
+    await finishCategoryReview(id, { status: 'APPROVED', statusLabel: '已通过', approvedConfigId: configResult._id, approvedLabel: label, approvedUnit: commonUnit, reviewRemark: safeText(data.reason, 200) }, current);
+    return { code: 0, message: '审核通过，配置已新增', data: { id, status: 'APPROVED', configId: configResult._id } };
+  } catch (error) {
+    await db.collection(REVIEW_COLLECTION).doc(id).update({ data: { status: 'PENDING', processingBy: db.command.remove(), processingTimestamp: db.command.remove(), updateTime: db.serverDate() } }).catch(() => {});
+    return { code: error.businessCode || 500, message: error.message || '审核处理失败', data: error.data };
+  }
 }
 
 async function getNextVersion(data) {
@@ -904,6 +1281,10 @@ exports.main = async event => {
     if (action === 'prepareShare') return await ensureQuotationShare(data, current);
     if (action === 'create') return await createQuotation(data, current);
     if (action === 'createVersion') return await createQuotationVersion(data, current);
+    if (action === 'reviewList') return await listCategoryReviews(data, current);
+    if (action === 'reviewDetail') return await getCategoryReviewDetail(data, current);
+    if (action === 'reviewPendingCount') return await getCategoryReviewPendingCount(current);
+    if (action === 'reviewSubmit') return await reviewCategoryRequest(data, current);
     if (action === 'nextVersion') return await getNextVersion(data);
     if (action === 'parseExcel') return await parseExcelImport(data, current);
     return { code: 400, message: '未知操作' };

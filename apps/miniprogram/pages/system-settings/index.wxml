@@ -1,7 +1,7 @@
 <view class="settings-page">
   <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
-    <view class="nav-title">系统设置</view>
+    <view class="nav-title">通知设置</view>
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
 
@@ -28,7 +28,7 @@
 
     <view class="section-divider"></view>
     <view class="setting-heading">微信订阅消息</view>
-    <view class="setting-description">项目发生重要变更时，通过微信服务通知提醒当前超级管理员。</view>
+    <view class="setting-description">两个模板分别计次；次数不足时进入管理中心或执行审核会自动请求授权，也可以在这里主动增加。</view>
     <view class="wechat-subscription-card {{wechatSubscription.canReceive ? 'active' : ''}}">
       <view class="wechat-card-head">
         <view class="wechat-card-icon"><t-icon name="logo-wechat-stroke-filled" size="46rpx" color="#ffffff" /></view>
@@ -47,6 +47,16 @@
         disabled="{{wechatSubscriptionLoading}}"
         bindtap="enableWechatSubscription"
       >{{wechatSubscription.availableCount ? '再增加一次提醒机会' : '开启一次微信提醒'}}</t-button>
+    </view>
+
+    <view class="wechat-subscription-card {{categoryReviewSubscription.canReceive ? 'active' : ''}}">
+      <view class="wechat-card-head">
+        <view class="wechat-card-icon"><t-icon name="logo-wechat-stroke-filled" size="46rpx" color="#ffffff" /></view>
+        <view class="wechat-card-main"><view class="wechat-card-title">成本类目审核提醒</view><view class="wechat-card-status">{{categoryReviewSubscription.statusLabel}}</view></view>
+        <view class="wechat-count"><text>{{categoryReviewSubscription.availableCount}}</text><view>次可用</view></view>
+      </view>
+      <view class="wechat-card-note">非超级管理员提交新报价类目后，通过微信服务通知提醒当前账号审核。</view>
+      <t-button t-class="subscribe-button" theme="primary" block loading="{{categoryReviewSubscriptionLoading}}" disabled="{{categoryReviewSubscriptionLoading}}" bindtap="enableCategoryReviewSubscription">{{categoryReviewSubscription.availableCount ? '再增加一次审核提醒' : '开启一次审核提醒'}}</t-button>
     </view>
 
     <view class="setting-tip">

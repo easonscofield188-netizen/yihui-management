@@ -637,6 +637,10 @@ Page({
       wx.showToast({ title: "请先完成前 3 步信息", icon: "none" });
       return;
     }
+    if (!draft.clientId) {
+      wx.showToast({ title: "请选择已有客户，或先新增客户", icon: "none" });
+      return;
+    }
 
     // 新建且开启凭证时，必须先选文件，避免创建出无凭证项目
     if (!this.data.isEditMode && this.data.invoiceEnabled && !this.data.files.length) {

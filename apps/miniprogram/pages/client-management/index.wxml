@@ -1,0 +1,132 @@
+<view class="client-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">客户管理</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="filter-panel">
+    <view class="search-box">
+      <t-icon name="search" size="38rpx" color="#74777f" />
+      <input class="search-input" value="{{keyword}}" placeholder="搜索客户名称" bindinput="onKeywordInput" />
+      <t-icon wx:if="{{keyword}}" name="close-circle" size="34rpx" color="#989fa6" bindtap="clearKeyword" />
+    </view>
+    <view class="filter-label">客户角色</view>
+    <view class="filter-list">
+      <view wx:for="{{roleFilters}}" wx:key="value" class="filter-chip {{roleFilter === item.value ? 'active' : ''}}" data-value="{{item.value}}" bindtap="selectRoleFilter">{{item.label}}</view>
+    </view>
+    <view class="filter-label source-label">来源渠道</view>
+    <view class="filter-list">
+      <view wx:for="{{sourceFilters}}" wx:key="value" class="filter-chip {{sourceFilter === item.value ? 'active' : ''}}" data-value="{{item.value}}" bindtap="selectSourceFilter">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="summary-row">
+    <text>客户列表</text>
+    <text class="summary-count">共 {{total}} 位</text>
+  </view>
+
+  <view class="client-list">
+    <view class="client-card {{item.cardToneClass}}" wx:for="{{clients}}" wx:key="id">
+      <view class="card-highlight"></view>
+      <view class="card-head">
+        <view class="client-avatar">{{item.avatarText}}</view>
+        <view class="client-main">
+          <view class="client-name">{{item.name}}</view>
+          <view class="client-updated">更新于 {{item.updateTimeText}}</view>
+        </view>
+        <view class="reference-badge {{item.referenceCount ? 'used' : ''}}">{{item.referenceCount ? '已引用 ' + item.referenceCount + ' 次' : '未引用'}}</view>
+      </view>
+      <view class="info-grid">
+        <view class="info-cell">
+          <view class="info-label">客户角色</view>
+          <view class="info-value">{{item.roleLabel}}</view>
+        </view>
+        <view class="info-cell">
+          <view class="info-label">来源渠道</view>
+          <view class="info-value">{{item.sourceLabel}}</view>
+        </view>
+      </view>
+      <view class="reference-preview" wx:if="{{item.referenceCount}}">
+        <t-icon name="link" size="28rpx" color="#536784" />
+        <text>{{item.referencePreview[0].name}}{{item.referenceCount > 1 ? ' 等 ' + item.referenceCount + ' 个项目' : ''}}</text>
+      </view>
+      <view class="card-actions">
+        <view class="action-button edit" data-id="{{item.id}}" bindtap="editClient"><t-icon name="edit-1" size="30rpx" color="#1a365d" /><text>编辑</text></view>
+        <view class="action-button delete {{item.referenceCount ? 'blocked' : ''}}" data-id="{{item.id}}" bindtap="requestDeleteClient"><t-icon name="delete" size="30rpx" color="{{item.referenceCount ? '#989fa6' : '#ba1a1a'}}" /><text>删除</text></view>
+      </view>
+    </view>
+
+    <view class="empty-state" wx:if="{{!loading && !clients.length}}">
+      <t-icon name="usergroup" size="86rpx" color="#989fa6" />
+      <view class="empty-title">暂无匹配客户</view>
+      <view>可更换客户名称、角色或来源渠道后重试</view>
+    </view>
+    <view class="list-loading" wx:if="{{loading}}"><t-loading size="36rpx" theme="circular" /><text>正在加载客户...</text></view>
+    <view class="list-loading" wx:if="{{!loading && clients.length && !hasMore}}">没有更多客户了</view>
+  </view>
+
+  <t-popup visible="{{impactVisible}}" placement="bottom" bindvisible-change="onImpactVisibleChange">
+    <view class="impact-sheet">
+      <view class="sheet-handle"></view>
+      <view class="sheet-title">{{impactMode === 'edit' ? '确认项目引用范围' : '当前客户无法删除'}}</view>
+      <view class="impact-tip {{impactMode === 'delete' ? 'danger' : ''}}">
+        <t-icon name="info-circle-filled" size="34rpx" color="{{impactMode === 'delete' ? '#ba1a1a' : '#1a365d'}}" />
+        <text wx:if="{{impactMode === 'edit'}}">客户“{{prepared.client.name}}”已被 {{prepared.referenceCount}} 个项目引用，修改后这些项目会同步更新。</text>
+        <text wx:else>客户“{{prepared.client.name}}”仍被 {{prepared.referenceCount}} 个项目引用，请先为这些项目重新选择客户。</text>
+      </view>
+      <scroll-view class="project-reference-list" scroll-y>
+        <view class="project-reference" wx:for="{{prepared.projects}}" wx:key="id">
+          <view class="reference-index">{{index + 1}}</view>
+          <view class="reference-main">
+            <view class="reference-name">{{item.name}}</view>
+            <view class="reference-code">{{item.projectCode || '暂无项目编号'}}</view>
+          </view>
+          <t-icon name="link" size="30rpx" color="#74777f" />
+        </view>
+      </scroll-view>
+      <view class="sheet-actions">
+        <view class="sheet-button secondary" bindtap="closeImpact">{{impactMode === 'edit' ? '取消' : '知道了'}}</view>
+        <view wx:if="{{impactMode === 'edit'}}" class="sheet-button primary" bindtap="continueEdit">确认并继续编辑</view>
+      </view>
+    </view>
+  </t-popup>
+
+  <t-popup visible="{{editorVisible}}" placement="bottom" bindvisible-change="onEditorVisibleChange">
+    <view class="editor-sheet">
+      <view class="sheet-handle"></view>
+      <view class="editor-head">
+        <view class="sheet-title">编辑客户信息</view>
+        <t-icon name="close" size="40rpx" color="#74777f" bindtap="closeEditor" />
+      </view>
+      <view class="sync-banner" wx:if="{{prepared.referenceCount}}">
+        <t-icon name="link" size="30rpx" color="#1a365d" />
+        <text>保存后将同步更新 {{prepared.referenceCount}} 个引用项目</text>
+      </view>
+      <view class="form-field">
+        <view class="field-label">客户名称</view>
+        <view class="field-input"><input value="{{editForm.name}}" maxlength="120" placeholder="请输入客户名称" bindinput="onEditNameInput" /></view>
+      </view>
+      <view class="form-field">
+        <view class="field-label">客户角色</view>
+        <view class="field-input select" data-field="roleCode" bindtap="openEditPicker"><text>{{editRoleLabel || '请选择客户角色'}}</text><t-icon name="chevron-down" size="32rpx" color="#74777f" /></view>
+      </view>
+      <view class="form-field">
+        <view class="field-label">来源渠道</view>
+        <view class="field-input select" data-field="source" bindtap="openEditPicker"><text>{{editSourceLabel || '请选择来源渠道'}}</text><t-icon name="chevron-down" size="32rpx" color="#74777f" /></view>
+      </view>
+      <view class="editor-actions">
+        <view class="sheet-button secondary" bindtap="closeEditor">取消</view>
+        <view class="sheet-button primary" bindtap="saveClient">确认保存</view>
+      </view>
+    </view>
+  </t-popup>
+
+  <t-picker visible="{{pickerVisible}}" value="{{pickerValue}}" title="{{pickerTitle}}" confirm-btn="确定" cancel-btn="取消" bindconfirm="onPickerConfirm" bindcancel="closePicker" bindclose="closePicker">
+    <t-picker-item options="{{pickerOptions}}" />
+  </t-picker>
+
+  <view class="operation-mask" wx:if="{{operating}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+    <view class="operation-content"><t-loading size="44rpx" theme="circular" /><text>{{loadingMessage}}</text></view>
+  </view>
+</view>

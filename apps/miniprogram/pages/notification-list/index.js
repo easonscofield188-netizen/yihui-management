@@ -28,9 +28,12 @@ function formatDateTime(value, timestamp) {
 }
 
 function decorateNotification(item) {
+  const isCategoryReview = item.notificationType === "cost_category_review";
   const projectName = String(item.projectName || "未命名项目");
   const isCreated = item.eventType === "project_created";
-  const listTitle = isCreated
+  const listTitle = isCategoryReview
+    ? `新类目“${item.proposedLabel || '待审核'}”待审核`
+    : isCreated
     ? `新建《${projectName}》`
     : `《${projectName}》信息变更`;
   return {
@@ -38,8 +41,8 @@ function decorateNotification(item) {
     listTitle,
     isUnread: item.readStatus === "unread",
     timeText: formatDateTime(item.createdAt, item.createdTimestamp),
-    iconName: isCreated ? "folder-add-filled" : "edit-1-filled",
-    iconColor: isCreated ? "#0f7a45" : "#2457a7",
+    iconName: isCategoryReview ? "task" : isCreated ? "folder-add-filled" : "edit-1-filled",
+    iconColor: isCategoryReview ? "#9a5b13" : isCreated ? "#0f7a45" : "#2457a7",
   };
 }
 
@@ -112,6 +115,11 @@ Page({
     }
     if (this.data.selectionMode) {
       this.toggleSelectionById(id);
+      return;
+    }
+    const notification = this.data.notifications.find(item => item._id === id);
+    if (notification && notification.notificationType === "cost_category_review" && notification.reviewRequestId) {
+      wx.navigateTo({ url: `/pages/category-review-detail/index?id=${notification.reviewRequestId}&notificationId=${id}` });
       return;
     }
     wx.navigateTo({ url: `/pages/notification-detail/index?id=${id}` });

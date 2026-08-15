@@ -10,6 +10,12 @@
     "pages/project-edit/index",
     "pages/account-create/index",
     "pages/profile/index",
+    "pages/admin-center/index",
+    "pages/data-config/index",
+    "pages/config-management/index",
+    "pages/category-review-list/index",
+    "pages/category-review-detail/index",
+    "pages/client-management/index",
     "pages/project-overview/index",
     "pages/project-cases/index",
     "pages/project-case-detail/index",
@@ -24,11 +30,11 @@
     "pages/system-settings/index"
   ],
   "window": {
-    "backgroundColor": "#F5F7F6",
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#146C43",
+    "backgroundColor": "#f7f9fd",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#f9f9ff",
     "navigationBarTitleText": "亿辉艺术",
-    "navigationBarTextStyle": "white"
+    "navigationBarTextStyle": "black"
   },
   "tabBar": {
     "custom": true,

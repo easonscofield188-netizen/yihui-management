@@ -1,4 +1,5 @@
 const PROJECT_CHANGE_TEMPLATE_ID = "AzJTLvxbpAoCM3IoQYfp5DsSKM4IjqCAwmsD1F_oXqA";
+const CATEGORY_REVIEW_TEMPLATE_ID = "osXcvIp2RwA4HpYNqVienL9R3gq-PNw5iDe0LQprkok";
 
 const WECHAT_SUBSCRIPTION_STATUS = Object.freeze({
   ACCEPTED: "accepted",
@@ -19,6 +20,7 @@ function mapWechatAuthResult(value) {
 }
 
 module.exports = {
+  CATEGORY_REVIEW_TEMPLATE_ID,
   PROJECT_CHANGE_TEMPLATE_ID,
   WECHAT_SUBSCRIPTION_STATUS,
   mapWechatAuthResult,

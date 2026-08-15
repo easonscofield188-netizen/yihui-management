@@ -77,6 +77,7 @@ function createItem(data = {}) {
   return {
     localId: data.localId || `${Date.now()}_${Math.random().toString(16).slice(2)}`,
     name: String(data.name || ""),
+    categoryConfigValue: String(data.categoryConfigValue || ""),
     quantity,
     unit: String(data.unit || "项"),
     unitPrice,
@@ -130,6 +131,9 @@ Page({
     sourceId: "",
     navTitle: "新增报价单",
     items: [createItem()],
+    costCategories: [],
+    categoryPickerVisible: false,
+    categoryItemIndex: -1,
     drawings: [],
     totalAmount: 0,
     totalText: "0.00",
@@ -142,6 +146,7 @@ Page({
   },
 
   onLoad(options = {}) {
+    this.loadCostCategories();
     const sourceId = String(options.sourceId || "").trim();
     if (sourceId) {
       this.setData({
@@ -325,6 +330,56 @@ Page({
     this.scheduleDraftSave();
   },
 
+  async loadCostCategories() {
+    try {
+      const configs = await api.getGlobalConfig(true);
+      const costCategories = (Array.isArray(configs.COST_CATEGORY) ? configs.COST_CATEGORY : [])
+        .map(item => ({
+          id: item.id || item._id || item.value,
+          value: String(item.value || ""),
+          label: String(item.label || ""),
+          commonUnit: String(item.commonUnit || "").trim(),
+        }))
+        .filter(item => item.label);
+      this.setData({ costCategories });
+      return costCategories;
+    } catch (error) {
+      return [];
+    }
+  },
+
+  async openCategoryPicker(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (!Number.isInteger(index) || !this.data.items[index]) return;
+    let categories = this.data.costCategories;
+    if (!categories.length) categories = await this.loadCostCategories();
+    if (!categories.length) {
+      wx.showToast({ title: "暂无可选成本类型，可继续手动填写", icon: "none" });
+      return;
+    }
+    this.setData({ categoryPickerVisible: true, categoryItemIndex: index });
+  },
+
+  closeCategoryPicker(event) {
+    if (event && event.detail && event.detail.visible === true) return;
+    this.setData({ categoryPickerVisible: false, categoryItemIndex: -1 });
+  },
+
+  selectCostCategory(event) {
+    const categoryIndex = Number(event.currentTarget.dataset.categoryIndex);
+    const itemIndex = this.data.categoryItemIndex;
+    const category = this.data.costCategories[categoryIndex];
+    if (!category || !Number.isInteger(itemIndex) || !this.data.items[itemIndex]) return;
+    this.setData({
+      [`items[${itemIndex}].name`]: category.label,
+      [`items[${itemIndex}].unit`]: category.commonUnit || "项",
+      [`items[${itemIndex}].categoryConfigValue`]: category.value,
+      categoryPickerVisible: false,
+      categoryItemIndex: -1,
+    });
+    this.scheduleDraftSave();
+  },
+
   onItemInput(event) {
     const index = Number(event.currentTarget.dataset.index);
     const field = event.currentTarget.dataset.field;
@@ -339,13 +394,15 @@ Page({
     items[index].totalAmount = itemTotal;
     items[index].totalText = money(itemTotal);
     const totalAmount = calcTotalAmount(items);
-    this.setData({
+    const updates = {
       [`items[${index}].${field}`]: value,
       [`items[${index}].totalAmount`]: itemTotal,
       [`items[${index}].totalText`]: money(itemTotal),
       totalAmount,
       totalText: money(totalAmount),
-    });
+    };
+    if (field === "name") updates[`items[${index}].categoryConfigValue`] = "";
+    this.setData(updates);
     this.scheduleDraftSave();
   },
 
@@ -632,6 +689,7 @@ Page({
         createdDate: this.data.form.createdDate,
         items: this.data.items.map(item => ({
           name: item.name.trim(),
+          categoryConfigValue: item.categoryConfigValue || "",
           quantity: Number(item.quantity),
           unit: item.unit.trim(),
           unitPrice: Number(item.unitPrice),

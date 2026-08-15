@@ -1,0 +1,15 @@
+<view class="config-home">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;"><view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view><view class="nav-title">数据配置</view></view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+  <view class="intro-card"><view class="intro-icon"><t-icon name="data-base" size="46rpx" color="#ffffff" /></view><view><view class="intro-title">主数据控制中心</view><view class="intro-description">统一管理小程序中的业务选项</view></view></view>
+  <view class="section-title">配置分类</view>
+  <view class="group-grid">
+    <view class="group-card tone-{{item.tone}}" wx:for="{{groups}}" wx:key="group" data-group="{{item.group}}" bindtap="openGroup">
+      <view class="group-head"><view class="group-icon"><t-icon name="{{item.icon}}" size="42rpx" color="#ffffff" /></view><t-icon name="setting" size="31rpx" color="#8a93a1" /></view>
+      <view class="group-name">{{item.name}}</view><view class="group-description">{{item.description}}</view>
+      <view class="group-preview">{{item.preview || '暂无启用配置'}}</view>
+      <view class="group-foot"><text>{{item.activeCount || 0}} 项启用</text><view>管理 <t-icon name="chevron-right" size="26rpx" color="#526174" /></view></view>
+    </view>
+  </view>
+  <view class="loading-mask" wx:if="{{loading}}"><view class="loading-content"><t-loading size="42rpx" theme="circular" /><text>正在加载配置...</text></view></view>
+</view>

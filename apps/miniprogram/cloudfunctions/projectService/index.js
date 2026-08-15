@@ -987,7 +987,41 @@ async function deleteProjects(params, currentUser) {
   }
 }
 
+async function applyCanonicalClientSnapshot(params = {}) {
+  const clientId = String(params.clientId || '').trim().slice(0, 80);
+  if (!clientId) return { params };
+  try {
+    const client = (await db.collection('clients').doc(clientId).get()).data;
+    if (!client || client.status === 'deleted' || client.status === 'deleting') {
+      return { error: { code: 409, message: '所选客户不存在或已删除，请重新选择客户' } };
+    }
+    const roleCode = String(client.roleCode || client.role || '').trim();
+    const source = String(client.source || '').trim();
+    if (!client.name || !roleCode || !source) {
+      return { error: { code: 409, message: '所选客户信息不完整，请先在客户管理中完善' } };
+    }
+    return {
+      params: {
+        ...params,
+        clientId,
+        client: String(client.name).trim(),
+        role: roleCode,
+        clientRole: roleCode,
+        clientSource: source,
+        source,
+        clientSnapshotVersion: Math.max(1, Number(client.version) || 1)
+      },
+      client
+    };
+  } catch (error) {
+    return { error: { code: 409, message: '所选客户不存在或无法读取，请重新选择客户' } };
+  }
+}
+
 async function updateProject(params) {
+  const canonical = await applyCanonicalClientSnapshot(params);
+  if (canonical.error) return canonical.error;
+  params = canonical.params;
   const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, startDate, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
 
   if (!id) {
@@ -1129,7 +1163,9 @@ async function updateProject(params) {
     if (period) updateDataFinal.period = period;
     if (client) updateDataFinal.client = client;
     if (clientId !== undefined) updateDataFinal.clientId = clientId;
+    if (params.clientSnapshotVersion !== undefined) updateDataFinal.clientSnapshotVersion = params.clientSnapshotVersion;
     if (role) updateDataFinal.role = role;
+    if (params.clientRole !== undefined) updateDataFinal.clientRole = params.clientRole;
     if (scene !== undefined) updateDataFinal.scene = scene;
     if (staffCount !== undefined) updateDataFinal.staffCount = staffCount;
     if (amount !== undefined) updateDataFinal.amount = amount;
@@ -1140,7 +1176,10 @@ async function updateProject(params) {
       updateDataFinal.receivedAmount = receivedAmount;
     }
     if (desc !== undefined) updateDataFinal.desc = desc;
-    if (clientSource !== undefined) updateDataFinal.clientSource = clientSource;
+    if (clientSource !== undefined) {
+      updateDataFinal.clientSource = clientSource;
+      updateDataFinal.source = clientSource;
+    }
     
     if (costs && Array.isArray(costs)) {
       // 清洗成本数据，确保没有 NaN 或 undefined
@@ -1348,6 +1387,12 @@ async function updateProject(params) {
 }
 
 async function createProject(params) {
+  if (!String(params.clientId || '').trim()) {
+    return { code: 400, message: '请选择已有客户，或先新增客户后再创建项目' };
+  }
+  const canonical = await applyCanonicalClientSnapshot(params);
+  if (canonical.error) return canonical.error;
+  params = canonical.params;
   const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
   // 创建渠道只在首次创建时写入，避免后续编辑篡改项目来源。
   // 未传该字段的旧管理端调用按“后台管理系统”处理，兼容既有入口。
@@ -1486,6 +1531,43 @@ async function createProject(params) {
     const res = await db.collection('projects').add({
       data
     });
+
+    if (params.clientId) {
+      const latestClient = (await db.collection('clients').doc(params.clientId).get()).data;
+      if (!latestClient || latestClient.status === 'deleted' || latestClient.status === 'deleting') {
+        await db.collection('projects').doc(res._id).remove();
+        return { code: 409, message: '所选客户已被删除，请重新选择客户后再创建项目' };
+      }
+      const latestRole = String(latestClient.roleCode || latestClient.role || '').trim();
+      const latestSource = String(latestClient.source || '').trim();
+      const latestVersion = Math.max(1, Number(latestClient.version) || 1);
+      if (
+        data.client !== latestClient.name
+        || data.role !== latestRole
+        || data.clientSource !== latestSource
+        || Number(data.clientSnapshotVersion || 1) !== latestVersion
+      ) {
+        Object.assign(data, {
+          client: latestClient.name,
+          role: latestRole,
+          clientRole: latestRole,
+          clientSource: latestSource,
+          source: latestSource,
+          clientSnapshotVersion: latestVersion
+        });
+        await db.collection('projects').doc(res._id).update({
+          data: {
+            client: data.client,
+            role: data.role,
+            clientRole: data.clientRole,
+            clientSource: data.clientSource,
+            source: data.source,
+            clientSnapshotVersion: latestVersion,
+            updateTime: db.serverDate()
+          }
+        });
+      }
+    }
 
     await recordProjectChangeEvent({
       eventType: PROJECT_EVENT_TYPE.CREATED,

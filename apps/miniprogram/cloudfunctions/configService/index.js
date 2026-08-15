@@ -15,6 +15,13 @@ cloud.init({
 });
 
 const db = cloud.database();
+const SESSION_COLLECTION = 'auth_sessions';
+const QUOTATION_COLLECTION = 'project_quotations';
+const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
+const ALLOWED_GROUPS = new Set(['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE']);
 
 // --- 服务器内存缓存变量 ---
 // 注意：云函数实例在“温热”状态下会保留全局变量
@@ -48,16 +55,34 @@ exports.main = async (event, context) => {
   }
   
   try {
+    const auth = await authenticate(event, data || {});
+    if (auth.error) return auth.error;
+    if (!READ_ROLES.has(auth.user.role || 'user')) return forbidden();
     // 根据操作类型执行相应的函数
     switch (action) {
       case 'getGlobalConfig':
         return await getGlobalConfig(data);
       case 'queryConfig':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
         return await queryConfig(data);
       case 'createConfig':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
         return await createConfig(data);
       case 'updateConfigStatus':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
         return await updateConfigStatus(data);
+      case 'getConfigUsage':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await getConfigUsage(data);
+      case 'updateConfig':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await updateConfig(data, auth.user);
+      case 'reorderConfig':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await reorderConfig(data);
+      case 'deleteConfig':
+        if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
+        return await deleteConfig(data, auth.user);
       default:
         // 处理未知操作
         return {
@@ -76,6 +101,38 @@ exports.main = async (event, context) => {
     };
   }
 };
+
+function forbidden() {
+  return { code: 403, message: '当前账号无此操作权限' };
+}
+
+function getAuthToken(event, data) {
+  const headers = event.headers || {};
+  const authorization = headers.authorization || headers.Authorization || '';
+  return String(data.authToken || event.authToken || authorization.replace(/^Bearer\s+/i, '') || '').trim();
+}
+
+async function authenticate(event, data) {
+  const token = getAuthToken(event, data || {});
+  if (!token) return { error: { code: 401, message: '请先登录' } };
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const sessionResult = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (sessionResult.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+    if (session && session._id) db.collection(SESSION_COLLECTION).doc(session._id).remove().catch(() => {});
+    return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  }
+  const now = Date.now();
+  if (!session.lastActiveAt || now - Number(session.lastActiveAt) >= SESSION_TOUCH_INTERVAL_MS) {
+    db.collection(SESSION_COLLECTION).doc(session._id).update({
+      data: { lastActiveAt: now, expiresAt: now + SESSION_TTL_MS, updateTime: db.serverDate() }
+    }).catch(() => {});
+  }
+  const userResult = await db.collection('users').doc(session.userId).get();
+  if (!userResult.data) return { error: { code: 401, message: '用户不存在或已停用' } };
+  if (userResult.data.status && userResult.data.status !== 'active') return { error: forbidden() };
+  return { user: { ...userResult.data, id: session.userId } };
+}
 
 /**
  * 获取全局聚合配置（带服务器内存缓存）
@@ -122,6 +179,7 @@ async function getGlobalConfig(params) {
         id: item._id || item.id,
         label: item.label || '未命名',
         value: val,
+        commonUnit: String(item.commonUnit || '').trim(),
         sortOrder: item.sortOrder !== undefined ? item.sortOrder : 999 // 默认排在最后
       });
     });
@@ -364,12 +422,17 @@ async function queryConfig(params) {
     }
 
     // 排序逻辑：按 sortOrder 字段升序排列，确保前端展示顺序可控
-    const res = await query.orderBy('sortOrder', 'asc').get();
+    const res = await query.orderBy('sortOrder', 'asc').limit(1000).get();
+
+    const sortedData = (res.data || []).slice().sort((left, right) => {
+      const statusDifference = Number(left.isActive === false) - Number(right.isActive === false);
+      return statusDifference || (Number(left.sortOrder) || 0) - (Number(right.sortOrder) || 0);
+    });
 
     return {
       code: 0,
       message: '查询成功',
-      data: res.data
+      data: sortedData
     };
   } catch (err) {
     console.error('查询配置数据库错误:', err);
@@ -386,15 +449,18 @@ async function queryConfig(params) {
  */
 async function createConfig(params) {
   const { group, label, description = '' } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
+  const commonUnit = group === 'COST_CATEGORY' ? String(params.commonUnit || '').trim().slice(0, 30) : '';
 
-  if (!group || !allowedGroups.includes(group)) {
+  if (!group || !ALLOWED_GROUPS.has(group)) {
     return { code: 400, message: '配置分组不支持新增' };
   }
   if (!label || !String(label).trim()) {
     return { code: 400, message: '请填写配置中文名' };
   }
-  if (!isSafeInput(label) || !isSafeInput(description)) {
+  if (group === 'COST_CATEGORY' && !commonUnit) {
+    return { code: 400, message: '请填写常用单位' };
+  }
+  if (!isSafeInput(label) || !isSafeInput(description) || !isSafeInput(commonUnit)) {
     return { code: 400, message: '输入包含非法字符' };
   }
 
@@ -403,8 +469,7 @@ async function createConfig(params) {
     const duplicatedLabel = await db.collection('system_configs')
       .where({
         group,
-        label: normalizedLabel,
-        isActive: true
+        label: normalizedLabel
       })
       .limit(1)
       .get();
@@ -443,7 +508,8 @@ async function createConfig(params) {
       value,
       sortOrder: nextSortOrder,
       isActive: true,
-      description: String(description || '').trim(),
+      description: String(description || '').trim().slice(0, 240),
+      commonUnit,
       createdAt: now,
       updateTime: now
     };
@@ -476,7 +542,6 @@ async function createConfig(params) {
  */
 async function updateConfigStatus(params) {
   const { id, group, isActive } = params || {};
-  const allowedGroups = ['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE'];
 
   if (!id || !String(id).trim()) {
     return { code: 400, message: '缺少配置 ID' };
@@ -484,7 +549,7 @@ async function updateConfigStatus(params) {
   if (typeof isActive !== 'boolean') {
     return { code: 400, message: '缺少启用状态' };
   }
-  if (!group || !allowedGroups.includes(group)) {
+  if (!group || !ALLOWED_GROUPS.has(group)) {
     return { code: 400, message: '配置分组不支持修改状态' };
   }
 
@@ -508,11 +573,23 @@ async function updateConfigStatus(params) {
       };
     }
 
+    if (!isActive && config.isActive) {
+      const activeResult = await db.collection('system_configs').where({ group, isActive: true }).count();
+      if (Number(activeResult.total) <= 1) {
+        return { code: 409, message: '每个配置分组至少保留一个启用项' };
+      }
+    }
+
+    const groupResult = await db.collection('system_configs').where({ group }).orderBy('sortOrder', 'asc').limit(1000).get();
+    const targetStatusItems = (groupResult.data || []).filter(item => item._id !== id && (item.isActive !== false) === isActive);
+    const nextSortOrder = targetStatusItems.reduce((maximum, item) => Math.max(maximum, Number(item.sortOrder) || 0), 0) + 1;
+
     await db.collection('system_configs')
       .doc(id)
       .update({
         data: {
           isActive,
+          sortOrder: nextSortOrder,
           updateTime: db.serverDate()
         }
       });
@@ -529,4 +606,266 @@ async function updateConfigStatus(params) {
     console.error('更新配置状态失败:', err);
     return { code: 500, message: '状态更新失败', error: err.message };
   }
+}
+
+async function fetchAllConfigDocuments(query) {
+  const records = [];
+  const pageSize = 1000;
+  let offset = 0;
+  while (true) {
+    const result = await query.skip(offset).limit(pageSize).get();
+    const page = result.data || [];
+    records.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return records;
+}
+
+async function fetchOptionalCollection(collectionName) {
+  try {
+    return await fetchAllConfigDocuments(db.collection(collectionName));
+  } catch (error) {
+    const message = String(error?.message || error?.errMsg || '');
+    const code = String(error?.errCode || error?.code || '');
+    if (code === '-502005' || /collection.*(not exist|不存在)/i.test(message)) return [];
+    throw error;
+  }
+}
+
+function configMatchesCost(cost, config) {
+  return String(cost?.categoryCode || '').trim() === config.value
+    || (!cost?.categoryCode && String(cost?.category || '').trim() === config.label);
+}
+
+async function collectConfigUsage(config) {
+  const clients = await fetchAllConfigDocuments(db.collection('clients'));
+  const projects = await fetchAllConfigDocuments(db.collection('projects'));
+  const clientReferences = [];
+  const projectReferences = [];
+  const quotationReferences = [];
+
+  if (config.group === 'CLIENT_ROLE') {
+    clients.forEach(client => {
+      if (String(client.roleCode || client.role || '') === config.value) clientReferences.push(client);
+    });
+    projects.forEach(project => {
+      if (String(project.role || project.clientRole || '') === config.value) projectReferences.push(project);
+    });
+  } else if (config.group === 'CLIENT_SOURCE') {
+    clients.forEach(client => {
+      if (String(client.source || '') === config.value) clientReferences.push(client);
+    });
+    projects.forEach(project => {
+      if (String(project.clientSource || project.source || '') === config.value) projectReferences.push(project);
+    });
+  } else if (config.group === 'PROJECT_SCENE') {
+    projects.forEach(project => {
+      if (String(project.scene || '') === config.value) projectReferences.push(project);
+    });
+  } else if (config.group === 'COST_CATEGORY') {
+    projects.forEach(project => {
+      const directCosts = Array.isArray(project.costs) ? project.costs : [];
+      const subCosts = (Array.isArray(project.subProjects) ? project.subProjects : [])
+        .flatMap(item => Array.isArray(item.costs) ? item.costs : []);
+      if ([...directCosts, ...subCosts].some(cost => configMatchesCost(cost, config))) projectReferences.push(project);
+    });
+    const quotations = await fetchOptionalCollection(QUOTATION_COLLECTION);
+    quotations.forEach(quotation => {
+      if (quotation.status === 'deleted') return;
+      const used = (Array.isArray(quotation.items) ? quotation.items : []).some(item => (
+        String(item.categoryConfigValue || '').trim() === config.value
+        || (!item.categoryConfigValue && String(item.name || '').trim() === config.label)
+      ));
+      if (used) quotationReferences.push(quotation);
+    });
+  }
+
+  const previews = [
+    ...clientReferences.map(client => ({ type: 'client', id: client._id, name: client.name || '未命名客户' })),
+    ...projectReferences.map(project => ({ type: 'project', id: project._id, name: project.name || '未命名项目' })),
+    ...quotationReferences.map(quotation => ({
+      type: 'quotation',
+      id: quotation._id,
+      name: `报价单：${quotation.projectName || quotation.title || '未命名报价'}${quotation.versionLabel ? `（${quotation.versionLabel}）` : ''}`
+    }))
+  ];
+  return {
+    clientReferences,
+    projectReferences,
+    quotationReferences,
+    referenceCount: previews.length,
+    previews
+  };
+}
+
+async function getConfigRecord(id, group) {
+  if (!id || !ALLOWED_GROUPS.has(group)) return null;
+  try {
+    const config = (await db.collection('system_configs').doc(id).get()).data;
+    return config && config.group === group ? config : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function getConfigUsage(params = {}) {
+  const id = String(params.id || '').trim().slice(0, 80);
+  const group = String(params.group || '').trim();
+  const config = await getConfigRecord(id, group);
+  if (!config) return { code: 404, message: '配置项不存在' };
+  const usage = await collectConfigUsage(config);
+  return {
+    code: 0,
+    message: '查询成功',
+    data: {
+      config,
+      referenceCount: usage.referenceCount,
+      clientReferenceCount: usage.clientReferences.length,
+      projectReferenceCount: usage.projectReferences.length,
+      quotationReferenceCount: usage.quotationReferences.length,
+      references: usage.previews
+    }
+  };
+}
+
+async function batchUpdateDocuments(collectionName, updates) {
+  const batchSize = 20;
+  for (let index = 0; index < updates.length; index += batchSize) {
+    const batch = updates.slice(index, index + batchSize);
+    await Promise.all(batch.map(item => db.collection(collectionName).doc(item.id).update({ data: item.data })));
+  }
+  return updates.length;
+}
+
+async function syncConfigLabel(config, nextLabel) {
+  const usage = await collectConfigUsage(config);
+  const clientUpdates = [];
+  const projectUpdates = [];
+
+  usage.clientReferences.forEach(client => {
+    const data = { updateTime: db.serverDate() };
+    if (config.group === 'CLIENT_ROLE') data.roleLabel = nextLabel;
+    if (config.group === 'CLIENT_SOURCE') data.sourceLabel = nextLabel;
+    clientUpdates.push({ id: client._id, data });
+  });
+
+  usage.projectReferences.forEach(project => {
+    const data = { updateTime: db.serverDate() };
+    if (config.group === 'CLIENT_ROLE') data.clientRoleLabel = nextLabel;
+    if (config.group === 'CLIENT_SOURCE') data.clientSourceLabel = nextLabel;
+    if (config.group === 'PROJECT_SCENE') data.sceneLabel = nextLabel;
+    if (config.group === 'COST_CATEGORY') {
+      data.costs = (Array.isArray(project.costs) ? project.costs : []).map(cost => (
+        configMatchesCost(cost, config)
+          ? { ...cost, categoryCode: config.value, category: nextLabel, categoryLabel: nextLabel }
+          : cost
+      ));
+      data.subProjects = (Array.isArray(project.subProjects) ? project.subProjects : []).map(subProject => ({
+        ...subProject,
+        costs: (Array.isArray(subProject.costs) ? subProject.costs : []).map(cost => (
+          configMatchesCost(cost, config)
+            ? { ...cost, categoryCode: config.value, category: nextLabel, categoryLabel: nextLabel }
+            : cost
+        ))
+      }));
+    }
+    projectUpdates.push({ id: project._id, data });
+  });
+
+  await batchUpdateDocuments('clients', clientUpdates);
+  await batchUpdateDocuments('projects', projectUpdates);
+  return usage.clientReferences.length + usage.projectReferences.length;
+}
+
+async function updateConfig(params = {}, currentUser) {
+  const id = String(params.id || '').trim().slice(0, 80);
+  const group = String(params.group || '').trim();
+  const label = String(params.label || '').trim().slice(0, 80);
+  const description = String(params.description || '').trim().slice(0, 240);
+  const commonUnit = group === 'COST_CATEGORY' ? String(params.commonUnit || '').trim().slice(0, 30) : '';
+  if (!id || !ALLOWED_GROUPS.has(group)) return { code: 400, message: '配置参数不完整' };
+  if (!label) return { code: 400, message: '请输入配置名称' };
+  if (group === 'COST_CATEGORY' && !commonUnit) return { code: 400, message: '请输入常用单位' };
+  if (!isSafeInput(label) || !isSafeInput(description) || !isSafeInput(commonUnit)) return { code: 400, message: '输入包含非法字符' };
+  const config = await getConfigRecord(id, group);
+  if (!config) return { code: 404, message: '配置项不存在' };
+  const duplicates = await db.collection('system_configs').where({ group, label }).limit(10).get();
+  if ((duplicates.data || []).some(item => item._id !== id)) return { code: 409, message: '同名配置项已存在' };
+
+  const affectedReferences = config.label === label ? 0 : await syncConfigLabel(config, label);
+  await db.collection('system_configs').doc(id).update({
+    data: {
+      label,
+      description,
+      commonUnit,
+      updatedBy: currentUser.id,
+      updatedByName: currentUser.nickname || currentUser.username || '',
+      updateTime: db.serverDate()
+    }
+  });
+  configCache = null;
+  lastUpdateTime = 0;
+  return { code: 0, message: '配置项已更新', data: { id, affectedReferences } };
+}
+
+async function reorderConfig(params = {}) {
+  const id = String(params.id || '').trim().slice(0, 80);
+  const group = String(params.group || '').trim();
+  const direction = params.direction === 'up' ? 'up' : params.direction === 'down' ? 'down' : '';
+  if (!id || !ALLOWED_GROUPS.has(group) || !direction) return { code: 400, message: '排序参数无效' };
+  const result = await db.collection('system_configs').where({ group }).orderBy('sortOrder', 'asc').limit(1000).get();
+  const list = result.data || [];
+  const current = list.find(item => item._id === id);
+  if (!current) return { code: 404, message: '配置项不存在' };
+  const peers = list.filter(item => (item.isActive !== false) === (current.isActive !== false));
+  const currentIndex = peers.findIndex(item => item._id === id);
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (targetIndex < 0 || targetIndex >= peers.length) return { code: 0, message: '当前已经在边界位置', data: { unchanged: true } };
+  const target = peers[targetIndex];
+  await Promise.all([
+    db.collection('system_configs').doc(current._id).update({ data: { sortOrder: Number(target.sortOrder) || targetIndex + 1, updateTime: db.serverDate() } }),
+    db.collection('system_configs').doc(target._id).update({ data: { sortOrder: Number(current.sortOrder) || currentIndex + 1, updateTime: db.serverDate() } })
+  ]);
+  configCache = null;
+  lastUpdateTime = 0;
+  return { code: 0, message: '排序已更新', data: { id } };
+}
+
+async function deleteConfig(params = {}, currentUser) {
+  const id = String(params.id || '').trim().slice(0, 80);
+  const group = String(params.group || '').trim();
+  const config = await getConfigRecord(id, group);
+  if (!config) return { code: 404, message: '配置项不存在' };
+  const usage = await collectConfigUsage(config);
+  if (usage.referenceCount) {
+    return {
+      code: 409,
+      message: `该配置仍被 ${usage.referenceCount} 条数据引用，无法删除`,
+      data: { referenceCount: usage.referenceCount, references: usage.previews }
+    };
+  }
+  const activeResult = await db.collection('system_configs').where({ group, isActive: true }).count();
+  if (config.isActive && Number(activeResult.total) <= 1) return { code: 409, message: '每个配置分组至少保留一个启用项' };
+  await db.collection('system_configs').doc(id).remove();
+  configCache = null;
+  lastUpdateTime = 0;
+  try {
+    await db.collection('operation_logs').add({
+      data: {
+        uid: currentUser.id,
+        un: String(currentUser.nickname || currentUser.username || '').slice(0, 20),
+        username: currentUser.username || '',
+        m: '数据配置',
+        a: 'delete',
+        c: `删除配置 ${config.label}（${group}）`,
+        s: '成功',
+        createdTimestamp: Date.now(),
+        createdAt: db.serverDate()
+      }
+    });
+  } catch (error) {
+    console.error('记录配置删除日志失败:', error);
+  }
+  return { code: 0, message: '配置项已删除', data: { id } };
 }

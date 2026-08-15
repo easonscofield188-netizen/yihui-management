@@ -10,6 +10,7 @@ const SESSION_COLLECTION = 'auth_sessions';
 const NOTIFICATION_COLLECTION = 'notifications';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const CATEGORY_REVIEW_TEMPLATE_ID = 'osXcvIp2RwA4HpYNqVienL9R3gq-PNw5iDe0LQprkok';
 
 async function getWechatSubscribeTemplateId() {
   try {
@@ -287,6 +288,8 @@ async function saveWechatSubscription(data, current) {
       wechatSubscriptionStatus: WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND,
       wechatSubscriptionStatusLabel: WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND].label,
       wechatSubscriptionAvailableCount: 0,
+      costCategoryReviewSubscriptionStatus: WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND,
+      costCategoryReviewSubscriptionAvailableCount: 0,
       updateTime: db.serverDate()
     }
   })));
@@ -311,6 +314,51 @@ async function saveWechatSubscription(data, current) {
     message: status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? '微信提醒已开启一次' : '订阅状态已更新',
     data: formatted
   };
+}
+
+async function formatCategoryReviewSubscription(user) {
+  const status = normalizeWechatSubscriptionStatus(user.costCategoryReviewSubscriptionStatus || WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND);
+  const availableCount = Math.max(0, Number(user.costCategoryReviewSubscriptionAvailableCount) || 0);
+  return {
+    templateId: CATEGORY_REVIEW_TEMPLATE_ID,
+    status,
+    statusLabel: availableCount > 0 ? '已开启' : (status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? '提醒次数已用完' : WECHAT_SUBSCRIPTION_STATUS_DICTIONARY[status].label),
+    isBound: Boolean(user.wechatOpenId),
+    availableCount,
+    canReceive: Boolean(user.wechatOpenId && availableCount > 0)
+  };
+}
+
+async function getCategoryReviewSubscriptionStatus(current) {
+  if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
+  return { code: 0, message: '查询成功', data: await formatCategoryReviewSubscription(current.user) };
+}
+
+async function saveCategoryReviewSubscription(data, current) {
+  if (current.user.role !== ADMIN_SUPER_ROLE) return forbiddenSubscription();
+  if (data.templateId !== CATEGORY_REVIEW_TEMPLATE_ID) return { code: 400, message: '订阅消息模板不匹配' };
+  const status = normalizeWechatSubscriptionStatus(data.status);
+  const openId = String(cloud.getWXContext().OPENID || '').trim();
+  if (!openId) return { code: 400, message: '请在微信小程序真机环境中开启消息提醒' };
+  const sameWechatResult = await db.collection('users').where({ wechatOpenId: openId }).get();
+  const duplicatedUsers = (sameWechatResult.data || []).filter(user => user._id !== current.userId);
+  await Promise.all(duplicatedUsers.map(user => db.collection('users').doc(user._id).update({ data: {
+    wechatOpenId: db.command.remove(),
+    costCategoryReviewSubscriptionStatus: WECHAT_SUBSCRIPTION_STATUS.NOT_BOUND,
+    costCategoryReviewSubscriptionAvailableCount: 0,
+    updateTime: db.serverDate()
+  }})));
+  const updateData = {
+    wechatOpenId: openId,
+    costCategoryReviewSubscriptionTemplateId: CATEGORY_REVIEW_TEMPLATE_ID,
+    costCategoryReviewSubscriptionStatus: status,
+    costCategoryReviewSubscriptionUpdatedTimestamp: Date.now(),
+    updateTime: db.serverDate()
+  };
+  if (status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED) updateData.costCategoryReviewSubscriptionAvailableCount = db.command.inc(1);
+  await db.collection('users').doc(current.userId).update({ data: updateData });
+  const latest = await db.collection('users').doc(current.userId).get();
+  return { code: 0, message: status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? '类目审核提醒已增加一次' : '订阅状态已更新', data: await formatCategoryReviewSubscription(latest.data || {}) };
 }
 
 exports.main = async (event) => {
@@ -343,6 +391,10 @@ exports.main = async (event) => {
         return await getWechatSubscriptionStatus(current);
       case 'saveWechatSubscription':
         return await saveWechatSubscription(data, current);
+      case 'getCategoryReviewSubscriptionStatus':
+        return await getCategoryReviewSubscriptionStatus(current);
+      case 'saveCategoryReviewSubscription':
+        return await saveCategoryReviewSubscription(data, current);
       default:
         return { code: 400, message: '未知操作' };
     }

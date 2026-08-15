@@ -5,6 +5,7 @@ const {
 } = require("../../utils/notification-preferences");
 const api = require("../../utils/api");
 const {
+  CATEGORY_REVIEW_TEMPLATE_ID,
   PROJECT_CHANGE_TEMPLATE_ID,
   WECHAT_SUBSCRIPTION_STATUS,
   mapWechatAuthResult,
@@ -47,11 +48,14 @@ Page({
       canReceive: false,
     },
     wechatSubscriptionLoading: false,
+    categoryReviewSubscription: { status: "not_bound", statusLabel: "未开启", availableCount: 0, canReceive: false },
+    categoryReviewSubscriptionLoading: false,
   },
 
   onShow() {
     this.setData({ displayMode: getFloatingNotificationMode() });
     this.loadWechatSubscriptionStatus();
+    this.loadCategoryReviewSubscriptionStatus();
   },
 
   goBack() {
@@ -112,6 +116,29 @@ Page({
       wx.showToast({ title: error.message || "微信提醒开启失败", icon: "none" });
     } finally {
       this.setData({ wechatSubscriptionLoading: false });
+    }
+  },
+
+  async loadCategoryReviewSubscriptionStatus() {
+    try {
+      const result = await api.getCategoryReviewSubscriptionStatus();
+      this.setData({ categoryReviewSubscription: result });
+    } catch (error) {}
+  },
+
+  async enableCategoryReviewSubscription() {
+    if (this.data.categoryReviewSubscriptionLoading) return;
+    this.setData({ categoryReviewSubscriptionLoading: true });
+    try {
+      const authResult = await new Promise((resolve, reject) => wx.requestSubscribeMessage({ tmplIds: [CATEGORY_REVIEW_TEMPLATE_ID], success: resolve, fail: reject }));
+      const status = mapWechatAuthResult(authResult[CATEGORY_REVIEW_TEMPLATE_ID]);
+      const result = await api.saveCategoryReviewSubscription({ templateId: CATEGORY_REVIEW_TEMPLATE_ID, status });
+      this.setData({ categoryReviewSubscription: result });
+      wx.showToast({ title: status === WECHAT_SUBSCRIPTION_STATUS.ACCEPTED ? "已增加一次审核提醒" : "你暂未同意微信提醒", icon: "none" });
+    } catch (error) {
+      wx.showToast({ title: error.message || "审核提醒开启失败", icon: "none" });
+    } finally {
+      this.setData({ categoryReviewSubscriptionLoading: false });
     }
   },
 });

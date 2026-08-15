@@ -1,0 +1,35 @@
+<view class="admin-page">
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-title">管理中心</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="admin-hero">
+    <view class="hero-orbit one"></view><view class="hero-orbit two"></view>
+    <view class="hero-icon"><t-icon name="control-platform" size="48rpx" color="#ffffff" /></view>
+    <view class="hero-main"><view class="hero-title">超级管理员工作台</view><view class="hero-description">集中管理业务数据和系统功能</view></view>
+  </view>
+
+  <view class="search-box">
+    <t-icon name="search" size="38rpx" color="#74777f" />
+    <input class="search-input" value="{{keyword}}" placeholder="搜索管理功能" bindinput="onSearchInput" />
+    <t-icon wx:if="{{keyword}}" name="close-circle" size="34rpx" color="#989fa6" bindtap="clearSearch" />
+  </view>
+
+  <view class="section" wx:for="{{sections}}" wx:key="key" wx:for-item="section">
+    <view class="section-head"><view><view class="section-title">{{section.title}}</view><view class="section-description">{{section.description}}</view></view><text>{{section.items.length}} 项</text></view>
+    <view class="menu-grid">
+      <view class="menu-card tone-{{item.tone}}" wx:for="{{section.items}}" wx:key="key" data-route="{{item.route}}" bindtap="openMenu">
+        <view class="menu-icon"><t-icon name="{{item.icon}}" size="42rpx" color="#ffffff" /></view>
+        <view wx:if="{{item.badgeKey === 'unread' && unreadCount}}" class="menu-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
+        <view wx:if="{{item.badgeKey === 'reviews' && pendingReviewCount}}" class="menu-badge">{{pendingReviewCount > 99 ? '99+' : pendingReviewCount}}</view>
+        <view class="menu-name">{{item.name}}</view>
+        <view class="menu-description">{{item.description}}</view>
+        <view class="menu-enter"><text>进入</text><t-icon name="chevron-right" size="27rpx" color="#64748b" /></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:if="{{keyword && !sections.length}}"><t-icon name="search" size="76rpx" color="#a0a7b2" /><view>没有找到相关管理功能</view></view>
+</view>

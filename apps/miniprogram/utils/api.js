@@ -129,8 +129,18 @@ function callFunction(name, action, data = {}, options = {}) {
     redirectToLogin();
     return Promise.reject(Object.assign(new Error("登录状态已失效，请重新登录"), { code: 401 }));
   }
+  let miniProgramState = "formal";
+  try {
+    const envVersion = getApp().globalData?.envVersion
+      || wx.getAccountInfoSync().miniProgram.envVersion;
+    miniProgramState = envVersion === "develop"
+      ? "developer"
+      : envVersion === "trial" ? "trial" : "formal";
+  } catch (error) {
+    // 无法识别运行版本时按正式版处理，避免生产通知误入开发版。
+  }
   const payload = action
-    ? { action, data: { ...data, authToken: token } }
+    ? { action, data: { ...data, authToken: token, _miniProgramState: miniProgramState } }
     : data;
 
   return wx.cloud.callFunction({ name, data: payload }).then(({ result }) => {
@@ -197,7 +207,23 @@ function listFinancialProjects(params) {
 }
 
 function queryClients(keyword = "") {
-  return callFunction("clientsService", "", { keyword });
+  return callFunction("clientsService", "listForSelection", { keyword });
+}
+
+function listManagedClients(params = {}) {
+  return callFunction("clientsService", "manageList", params);
+}
+
+function prepareClientUpdate(id) {
+  return callFunction("clientsService", "prepareUpdate", { id });
+}
+
+function updateClient(data) {
+  return callFunction("clientsService", "updateClient", data);
+}
+
+function deleteClient(id) {
+  return callFunction("clientsService", "deleteClient", { id });
 }
 
 function createProject(data) {
@@ -336,6 +362,30 @@ function saveWechatSubscription(data) {
   return callFunction("notificationService", "saveWechatSubscription", data);
 }
 
+function getCategoryReviewSubscriptionStatus() {
+  return callFunction("notificationService", "getCategoryReviewSubscriptionStatus", {});
+}
+
+function saveCategoryReviewSubscription(data) {
+  return callFunction("notificationService", "saveCategoryReviewSubscription", data);
+}
+
+function listCategoryReviews(data = {}) {
+  return callFunction("quotationService", "reviewList", data);
+}
+
+function getCategoryReviewDetail(id) {
+  return callFunction("quotationService", "reviewDetail", { id });
+}
+
+function getCategoryReviewPendingCount() {
+  return callFunction("quotationService", "reviewPendingCount", {});
+}
+
+function submitCategoryReview(data) {
+  return callFunction("quotationService", "reviewSubmit", data);
+}
+
 function quickRecord(data) {
   return callFunction("projectService", "quickRecord", data);
 }
@@ -344,8 +394,36 @@ function getVouchers(projectId) {
   return callFunction("voucherService", "list", { projectId });
 }
 
-function getGlobalConfig() {
-  return callFunction("configService", "getGlobalConfig", {});
+function getGlobalConfig(forceRefresh = true) {
+  return callFunction("configService", "getGlobalConfig", { forceRefresh });
+}
+
+function queryConfigs(group, isActive = "all") {
+  return callFunction("configService", "queryConfig", { group, isActive });
+}
+
+function createConfig(data) {
+  return callFunction("configService", "createConfig", data);
+}
+
+function updateConfig(data) {
+  return callFunction("configService", "updateConfig", data);
+}
+
+function updateConfigStatus(data) {
+  return callFunction("configService", "updateConfigStatus", data);
+}
+
+function getConfigUsage(id, group) {
+  return callFunction("configService", "getConfigUsage", { id, group });
+}
+
+function reorderConfig(data) {
+  return callFunction("configService", "reorderConfig", data);
+}
+
+function deleteConfig(id, group) {
+  return callFunction("configService", "deleteConfig", { id, group });
 }
 
 function addVoucher(data) {
@@ -363,10 +441,13 @@ module.exports = {
   clearSession,
   createAccount,
   createClient,
+  createConfig,
   createProject,
   createProjectCase,
   createProjectQuotation,
   createProjectQuotationVersion,
+  deleteClient,
+  deleteConfig,
   deleteProjects,
   deleteProjectQuotations,
   deleteProjectCase,
@@ -376,7 +457,11 @@ module.exports = {
   ensureAuthOnShow,
   getProject,
   getCachedUserInfo,
+  getCategoryReviewDetail,
+  getCategoryReviewPendingCount,
+  getCategoryReviewSubscriptionStatus,
   getGlobalConfig,
+  getConfigUsage,
   getNextEmployeeNo,
   getNextProjectQuotationVersion,
   getProjectOverview,
@@ -391,12 +476,15 @@ module.exports = {
   getVouchers,
   getWechatSubscriptionStatus,
   listProjects,
+  listCategoryReviews,
+  listManagedClients,
   listProjectIds,
   listFinancialProjects,
   listProjectCases,
   listProjectQuotationIds,
   listProjectQuotations,
   parseProjectQuotationExcel,
+  prepareClientUpdate,
   prepareProjectQuotationShare,
   listNotificationIds,
   listNotifications,
@@ -404,11 +492,18 @@ module.exports = {
   logout,
   markAllNotificationsRead,
   saveWechatSubscription,
+  saveCategoryReviewSubscription,
   setProjectCaseCover,
   syncProjectToCase,
+  submitCategoryReview,
   invalidateUserInfoCache,
   isUserInfoCacheFresh,
   quickRecord,
   queryClients,
+  queryConfigs,
+  reorderConfig,
+  updateConfig,
+  updateConfigStatus,
   updateProject,
+  updateClient,
 };

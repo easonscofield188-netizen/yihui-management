@@ -21,67 +21,20 @@
       </view>
     </view>
 
-    <view class="function-card">
-      <view class="function-row" bindtap="openSecurity">
-        <view class="function-main">
-          <view class="function-icon"><t-icon name="lock-on" size="38rpx" color="#002045" /></view>
-          <text>账号安全</text>
-        </view>
-        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
+    <view class="quick-section">
+      <view class="profile-section-title">常用功能</view>
+      <view class="quick-grid">
+        <view class="quick-tile" bindtap="openProjects"><view class="quick-icon blue"><t-icon name="catalog" size="40rpx" color="#285692" /></view><text>项目总览</text></view>
+        <view class="quick-tile" bindtap="openProjectQuotations"><view class="quick-icon violet"><t-icon name="bill" size="40rpx" color="#6350a7" /></view><text>项目报价</text></view>
+        <view class="quick-tile" bindtap="openProjectCases"><view class="quick-icon green"><t-icon name="image" size="40rpx" color="#26785f" /></view><text>项目案例</text></view>
+        <view class="quick-tile" bindtap="openSecurity"><view class="quick-icon gray"><t-icon name="lock-on" size="40rpx" color="#536174" /></view><text>账号安全</text></view>
       </view>
-      <view class="function-divider"></view>
-      <view class="function-row" bindtap="openProjects">
-        <view class="function-main">
-          <view class="function-icon"><t-icon name="catalog" size="38rpx" color="#002045" /></view>
-          <text>项目总览</text>
-        </view>
-        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-      </view>
-      <view class="function-divider"></view>
-      <view class="function-row" bindtap="openProjectQuotations">
-        <view class="function-main">
-          <view class="function-icon"><t-icon name="bill" size="40rpx" color="#002045" /></view>
-          <text>项目报价</text>
-        </view>
-        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-      </view>
-      <view class="function-divider"></view>
-      <view class="function-row" bindtap="openProjectCases">
-        <view class="function-main">
-          <view class="function-icon"><t-icon name="image" size="38rpx" color="#002045" /></view>
-          <text>项目案例</text>
-        </view>
-        <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-      </view>
-      <block wx:if="{{userInfo.role === 'ADMIN_SUPER'}}">
-        <view class="function-divider"></view>
-        <view class="function-row" bindtap="openNotifications">
-          <view class="function-main">
-            <view class="function-icon"><t-icon name="notification" size="38rpx" color="#002045" /></view>
-            <text>消息通知</text>
-          </view>
-          <view class="function-side">
-            <view wx:if="{{unreadNotificationCount}}" class="notification-badge">{{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}}</view>
-            <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-          </view>
-        </view>
-        <view class="function-divider"></view>
-        <view class="function-row" bindtap="openSystemSettings">
-          <view class="function-main">
-            <view class="function-icon"><t-icon name="setting" size="38rpx" color="#002045" /></view>
-            <text>系统设置</text>
-          </view>
-          <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-        </view>
-        <view class="function-divider"></view>
-        <view class="function-row" bindtap="openCreateAccount">
-          <view class="function-main">
-            <view class="function-icon"><t-icon name="user-add" size="38rpx" color="#002045" /></view>
-            <text>创建账号</text>
-          </view>
-          <t-icon name="chevron-right" size="38rpx" color="#74777f" />
-        </view>
-      </block>
+    </view>
+
+    <view wx:if="{{userInfo.role === 'ADMIN_SUPER'}}" class="admin-center-entry" bindtap="openAdminCenter">
+      <view class="admin-entry-icon"><t-icon name="control-platform" size="44rpx" color="#ffffff" /></view>
+      <view class="admin-entry-main"><view class="admin-entry-title">管理中心</view><view class="admin-entry-description">客户、账号、消息、数据配置与系统设置</view></view>
+      <view class="function-side"><view wx:if="{{unreadNotificationCount}}" class="notification-badge">{{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}}</view><t-icon name="chevron-right" size="38rpx" color="#ffffff" /></view>
     </view>
 
     <view class="function-card agreement-card">

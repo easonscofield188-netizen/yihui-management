@@ -1,6 +1,8 @@
 const api = require("../../utils/api");
 const { getRuntimeVersion } = require("../../utils/app-version");
 const { openPrivacyContract } = require("../../utils/privacy-contract");
+const { CATEGORY_REVIEW_TEMPLATE_ID, PROJECT_CHANGE_TEMPLATE_ID } = require("../../utils/wechat-subscription");
+const { requestLowCountSubscriptions } = require("../../utils/subscription-auto-prompt");
 
 const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
 const NOTIFICATION_COUNT_AT_KEY = "notificationUnreadCountCachedAt";
@@ -51,6 +53,8 @@ Page({
     loadingMessage: "正在加载账户信息...",
     versionText: "",
     unreadNotificationCount: 0,
+    projectSubscription: null,
+    categoryReviewSubscription: null,
   },
 
   onLoad() {
@@ -81,6 +85,7 @@ Page({
     if (cachedUser) this.showUser(cachedUser);
     if (cachedUser && cachedUser.role === "ADMIN_SUPER") {
       this.loadUnreadNotificationCount();
+      this.loadSubscriptionStatuses();
     }
     if (!cachedUser || !api.isUserInfoCacheFresh()) {
       this.loadUser({ silent: Boolean(cachedUser) });
@@ -91,6 +96,7 @@ Page({
     Promise.all([
       this.loadUser({ force: true, silent: true }),
       this.loadUnreadNotificationCount({ force: true }),
+      this.loadSubscriptionStatuses(),
     ])
       .finally(() => wx.stopPullDownRefresh());
   },
@@ -121,6 +127,7 @@ Page({
         this.showUser(userInfo);
         if (userInfo && userInfo.role === "ADMIN_SUPER") {
           this.loadUnreadNotificationCount();
+          this.loadSubscriptionStatuses();
         } else {
           this.setData({ unreadNotificationCount: 0 });
         }
@@ -201,6 +208,52 @@ Page({
 
   openNotifications() {
     wx.navigateTo({ url: "/pages/notification-list/index" });
+  },
+
+  openClientManagement() {
+    const userInfo = this.data.userInfo || {};
+    if (userInfo.role !== "ADMIN_SUPER") {
+      wx.showToast({ title: "仅超级系统管理员可管理客户", icon: "none" });
+      return;
+    }
+    wx.navigateTo({ url: "/pages/client-management/index" });
+  },
+
+  openAdminCenter() {
+    const userInfo = this.data.userInfo || {};
+    if (userInfo.role !== "ADMIN_SUPER") {
+      wx.showToast({ title: "仅超级系统管理员可进入管理中心", icon: "none" });
+      return;
+    }
+    const navigate = () => wx.navigateTo({ url: "/pages/admin-center/index" });
+    if (this.subscriptionPromptInFlight) return;
+    this.subscriptionPromptInFlight = true;
+    const requested = requestLowCountSubscriptions([
+      {
+        templateId: PROJECT_CHANGE_TEMPLATE_ID,
+        status: this.data.projectSubscription,
+        save: status => api.saveWechatSubscription({ templateId: PROJECT_CHANGE_TEMPLATE_ID, status }),
+      },
+      {
+        templateId: CATEGORY_REVIEW_TEMPLATE_ID,
+        status: this.data.categoryReviewSubscription,
+        save: status => api.saveCategoryReviewSubscription({ templateId: CATEGORY_REVIEW_TEMPLATE_ID, status }),
+      },
+    ], () => {
+      this.subscriptionPromptInFlight = false;
+      navigate();
+    });
+    if (!requested) this.subscriptionPromptInFlight = false;
+  },
+
+  async loadSubscriptionStatuses() {
+    try {
+      const [projectSubscription, categoryReviewSubscription] = await Promise.all([
+        api.getWechatSubscriptionStatus(),
+        api.getCategoryReviewSubscriptionStatus(),
+      ]);
+      this.setData({ projectSubscription, categoryReviewSubscription });
+    } catch (error) {}
   },
 
   openSystemSettings() {

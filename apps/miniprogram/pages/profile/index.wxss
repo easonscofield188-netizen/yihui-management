@@ -192,6 +192,13 @@ page {
   border-radius: 50%;
   background: #e7eeff;
 }
+.quick-section { margin-top: 42rpx; }
+.profile-section-title { margin: 0 4rpx 18rpx; color: #334057; font-size: 27rpx; font-weight: 700; }
+.quick-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18rpx; }
+.quick-tile { display: flex; min-height: 142rpx; padding: 22rpx; align-items: center; gap: 18rpx; border: 2rpx solid rgba(214,227,255,.75); border-radius: 21rpx; background: #fff; color: #253047; font-size: 27rpx; font-weight: 650; box-shadow: 0 10rpx 25rpx rgba(26,54,93,.07); }
+.quick-icon { display: flex; width: 64rpx; height: 64rpx; flex: none; align-items: center; justify-content: center; border-radius: 17rpx; }.quick-icon.blue { background: #e8f0ff; }.quick-icon.violet { background: #f0ebff; }.quick-icon.green { background: #e7f6ef; }.quick-icon.gray { background: #edf0f4; }
+.admin-center-entry { position: relative; display: flex; min-height: 132rpx; margin-top: 28rpx; overflow: hidden; padding: 26rpx 28rpx; align-items: center; gap: 20rpx; border-radius: 23rpx; background: linear-gradient(135deg,#0b315d,#1e5c94); color: #fff; box-shadow: 0 16rpx 32rpx rgba(13,54,99,.2); }
+.admin-entry-icon { display: flex; width: 72rpx; height: 72rpx; flex: none; align-items: center; justify-content: center; border-radius: 19rpx; background: rgba(255,255,255,.14); }.admin-entry-main { min-width: 0; flex: 1; }.admin-entry-title { font-size: 29rpx; font-weight: 700; }.admin-entry-description { margin-top: 7rpx; color: rgba(255,255,255,.72); font-size: 20rpx; line-height: 29rpx; }
 
 .agreement-card {
   margin-top: 32rpx;

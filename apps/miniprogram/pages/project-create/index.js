@@ -396,14 +396,17 @@ Page({
     try {
       const result = await api.createClient({ name: name.trim(), role, roleCode: role, source });
       const clientId = result.id || "";
+      const canonicalName = result.name || name.trim();
+      const canonicalRole = result.roleCode || result.role || role;
+      const canonicalSource = result.source || source;
       this.setData({
-        "form.client": name.trim(),
+        "form.client": canonicalName,
         "form.clientId": clientId,
-        "form.role": role,
-        "form.source": source,
+        "form.role": canonicalRole,
+        "form.source": canonicalSource,
         "form.createClient": false,
-        roleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === role)),
-        sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === source)),
+        roleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === canonicalRole)),
+        sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === canonicalSource)),
         newClientVisible: false,
       });
       this.loadClients();
