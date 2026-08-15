@@ -54,7 +54,8 @@ Page({
     roleIndex: 0,
     sourceIndex: 0,
     clients: [],
-    showClientList: false,
+    clientSelectVisible: false,
+    clientSearchKeyword: "",
     clientLoading: false,
     clientLoadFailed: false,
     pickerVisible: false,
@@ -77,6 +78,8 @@ Page({
     },
     newClientRoleIndex: 0,
     newClientSourceIndex: 0,
+    formScrollTop: 0,
+    scrollTarget: "",
     form: {
       name: "",
       scene: FALLBACK_SCENES[0].value,
@@ -109,7 +112,6 @@ Page({
     });
     this.loadServerDate();
     this.loadOptions();
-    this.loadClients();
   },
 
   async loadServerDate() {
@@ -156,8 +158,19 @@ Page({
     try {
       const clients = await api.queryClients(keyword);
       if (requestId !== this.clientRequestId) return;
+      const roleMap = new Map((this.data.clientRoles || []).map((r) => [r.value, r.label]));
+      const sourceMap = new Map((this.data.clientSources || []).map((s) => [s.value, s.label]));
+      const enrichedClients = (Array.isArray(clients) ? clients : []).map((c) => {
+        const role = c.roleCode || c.role || "";
+        const source = c.source || "";
+        return {
+          ...c,
+          roleLabel: roleMap.get(role) || role,
+          sourceLabel: sourceMap.get(source) || source,
+        };
+      });
       this.setData({
-        clients: Array.isArray(clients) ? clients : [],
+        clients: enrichedClients,
         clientLoading: false,
         clientLoadFailed: false,
       });
@@ -179,74 +192,62 @@ Page({
     this.setData({ "form.name": event.detail.value });
   },
 
-  onClientInput(event) {
+  openClientSelectPopup() {
     if (this.data.isClosedEdit) return;
-    const value = event.detail.value;
-    this.clientRequestId = (this.clientRequestId || 0) + 1;
     this.setData({
-      "form.client": value,
-      "form.clientId": "",
-      showClientList: !this.data.form.createClient,
-      clientLoading: false,
-      clientLoadFailed: false,
+      clientSelectVisible: true,
+      clientSearchKeyword: "",
     });
-    clearTimeout(this.clientSearchTimer);
-    this.clientSearchTimer = setTimeout(() => this.loadClients(value), 250);
+    this.loadClients("");
   },
 
-  showClientSuggestions() {
-    if (!this.data.isClosedEdit && !this.data.form.createClient) {
-      clearTimeout(this.clientBlurTimer);
-      this.clientListInteracting = false;
-      this.setData({ showClientList: true });
-      const keyword = this.data.form.clientId ? "" : this.data.form.client;
-      this.loadClients(keyword, { showError: true });
+  closeClientSelectPopup() {
+    this.setData({ clientSelectVisible: false });
+  },
+
+  onClientSelectPopupChange(event) {
+    if (!event.detail.visible) {
+      this.closeClientSelectPopup();
     }
   },
 
-  clearClient() {
-    if (this.data.isClosedEdit) return;
+  onClientSearchInput(event) {
+    const keyword = (event.detail && event.detail.value) || "";
+    this.setData({ clientSearchKeyword: keyword });
     clearTimeout(this.clientSearchTimer);
+    this.clientSearchTimer = setTimeout(() => {
+      this.loadClients(keyword);
+    }, 250);
+  },
+
+  onClientSearchClear() {
+    this.setData({ clientSearchKeyword: "" });
+    clearTimeout(this.clientSearchTimer);
+    this.loadClients("");
+  },
+
+  openNewClientFromSearch() {
+    const searchName = (this.data.clientSearchKeyword || "").trim();
+    const defaultRole = preferredValue(this.data.clientRoles, "");
+    const defaultSource = preferredValue(this.data.clientSources, "");
     this.setData({
-      "form.client": "",
-      "form.clientId": "",
-      showClientList: true,
+      clientSelectVisible: false,
+      newClientVisible: true,
+      "form.createClient": true,
+      newClient: {
+        name: searchName,
+        role: defaultRole,
+        source: defaultSource,
+      },
+      newClientRoleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === defaultRole)),
+      newClientSourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === defaultSource)),
     });
-    this.loadClients("", { showError: true });
-  },
-
-  retryLoadClients() {
-    clearTimeout(this.clientSearchTimer);
-    clearTimeout(this.clientBlurTimer);
-    const keyword = this.data.form.clientId ? "" : this.data.form.client;
-    this.loadClients(keyword, { showError: true });
-  },
-
-  hideClientSuggestions() {
-    clearTimeout(this.clientBlurTimer);
-    this.clientBlurTimer = setTimeout(() => {
-      if (!this.clientListInteracting) this.setData({ showClientList: false });
-    }, 260);
-  },
-
-  onClientListTouchStart() {
-    this.clientListInteracting = true;
-    clearTimeout(this.clientBlurTimer);
-    clearTimeout(this.clientListTouchTimer);
-  },
-
-  onClientListTouchEnd() {
-    clearTimeout(this.clientListTouchTimer);
-    this.clientListTouchTimer = setTimeout(() => {
-      this.clientListInteracting = false;
-    }, 360);
   },
 
   selectClient(event) {
     if (this.data.isClosedEdit) return;
-    clearTimeout(this.clientBlurTimer);
-    this.clientListInteracting = false;
     const client = event.currentTarget.dataset.client;
+    if (!client) return;
     const role = client.roleCode || client.role || this.data.form.role;
     const source = client.source || this.data.form.source;
     this.setData({
@@ -256,16 +257,23 @@ Page({
       "form.source": source,
       roleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === role)),
       sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === source)),
-      showClientList: false,
+      clientSelectVisible: false,
     });
-    this.loadClients("");
+    this.scrollToBottom();
+  },
+
+  scrollToBottom() {
+    setTimeout(() => {
+      this.setData({
+        scrollTarget: "form-bottom-anchor",
+        formScrollTop: (this.data.formScrollTop || 0) >= 9999 ? 9998 : 9999,
+      });
+    }, 200);
   },
 
   onUnload() {
     this.clientRequestId = (this.clientRequestId || 0) + 1;
     clearTimeout(this.clientSearchTimer);
-    clearTimeout(this.clientBlurTimer);
-    clearTimeout(this.clientListTouchTimer);
   },
 
   openPicker(event) {
@@ -338,11 +346,37 @@ Page({
   onCreateClientChange(event) {
     if (this.data.isClosedEdit) return;
     const createClient = event.detail.value;
-    this.setData({ "form.createClient": createClient, showClientList: false, newClientVisible: createClient });
+    const defaultRole = preferredValue(this.data.clientRoles, "");
+    const defaultSource = preferredValue(this.data.clientSources, "");
+    this.setData({
+      "form.createClient": createClient,
+      newClientVisible: createClient,
+      ...(createClient ? {
+        newClient: {
+          name: "",
+          role: defaultRole,
+          source: defaultSource,
+        },
+        newClientRoleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === defaultRole)),
+        newClientSourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === defaultSource)),
+      } : {}),
+    });
   },
 
   closeNewClient() {
-    this.setData({ newClientVisible: false, "form.createClient": false });
+    const defaultRole = preferredValue(this.data.clientRoles, "");
+    const defaultSource = preferredValue(this.data.clientSources, "");
+    this.setData({
+      newClientVisible: false,
+      "form.createClient": false,
+      newClient: {
+        name: "",
+        role: defaultRole,
+        source: defaultSource,
+      },
+      newClientRoleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === defaultRole)),
+      newClientSourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === defaultSource)),
+    });
   },
 
   onNewClientPopupChange(event) {
@@ -395,6 +429,8 @@ Page({
       const canonicalName = result.name || name.trim();
       const canonicalRole = result.roleCode || result.role || role;
       const canonicalSource = result.source || source;
+      const defaultRole = preferredValue(this.data.clientRoles, "");
+      const defaultSource = preferredValue(this.data.clientSources, "");
       this.setData({
         "form.client": canonicalName,
         "form.clientId": clientId,
@@ -403,9 +439,18 @@ Page({
         "form.createClient": false,
         roleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === canonicalRole)),
         sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === canonicalSource)),
+        newClient: {
+          name: "",
+          role: defaultRole,
+          source: defaultSource,
+        },
+        newClientRoleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === defaultRole)),
+        newClientSourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === defaultSource)),
         newClientVisible: false,
+        clientSelectVisible: false,
       });
       this.loadClients();
+      this.scrollToBottom();
       wx.showToast({ title: result.existed ? "客户已存在，已选中" : "客户添加成功", icon: "success" });
     } catch (error) {
       wx.showToast({ title: error.message || "客户添加失败", icon: "none" });
@@ -424,9 +469,13 @@ Page({
   },
 
   next() {
-    const { name, startDate, client, role, source } = this.data.form;
+    const { name, startDate, client, clientId, role, source } = this.data.form;
     if (!name.trim() || !startDate || !client.trim() || !role || !source) {
       wx.showToast({ title: "请完成本页必填信息", icon: "none" });
+      return;
+    }
+    if (!clientId) {
+      wx.showToast({ title: "请从列表选择或新增客户", icon: "none" });
       return;
     }
     wx.setStorageSync(DRAFT_KEY, { ...(wx.getStorageSync(DRAFT_KEY) || {}), ...this.data.form });
