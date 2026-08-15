@@ -23,16 +23,22 @@ Page({
   },
 
   onUsernameInput(event) {
-    this.setData({ username: event.detail.value.trim() });
+    const val = (event.detail && event.detail.value) || "";
+    this.data.username = val.trim();
   },
 
   onPasswordInput(event) {
-    this.setData({ password: event.detail.value });
+    const val = (event.detail && event.detail.value) || "";
+    this.data.password = val;
   },
 
   togglePassword(event) {
     if (event.detail && event.detail.trigger !== "suffix-icon") return;
-    this.setData({ showPassword: !this.data.showPassword });
+    const showPassword = !this.data.showPassword;
+    this.setData({
+      showPassword,
+      password: this.data.password || "",
+    });
   },
 
   onAgreementToggle() {
@@ -42,7 +48,10 @@ Page({
   openPrivacyContract,
 
   async submit() {
-    const { username, password, agreementAccepted, loading } = this.data;
+    const { agreementAccepted, loading } = this.data;
+    const username = (this.data.username || "").trim();
+    const password = this.data.password || "";
+
     if (loading) return;
     if (!agreementAccepted) {
       wx.showToast({ title: "请先阅读并同意隐私保护指引", icon: "none" });

@@ -282,10 +282,6 @@ function prepareProjectQuotationShare(id) {
   return callFunction("quotationService", "prepareShare", { id });
 }
 
-function generateProjectQuotationPdf(id) {
-  return callFunction("quotationPdfService", "generate", { id });
-}
-
 function getPublicProjectQuotation(id, shareToken, versionId = "") {
   return callFunction(
     "quotationService",
@@ -470,7 +466,6 @@ module.exports = {
   getNextProjectQuotationVersion,
   getProjectOverview,
   getProjectQuotation,
-  generateProjectQuotationPdf,
   getPublicProjectQuotation,
   getProjectCase,
   getNotificationDetail,

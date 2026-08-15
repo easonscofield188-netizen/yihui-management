@@ -1,5 +1,4 @@
 const api = require("../../utils/api");
-const { openPdfFile, resolvePdfLocalPath } = require("../../utils/file-preview");
 
 const DETAIL_REFRESH_KEY = "projectQuotationDetailRefreshV1";
 const LIST_REFRESH_KEY = "projectQuotationListRefreshV1";
@@ -38,13 +37,6 @@ function money(value) {
 
 function fileExtension(value) {
   return String(value || "").split("?")[0].match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || "";
-}
-
-function quotationPdfErrorType(error) {
-  const message = String(error && (error.errMsg || error.message) || "");
-  if (/-504003|time.?out|FUNCTIONS_TIME_LIMIT_EXCEEDED/i.test(message)) return "timeout";
-  if (/-501000|FUNCTION_NOT_FOUND|function.*not.*exist/i.test(message)) return "not_found";
-  return "other";
 }
 
 const CHINESE_NUMS = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
@@ -98,8 +90,6 @@ Page({
     clientShareReady: false,
     versionPickerVisible: false,
     isSharedView: false,
-    pdfBusy: false,
-    generatedPdf: null,
   },
 
   onLoad(options = {}) {
@@ -206,16 +196,7 @@ Page({
         amountText: money(result.totalAmount),
         versions: decoratedVersions,
       };
-      this.setData({
-        quotation,
-        drawings,
-        loading: false,
-        shareImageUrl: "",
-        generatedPdf: result.pdfFileId ? {
-          fileId: result.pdfFileId,
-          fileName: result.pdfFileName || `${result.projectName || "项目"}-报价单.pdf`,
-        } : null,
-      });
+      this.setData({ quotation, drawings, loading: false, shareImageUrl: "" });
       this.prepareShareImage(drawings);
       this.prepareClientShare(id);
     } catch (error) {
@@ -344,89 +325,6 @@ Page({
       wx.showToast({ title: error.message || "PDF 打开失败", icon: "none" });
     } finally {
       wx.hideLoading();
-    }
-  },
-
-  async onQuotationPdfTap() {
-    if (this.data.pdfBusy || !this.data.id) return;
-    this.setData({ pdfBusy: true });
-    try {
-      const generatedPdf = await api.generateProjectQuotationPdf(this.data.id);
-      if (!generatedPdf.fileId) throw new Error("PDF 文件生成失败");
-      this.setData({ generatedPdf });
-    } catch (error) {
-      const errorType = quotationPdfErrorType(error);
-      if (errorType === "timeout") {
-        wx.showModal({
-          title: "PDF 生成超时",
-          content: "PDF 云函数执行时间不足，请联系系统维护人员将 quotationPdfService 的超时时间设置为 20 秒后重试。",
-          showCancel: false,
-          confirmText: "知道了",
-        });
-      } else if (errorType === "not_found") {
-        wx.showModal({
-          title: "PDF 服务未部署",
-          content: "请先上传并部署 quotationPdfService 云函数，并选择云端安装依赖。",
-          showCancel: false,
-          confirmText: "知道了",
-        });
-      } else {
-        wx.showToast({ title: error.message || "PDF 生成失败", icon: "none" });
-      }
-      return;
-    } finally {
-      this.setData({ pdfBusy: false });
-    }
-    wx.showActionSheet({
-      itemList: ["发送 PDF 给客户", "预览 PDF"],
-      success: ({ tapIndex }) => {
-        if (tapIndex === 0) this.sendQuotationPdf();
-        if (tapIndex === 1) this.previewQuotationPdf();
-      },
-    });
-  },
-
-  async previewQuotationPdf() {
-    const pdf = this.data.generatedPdf;
-    if (!pdf || !pdf.fileId || this.data.pdfBusy) return;
-    this.setData({ pdfBusy: true });
-    try {
-      await openPdfFile({ fileId: pdf.fileId, showMenu: true });
-    } catch (error) {
-      wx.showToast({ title: error.message || "PDF 打开失败", icon: "none" });
-    } finally {
-      this.setData({ pdfBusy: false });
-    }
-  },
-
-  async sendQuotationPdf() {
-    const pdf = this.data.generatedPdf;
-    if (!pdf || !pdf.fileId || this.data.pdfBusy) return;
-    this.setData({ pdfBusy: true });
-    try {
-      const filePath = await resolvePdfLocalPath({ fileId: pdf.fileId });
-      if (typeof wx.shareFileMessage === "function") {
-        await new Promise((resolve, reject) => wx.shareFileMessage({
-          filePath,
-          fileName: pdf.fileName || "项目报价单.pdf",
-          success: resolve,
-          fail: reject,
-        }));
-        return;
-      }
-      await openPdfFile({ filePath, showMenu: true });
-      wx.showModal({
-        title: "请从右上角发送",
-        content: "当前微信版本不支持直接发送文件，请点击 PDF 预览页右上角菜单发送给客户。",
-        showCancel: false,
-        confirmText: "知道了",
-      });
-    } catch (error) {
-      if (!/cancel/i.test(String(error && (error.errMsg || error.message) || ""))) {
-        wx.showToast({ title: error.message || "PDF 发送失败", icon: "none" });
-      }
-    } finally {
-      this.setData({ pdfBusy: false });
     }
   },
 

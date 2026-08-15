@@ -102,10 +102,6 @@ function drawingFileId(drawing) {
 function collectQuotationFileIds(items) {
   const fileIds = [];
   (items || []).forEach(item => {
-    fileIds.push(safeText(item && item.pdfFileId, 500));
-    (Array.isArray(item && item.pdfFiles) ? item.pdfFiles : []).forEach(file => {
-      fileIds.push(drawingFileId(file));
-    });
     const files = ['drawings', 'images', 'attachments', 'files']
       .reduce((list, field) => list.concat(Array.isArray(item[field]) ? item[field] : []), []);
     files.forEach(drawing => {
@@ -948,9 +944,6 @@ function formatQuotationDetail(item, versions, canManage) {
     totalAmount: normalizeMoney(item.totalAmount),
     items: (Array.isArray(item.items) ? item.items : []).map(normalizeItem),
     drawings: (Array.isArray(item.drawings) ? item.drawings : []).map(normalizeDrawing),
-    pdfFileId: safeText(item.pdfFileId, 500),
-    pdfFileName: safeText(item.pdfFileName, 160),
-    pdfGeneratedTimestamp: Number(item.pdfGeneratedTimestamp) || 0,
     updatedDate: formatDate(updatedValue) || formatDate(quotationDate(item)),
     updatedDateTime: formatDateTime(updatedValue) || formatDateTime(quotationDate(item)),
     updatedByName: safeText(item.createdByName || item.updatedByName, 80) || '系统用户',

@@ -19,6 +19,9 @@
             placeholder="请输入您的账号"
             placeholder-class="login-placeholder"
             value="{{username}}"
+            always-embed="{{true}}"
+            adjust-position="{{true}}"
+            cursor-spacing="{{20}}"
             bindchange="onUsernameInput"
           />
         </view>
@@ -37,6 +40,9 @@
             placeholder-class="login-placeholder"
             value="{{password}}"
             confirm-type="done"
+            always-embed="{{true}}"
+            adjust-position="{{true}}"
+            cursor-spacing="{{20}}"
             bindchange="onPasswordInput"
             bindenter="submit"
             bindclick="togglePassword"
