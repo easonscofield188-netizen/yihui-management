@@ -64,14 +64,6 @@ function normalizeDateOnly(value) {
   return `${year}-${month}-${day}`;
 }
 
-function getToday() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function isSettledCost(value) {
   return isSettled(value);
 }
@@ -151,7 +143,7 @@ Page({
     scenePickerVisible: false,
     scenePickerValue: [],
     datePickerVisible: false,
-    today: getToday(),
+    today: "",
     costs: [],
     orderCostText: "0.00",
     profitText: "0.00",
@@ -567,14 +559,18 @@ Page({
         return serverToday;
       }
     } catch (error) {
-      // fallback to local today
+      // 日期边界必须来自服务器，不能使用可被用户修改的本机时间。
     }
-    return this.data.today || getToday();
+    return "";
   },
 
   async openDatePicker() {
     if (this.data.saving) return;
     const serverToday = await this.loadServerDate();
+    if (!serverToday) {
+      wx.showToast({ title: "服务器时间获取失败，请稍后重试", icon: "none" });
+      return;
+    }
     this.setData({
       today: serverToday,
       "form.startDate": normalizeDateOnly(this.data.form.startDate) || serverToday,

@@ -18,6 +18,7 @@ const ADMIN_COM_ROLE = 'ADMIN_COM';
 const SESSION_COLLECTION = 'auth_sessions';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const NOTIFICATION_COLLECTION = 'notifications';
+const MINI_PROGRAM_STATES = new Set(['developer', 'trial', 'formal']);
 async function getWechatSubscribeTemplateId() {
   try {
     const res = await db.collection('system_configs').where({ key: 'wechat_subscribe_template_id', isActive: true }).limit(1).get();
@@ -363,7 +364,12 @@ async function updateNotificationDelivery(notificationId, status, extraData = {}
   });
 }
 
-async function deliverWechatSubscription({ recipient, notificationId, eventData, changes, now }) {
+function normalizeMiniProgramState(value) {
+  const state = String(value || '').trim().toLowerCase();
+  return MINI_PROGRAM_STATES.has(state) ? state : 'formal';
+}
+
+async function deliverWechatSubscription({ recipient, notificationId, eventData, changes, now, miniProgramState }) {
   const availableCount = Math.max(0, Number(recipient.wechatSubscriptionAvailableCount) || 0);
   if (!recipient.wechatOpenId || availableCount < 1) {
     await updateNotificationDelivery(notificationId, NOTIFICATION_DELIVERY_STATUS.SKIPPED, {
@@ -379,6 +385,7 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
       touser: recipient.wechatOpenId,
       templateId: wechatTemplateId,
       page: `pages/notification-detail/index?id=${notificationId}&source=wechat_subscribe`,
+      miniprogramState: normalizeMiniProgramState(miniProgramState),
       lang: 'zh_CN',
       data: {
         thing1: { value: truncateSubscribeValue(eventData.projectName) },
@@ -418,7 +425,7 @@ async function deliverWechatSubscription({ recipient, notificationId, eventData,
   }
 }
 
-async function recordProjectChangeEvent({ eventType, projectId, beforeProject, afterProject, actor, source }) {
+async function recordProjectChangeEvent({ eventType, projectId, beforeProject, afterProject, actor, source, miniProgramState }) {
   try {
     const isCreated = eventType === PROJECT_EVENT_TYPE.CREATED;
     const changes = buildProjectChanges(beforeProject, afterProject, isCreated);
@@ -449,6 +456,7 @@ async function recordProjectChangeEvent({ eventType, projectId, beforeProject, a
 
     if (actor?.role !== ADMIN_SUPER_ROLE) {
       const recipients = await getActiveSuperAdmins();
+      const targetMiniProgramState = normalizeMiniProgramState(miniProgramState);
       await Promise.all(recipients.map(async (recipient) => {
         const notificationResult = await db.collection(NOTIFICATION_COLLECTION).add({
           data: {
@@ -469,6 +477,7 @@ async function recordProjectChangeEvent({ eventType, projectId, beforeProject, a
           readStatusLabel: '未读',
           deliveryStatus: NOTIFICATION_DELIVERY_STATUS.PENDING,
           deliveryStatusLabel: NOTIFICATION_DELIVERY_STATUS_DICTIONARY[NOTIFICATION_DELIVERY_STATUS.PENDING].label,
+          targetMiniProgramState,
           createdTimestamp: now,
           createdAt: db.serverDate()
           }
@@ -478,7 +487,8 @@ async function recordProjectChangeEvent({ eventType, projectId, beforeProject, a
           notificationId: notificationResult._id,
           eventData,
           changes,
-          now
+          now,
+          miniProgramState: targetMiniProgramState
         });
       }));
     }
@@ -706,9 +716,16 @@ function enrichProjectFinancials(project) {
 
 function isFutureDateValue(dateValue) {
   if (!dateValue) return false;
-  const date = new Date(dateValue);
-  if (isNaN(date.getTime())) return true;
-  return date.getTime() > Date.now();
+  const raw = String(dateValue.$date || dateValue).trim();
+  const matched = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!matched) return true;
+  const normalized = `${matched[1]}-${matched[2]}-${matched[3]}`;
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return true;
+  return normalized > getServerDateOnly();
 }
 
 function getAllowedStatusesByType(type, isHistorical) {
@@ -1055,7 +1072,7 @@ async function updateProject(params) {
       const lockedFields = ['type', 'period', 'constructionPeriod', 'collectionPeriod'];
       const incomingFields = Object.keys(params).filter(key => (
         params[key] !== undefined
-        && !['id', 'authToken', 'currentUser', 'requestSource'].includes(key)
+        && !['id', 'authToken', 'currentUser', 'requestSource', '_miniProgramState'].includes(key)
       ));
       const illegalChanges = incomingFields.filter(field => {
         if (!lockedFields.includes(field)) return false;
@@ -1115,7 +1132,7 @@ async function updateProject(params) {
       ];
       const incomingFields = Object.keys(params).filter(key => (
         params[key] !== undefined
-        && !['id', 'authToken', 'currentUser', 'requestSource'].includes(key)
+        && !['id', 'authToken', 'currentUser', 'requestSource', '_miniProgramState'].includes(key)
       ));
       
       // 只有当字段在不允许编辑的列表中，且其值与原值不同时，才视为非法操作
@@ -1376,7 +1393,8 @@ async function updateProject(params) {
       beforeProject: oldProject,
       afterProject: { ...oldProject, ...updateDataFinal },
       actor: params.currentUser,
-      source: normalizeCreationChannel(params.requestSource)
+      source: normalizeCreationChannel(params.requestSource),
+      miniProgramState: params._miniProgramState
     });
 
     return { code: 0, message: '更新成功' };
@@ -1520,6 +1538,7 @@ async function createProject(params) {
     delete data.currentUser;
     delete data.authToken;
     delete data.requestSource;
+    delete data._miniProgramState;
     // 常规项目状态完全由收款和成本结算情况决定；交付时间使用用户填写的交付日期。
     data.completedTime = String(startDate).slice(0, 10);
     Object.assign(data, buildNormalProjectLifecycle({
@@ -1575,7 +1594,8 @@ async function createProject(params) {
       beforeProject: null,
       afterProject: data,
       actor: currentUser,
-      source: normalizeCreationChannel(params.requestSource || creationChannel)
+      source: normalizeCreationChannel(params.requestSource || creationChannel),
+      miniProgramState: params._miniProgramState
     });
 
     // 发送邮件通知超级管理员（仅当创建者是普通管理员时）
@@ -1710,7 +1730,8 @@ async function quickRecord(params, currentUser) {
         beforeProject: transactionResult.beforeProject,
         afterProject: transactionResult.afterProject,
         actor: currentUser,
-        source: CREATION_CHANNEL.MINIPROGRAM
+        source: CREATION_CHANNEL.MINIPROGRAM,
+        miniProgramState: params._miniProgramState
       });
     }
 

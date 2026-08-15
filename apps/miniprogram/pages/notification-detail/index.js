@@ -90,7 +90,11 @@ Page({
     const isServiceNotificationEntry = isWechatServiceNotificationEntry(options);
     this.setData({ notificationId, isServiceNotificationEntry });
     if (!notificationId) {
-      wx.showToast({ title: "消息参数错误", icon: "none" });
+      // id 缺失（如订阅消息未携带参数）：兜底跳转到通知列表，避免停在空白页
+      wx.showToast({ title: "消息参数错误，请在消息列表查看", icon: "none", duration: 1500 });
+      setTimeout(() => {
+        wx.redirectTo({ url: "/pages/notification-list/index" });
+      }, 1600);
       return;
     }
     this.loadDetail();

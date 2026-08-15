@@ -323,7 +323,6 @@ Page({
     wx.showLoading({ title: "正在压缩图片", mask: true });
     const accepted = [];
     let oversizedCount = 0;
-    let cacheFailedCount = 0;
     for (const file of files) {
       try {
         const prepared = await prepareFile(file);
@@ -331,16 +330,26 @@ Page({
           oversizedCount += 1;
           continue;
         }
-        const saved = await saveLocalFile(prepared.tempFilePath);
-        accepted.push(toUploadFile({ ...prepared, tempFilePath: saved.savedFilePath, isSavedFile: true }));
+        // 尝试持久化到本地存储，保证小程序重启后仍可重试上传。
+        // 若 saveFile 失败（本地空间不足、系统限制等），降级使用临时路径，
+        // 本次会话内仍可正常上传，重启后该文件无法恢复属于可接受的降级行为。
+        let finalPath = prepared.tempFilePath;
+        let isSavedFile = false;
+        try {
+          const saved = await saveLocalFile(prepared.tempFilePath);
+          finalPath = saved.savedFilePath;
+          isSavedFile = true;
+        } catch (saveError) {
+          console.warn("[凭证] saveFile 降级为 tempFilePath:", saveError && saveError.errMsg);
+        }
+        accepted.push(toUploadFile({ ...prepared, tempFilePath: finalPath, isSavedFile }));
       } catch (error) {
-        // 未能持久化的临时文件不进入队列，避免重启后无法重试。
-        cacheFailedCount += 1;
+        // prepareFile / 其他异常：跳过该文件，不影响其他文件入队
+        console.error("[凭证] 文件预处理失败:", error && error.message);
       }
     }
     wx.hideLoading();
     if (oversizedCount) wx.showToast({ title: "已忽略压缩后仍超过 10MB 的文件", icon: "none" });
-    else if (cacheFailedCount) wx.showToast({ title: "部分文件缓存失败，请重选", icon: "none" });
     if (!accepted.length) return;
     this.setData({ files: [...this.data.files, ...accepted].slice(0, 9) }, () => this.persistUploadQueue());
   },

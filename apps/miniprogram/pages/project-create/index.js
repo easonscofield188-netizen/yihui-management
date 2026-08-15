@@ -19,14 +19,6 @@ function getNavMetrics() {
   return { statusBarHeight, navHeight: statusBarHeight + contentHeight, menuRightInset };
 }
 
-function getToday() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function normalizeDateOnly(value) {
   const raw = Array.isArray(value) ? value[0] : value;
   const matched = String(raw || "").match(/^\d{4}-\d{2}-\d{2}/);
@@ -53,7 +45,7 @@ Page({
     isEditMode: false,
     isClosedEdit: false,
     isDateLocked: false,
-    today: getToday(),
+    today: "",
     serverToday: "",
     projectScenes: FALLBACK_SCENES,
     clientRoles: FALLBACK_ROLES,
@@ -127,7 +119,7 @@ Page({
       if (serverToday) this.setData({ serverToday, today: serverToday });
       return serverToday;
     } catch (error) {
-      return this.data.today || getToday();
+      return "";
     }
   },
 
@@ -320,7 +312,11 @@ Page({
       wx.showToast({ title: "当前不可修改交付日期", icon: "none" });
       return;
     }
-    const serverToday = this.data.serverToday || await this.loadServerDate() || getToday();
+    const serverToday = await this.loadServerDate();
+    if (!serverToday) {
+      wx.showToast({ title: "服务器时间获取失败，请稍后重试", icon: "none" });
+      return;
+    }
     this.setData({
       today: serverToday,
       "form.startDate": normalizeDateOnly(this.data.form.startDate) || serverToday,
