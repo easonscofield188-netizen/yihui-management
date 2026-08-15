@@ -44,6 +44,23 @@
         </view>
       </view>
 
+      <view class="agreement-row">
+        <view
+          class="agreement-choice"
+          aria-role="checkbox"
+          aria-checked="{{agreementAccepted}}"
+          bindtap="onAgreementToggle"
+        >
+          <t-icon
+            name="{{agreementAccepted ? 'check-circle-filled' : 'circle'}}"
+            size="34rpx"
+            color="{{agreementAccepted ? '#002045' : '#596675'}}"
+          />
+          <text class="agreement-label">我已阅读并同意</text>
+        </view>
+        <text class="privacy-link" catchtap="openPrivacyContract">《隐私保护指引》</text>
+      </view>
+
       <t-button
         t-class="login-button"
         theme="primary"
@@ -56,9 +73,5 @@
     </view>
 
     <view class="help">忘记密码？请登录电脑端管理后台进行重置</view>
-    <view class="privacy-tip">
-      <text>登录前请阅读</text>
-      <text class="privacy-link" bindtap="openPrivacyContract">《隐私保护指引》</text>
-    </view>
   </view>
 </view>

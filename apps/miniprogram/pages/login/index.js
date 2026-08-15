@@ -6,6 +6,7 @@ Page({
     username: "",
     password: "",
     showPassword: false,
+    agreementAccepted: false,
     loading: false,
   },
 
@@ -34,11 +35,19 @@ Page({
     this.setData({ showPassword: !this.data.showPassword });
   },
 
+  onAgreementToggle() {
+    this.setData({ agreementAccepted: !this.data.agreementAccepted });
+  },
+
   openPrivacyContract,
 
   async submit() {
-    const { username, password, loading } = this.data;
+    const { username, password, agreementAccepted, loading } = this.data;
     if (loading) return;
+    if (!agreementAccepted) {
+      wx.showToast({ title: "请先阅读并同意隐私保护指引", icon: "none" });
+      return;
+    }
     if (!username || !password) {
       wx.showToast({ title: "请输入账号和密码", icon: "none" });
       return;
