@@ -5,7 +5,7 @@
   </view>
 
   <scroll-view class="step3-scroll" scroll-y show-scrollbar="{{false}}">
-    <view class="progress-section"><view class="progress-text"><text>步骤 3 / 4</text><text class="progress-percent">已完成 75%</text></view><view class="progress"><view class="progress-current"></view></view></view>
+    <view class="progress-section" wx:if="{{!isLongTerm}}"><view class="progress-text"><text>步骤 3 / 4</text><text class="progress-percent">已完成 75%</text></view><view class="progress"><view class="progress-current"></view></view></view>
     <view class="page-title">成本支出</view>
 
     <view class="total-card"><view class="card-label">总预计成本</view><view class="total-amount">¥{{totalCostText}}</view></view>
@@ -22,7 +22,12 @@
     <view class="summary-grid"><view class="summary-card"><t-icon name="catalog" size="52rpx" color="#002045" /><view class="summary-label">类别</view><view class="summary-value">{{costs.length}} 项生效</view></view><view class="summary-card"><t-icon name="bill" size="52rpx" color="#ba1a1a" /><view class="summary-label">待支付</view><view class="summary-value">¥{{pendingCostText}}</view></view></view>
   </scroll-view>
 
-  <view class="wizard-footer"><t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" /><t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" /><t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled /></view>
+  <view class="wizard-footer">
+    <t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" />
+    <t-button wx:if="{{isLongTerm && !costs.length}}" t-class="next-button submit-direct-button" theme="primary" icon="check" content="完成创建" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitDirectly" />
+    <t-button wx:else t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" />
+    <t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled />
+  </view>
 
   <t-popup
     t-class-content="add-cost-popup"

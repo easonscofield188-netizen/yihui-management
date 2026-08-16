@@ -328,6 +328,22 @@ function getProject(id) {
   return callFunction("projectService", "get", { id });
 }
 
+function addProjectServiceRecord(data) {
+  return callFunction("projectService", "addServiceRecord", data);
+}
+
+function listProjectServiceRecords(projectId, params = {}) {
+  return callFunction("projectService", "listServiceRecords", { projectId, ...params });
+}
+
+function updateProjectServiceRecord(data) {
+  return callFunction("projectService", "updateServiceRecord", data);
+}
+
+function deleteProjectServiceRecord(recordId, projectId) {
+  return callFunction("projectService", "deleteServiceRecord", { recordId, projectId });
+}
+
 function getServerDate() {
   return callFunction("projectService", "getServerDate", {});
 }
@@ -614,4 +630,8 @@ module.exports = {
   updateConfigStatus,
   updateProject,
   updateClient,
+  addProjectServiceRecord,
+  listProjectServiceRecords,
+  updateProjectServiceRecord,
+  deleteProjectServiceRecord,
 };

@@ -10,6 +10,40 @@ page { background: #f9f9ff; }
 .intro { color: #43474e; font-size: 27rpx; line-height: 42rpx; }
 .intro-title { margin-bottom: 12rpx; color: #002045; font-size: 42rpx; font-weight: 700; line-height: 60rpx; }
 .form-card { position: relative; margin-top: 44rpx; padding: 32rpx; border: 2rpx solid #d6e3ff; border-radius: 22rpx; background: #fff; }
+.project-type-segment {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  border: 2rpx solid #002045;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #ffffff;
+  margin-bottom: 28rpx;
+}
+.type-segment-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 22rpx 12rpx;
+  font-size: 27rpx;
+  font-weight: 500;
+  color: #002045;
+  background: #ffffff;
+  border-right: 2rpx solid #002045;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.type-segment-item:last-child {
+  border-right: none;
+}
+.type-segment-item.active {
+  background: #002045;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
 .field-label { margin-top: 34rpx; margin-bottom: 16rpx; color: #242c3a; font-size: 28rpx; }
 .field-label:first-child { margin-top: 0; }
 .input-shell { box-sizing: border-box; width: 100%; min-height: 92rpx; overflow: hidden; border: 2rpx solid #c4c6cf; border-radius: 14rpx; background: #f0f3ff; }

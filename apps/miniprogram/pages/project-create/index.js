@@ -81,7 +81,9 @@ Page({
     formScrollTop: 0,
     scrollTarget: "",
     form: {
+      type: "normal",
       name: "",
+      amount: "",
       scene: FALLBACK_SCENES[0].value,
       startDate: "",
       client: "",
@@ -188,8 +190,27 @@ Page({
     this.setData({ [`form.${field}`]: event.detail.value });
   },
 
+  onProjectTypeChange(event) {
+    const type = event.currentTarget.dataset.type || "normal";
+    const patch = { "form.type": type };
+    if (type === "long_term") {
+      const dailyIndex = this.data.projectScenes.findIndex(
+        (item) => item.label.includes("日常维护") || item.label.includes("维护") || item.value === "daily_maintenance"
+      );
+      if (dailyIndex >= 0) {
+        patch.sceneIndex = dailyIndex;
+        patch["form.scene"] = this.data.projectScenes[dailyIndex].value;
+      }
+    }
+    this.setData(patch);
+  },
+
   onNameChange(event) {
     this.setData({ "form.name": event.detail.value });
+  },
+
+  onAmountChange(event) {
+    this.setData({ "form.amount": event.detail.value });
   },
 
   openClientSelectPopup() {
@@ -250,11 +271,14 @@ Page({
     if (!client) return;
     const role = client.roleCode || client.role || this.data.form.role;
     const source = client.source || this.data.form.source;
+    const currentName = this.data.form.name ? this.data.form.name.trim() : "";
+    const name = currentName || (this.data.form.type === "long_term" ? `${client.name}-长期合作` : "");
     this.setData({
       "form.client": client.name,
       "form.clientId": client._id || client.id || "",
       "form.role": role,
       "form.source": source,
+      "form.name": name,
       roleIndex: Math.max(0, this.data.clientRoles.findIndex((item) => item.value === role)),
       sourceIndex: Math.max(0, this.data.clientSources.findIndex((item) => item.value === source)),
       clientSelectVisible: false,
@@ -468,17 +492,71 @@ Page({
     this.close();
   },
 
+  async submitLongTermProject() {
+    const { name, startDate, client, clientId, role, source, scene, amount } = this.data.form;
+    if (!name.trim()) {
+      wx.showToast({ title: "请输入项目名称", icon: "none" });
+      return;
+    }
+    if (!clientId) {
+      wx.showToast({ title: "请选择客户", icon: "none" });
+      return;
+    }
+    const createData = {
+      name: name.trim(),
+      type: "long_term",
+      client: client.trim(),
+      clientId,
+      role,
+      source,
+      scene,
+      startDate: startDate || this.data.today || new Date().toISOString().slice(0, 10),
+      amount: amount !== undefined && amount !== "" ? Number(amount) : 0,
+      receivedAmount: 0,
+      costs: [],
+      desc: scene === 'daily_maintenance' ? '日常维护' : (scene || '日常维护'),
+      staffCount: 1,
+      isHasContract: "no",
+      isHasPreview: "no",
+      isHasVoucher: "no",
+    };
+    wx.showLoading({ title: "正在创建项目...", mask: true });
+    try {
+      const res = await api.createProject(createData);
+      wx.removeStorageSync(DRAFT_KEY);
+      wx.showToast({ title: "长期项目创建成功", icon: "success" });
+      const targetId = res.id || res._id || (res.data && (res.data.id || res.data._id)) || "";
+      setTimeout(() => {
+        if (targetId) {
+          wx.redirectTo({ url: `/pages/project-detail/index?id=${targetId}` });
+        } else {
+          wx.switchTab({ url: "/pages/index/index" });
+        }
+      }, 500);
+    } catch (err) {
+      wx.showToast({ title: err.message || "创建失败", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
+  },
+
   next() {
-    const { name, startDate, client, clientId, role, source } = this.data.form;
-    if (!name.trim() || !startDate || !client.trim() || !role || !source) {
+    const { type, name, startDate, client, clientId, role, source } = this.data.form;
+    if (!startDate || !client.trim() || !role || !source) {
       wx.showToast({ title: "请完成本页必填信息", icon: "none" });
+      return;
+    }
+    if (type === "normal" && !name.trim()) {
+      wx.showToast({ title: "请输入项目名称", icon: "none" });
       return;
     }
     if (!clientId) {
       wx.showToast({ title: "请从列表选择或新增客户", icon: "none" });
       return;
     }
-    wx.setStorageSync(DRAFT_KEY, { ...(wx.getStorageSync(DRAFT_KEY) || {}), ...this.data.form });
+    const finalName = type === "long_term" ? (client.trim() || "长期维护项目") : name.trim();
+    const finalForm = { ...this.data.form, name: finalName };
+    wx.setStorageSync(DRAFT_KEY, { ...(wx.getStorageSync(DRAFT_KEY) || {}), ...finalForm });
     wx.navigateTo({ url: "/pages/project-create-step2/index" });
   },
 });

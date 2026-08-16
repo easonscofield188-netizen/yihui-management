@@ -1,3 +1,4 @@
+const api = require("../../utils/api");
 const DRAFT_KEY = "projectCreateDraft";
 
 function getNavMetrics() {
@@ -39,6 +40,8 @@ Page({
     isEditMode: false,
     isClosedEdit: false,
     isFullySettled: false,
+    isLongTerm: false,
+    submitting: false,
     form: {
       amount: "",
       receivedAmount: "",
@@ -67,6 +70,7 @@ Page({
       isEditMode,
       isClosedEdit: isEditMode && ["closed", "archived"].includes(draft._originalStatus || draft.status),
       isFullySettled,
+      isLongTerm: draft.type === "long_term",
       form: {
         amount: amountStr,
         receivedAmount: receivedStr,
@@ -189,12 +193,75 @@ Page({
       return;
     }
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
-    wx.setStorageSync(DRAFT_KEY, {
+    const updatedDraft = {
       ...draft,
       amount,
       receivedAmount,
       staffCount: Number(this.data.form.staffCount),
-    });
+    };
+    wx.setStorageSync(DRAFT_KEY, updatedDraft);
+
+    if (this.data.isLongTerm) {
+      wx.showModal({
+        title: "成本支出确认",
+        content: "本次长期合作首次服务是否有成本支出？",
+        cancelText: "无成本",
+        confirmText: "有成本",
+        confirmColor: "#002045",
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({ url: "/pages/project-create-step3/index" });
+          } else {
+            this.submitWithoutCost(updatedDraft);
+          }
+        },
+      });
+      return;
+    }
+
     wx.navigateTo({ url: "/pages/project-create-step3/index" });
+  },
+
+  async submitWithoutCost(draft) {
+    if (this.data.submitting) return;
+    this.setData({ submitting: true });
+    wx.showLoading({ title: "正在创建长期项目...", mask: true });
+    try {
+      const deliveryDate = String(draft.startDate).slice(0, 10);
+      const res = await api.createProject({
+        type: "long_term",
+        name: draft.name ? draft.name.trim() : `${draft.client.trim()}-长期合作`,
+        client: draft.client.trim(),
+        clientId: draft.clientId,
+        role: draft.role,
+        clientSource: draft.source || "",
+        scene: draft.scene || "",
+        startDate: deliveryDate,
+        amount: Number(draft.amount) || 0,
+        receivedAmount: Number(draft.receivedAmount) || 0,
+        staffCount: Number(draft.staffCount) || 1,
+        costs: [],
+        desc: draft.sceneLabel || (draft.scene === 'daily_maintenance' ? '日常维护' : draft.scene) || '日常维护',
+        isHasContract: "否",
+        isHasPreview: "否",
+        isHasVoucher: "否",
+      });
+
+      wx.removeStorageSync(DRAFT_KEY);
+      wx.showToast({ title: "长期项目创建成功", icon: "success" });
+      const targetId = res.id || res._id || (res.data && (res.data.id || res.data._id)) || "";
+      setTimeout(() => {
+        if (targetId) {
+          wx.redirectTo({ url: `/pages/project-detail/index?id=${targetId}` });
+        } else {
+          wx.switchTab({ url: "/pages/index/index" });
+        }
+      }, 500);
+    } catch (err) {
+      wx.showToast({ title: err.message || "创建失败", icon: "none" });
+    } finally {
+      this.setData({ submitting: false });
+      wx.hideLoading();
+    }
   },
 });

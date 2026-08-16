@@ -170,6 +170,7 @@ Page({
     submitting: false,
     createdProjectId: "",
     uploadProgressText: "",
+    isLongTerm: false,
   },
 
   onLoad() {
@@ -184,6 +185,7 @@ Page({
       pageTitle: isEditMode ? "编辑项目" : "新建项目",
       submitText: isEditMode ? "保存" : "提交",
       isEditMode,
+      isLongTerm: draft.type === "long_term",
       projectId: isEditMode ? draft._projectId : (createdProjectId || ""),
       projectName: String(draft.name || "").trim(),
       createdProjectId,
@@ -704,7 +706,7 @@ Page({
         } else {
           const result = await api.createProject({
             ...commonData,
-            type: "normal",
+            type: draft.type || "normal",
             startDate: deliveryDate,
             period: [deliveryDate, deliveryDate],
             scene: draft.scene || "",

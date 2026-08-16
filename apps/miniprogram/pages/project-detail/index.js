@@ -117,7 +117,8 @@ function decorateProject(project, config) {
     sourceText: configLabel(config, "CLIENT_SOURCE", project.clientSource || project.source),
     sceneText: configLabel(config, "PROJECT_SCENE", project.scene),
     deliveryDateText: dateText(
-      project.startDate
+      project.latestServiceDate
+      || project.startDate
       || project.completionTime
       || (project.period && project.period[1])
     ),
@@ -145,6 +146,9 @@ Page({
     requestId: "",
     keyboardHeight: 0,
     windowHeight: 667,
+    serviceRecords: [],
+    serviceModalVisible: false,
+    activeRecord: null,
   },
 
   onLoad(options) {
@@ -190,16 +194,22 @@ Page({
   async loadDetail() {
     this.setData({ loading: true });
     try {
-      const [project, vouchers, config] = await Promise.all([
+      const [project, vouchers, config, serviceRecordsRes] = await Promise.all([
         api.getProject(this.data.projectId),
         api.getVouchers(this.data.projectId),
         api.getGlobalConfig().catch(() => null),
+        api.listProjectServiceRecords(this.data.projectId, { page: 1, pageSize: 100 }).catch(() => ({ list: [] })),
       ]);
       const categories = this.extractCategories(config);
       const refreshedVouchers = await this.refreshVoucherUrls(vouchers || []);
+      const rawRecords = Array.isArray(serviceRecordsRes)
+        ? serviceRecordsRes
+        : (serviceRecordsRes && Array.isArray(serviceRecordsRes.list) ? serviceRecordsRes.list : []);
+      const serviceRecords = await this.refreshRecordVouchers(rawRecords, vouchers || []);
       this.setData({
         project: decorateProject(project, config),
         vouchers: refreshedVouchers,
+        serviceRecords,
         categories: categories.length ? categories : this.data.categories,
         canEdit: this.data.canWrite && (project.type || "normal") === "normal",
       });
@@ -249,6 +259,146 @@ Page({
         isImage: item.mimeType !== "application/pdf" && !/\.pdf$/i.test(item.fileName || ""),
       }));
     }
+  },
+
+  async refreshRecordVouchers(records = [], projectVouchers = []) {
+    const allFileIds = new Set();
+    const projVoucherFileIds = (projectVouchers || []).map((v) => v.fileId || v.fileUrl).filter(Boolean);
+
+    records.forEach((rec, idx) => {
+      const recFiles = Array.isArray(rec.voucherFileIds)
+        ? rec.voucherFileIds
+        : (Array.isArray(rec.vouchers) ? rec.vouchers : []);
+      recFiles.forEach((f) => f && allFileIds.add(f));
+      (rec.costs || []).forEach((c) => {
+        (c.voucherFileIds || []).forEach((f) => f && allFileIds.add(f));
+      });
+      if (idx === records.length - 1 && (!recFiles.length || recFiles.length === 0)) {
+        projVoucherFileIds.forEach((f) => allFileIds.add(f));
+      }
+    });
+
+    const fileList = Array.from(allFileIds).filter((f) => typeof f === "string" && f.startsWith("cloud://"));
+    const urlMap = {};
+    if (fileList.length) {
+      try {
+        const result = await wx.cloud.getTempFileURL({ fileList });
+        (result.fileList || []).forEach((item) => {
+          if (item.tempFileURL) urlMap[item.fileID] = item.tempFileURL;
+        });
+      } catch (err) {
+        console.warn("获取服务流水凭证临时链接失败", err);
+      }
+    }
+
+    const SCENE_NAME_MAP = {
+      routine_maintenance: "日常维护",
+      daily_maintenance: "日常维护",
+      company_scenery: "公司布景",
+      store_landscaping: "门店造景",
+      government_unit: "机关单位",
+      private_residence: "私人住宅",
+      commercial_space: "商业空间",
+    };
+
+    return records.map((rec, idx) => {
+      let fileIds = Array.isArray(rec.voucherFileIds)
+        ? [...rec.voucherFileIds]
+        : (Array.isArray(rec.vouchers) ? [...rec.vouchers] : []);
+      (rec.costs || []).forEach((c) => {
+        (c.voucherFileIds || []).forEach((f) => {
+          if (f && !fileIds.includes(f)) fileIds.push(f);
+        });
+      });
+      if (idx === records.length - 1 && fileIds.length === 0 && projVoucherFileIds.length > 0) {
+        fileIds = [...projVoucherFileIds];
+      }
+
+      const voucherUrls = fileIds.map((fid) => urlMap[fid] || fid).filter(Boolean);
+      const rawContent = String(rec.content || rec.scene || "日常维护").trim();
+      const displayContent =
+        SCENE_NAME_MAP[rawContent] ||
+        SCENE_NAME_MAP[rec.scene] ||
+        (rawContent.includes("长期合作") ? "日常维护" : rawContent);
+
+      return {
+        ...rec,
+        serviceDate: String(rec.serviceDate || '').slice(0, 10),
+        displayContent,
+        voucherUrls,
+        voucherFileIds: fileIds,
+        costAmountText: money(rec.costAmount),
+        receivableText: money(rec.receivableAmount),
+        receivedText: money(rec.receivedAmount),
+        unreceivedText: money(rec.unreceivedAmount),
+      };
+    });
+  },
+
+  previewVoucherThumbnail(e) {
+    const current = e.currentTarget.dataset.url;
+    const urls = e.currentTarget.dataset.urls || [current];
+    if (!current) return;
+    wx.previewImage({
+      current,
+      urls: Array.isArray(urls) && urls.length ? urls : [current],
+    });
+  },
+
+  openAddServiceRecord() {
+    this.setData({
+      activeRecord: null,
+      serviceModalVisible: true,
+    });
+  },
+
+  editServiceRecord(e) {
+    const item = e.currentTarget.dataset.item;
+    this.setData({
+      activeRecord: item,
+      serviceModalVisible: true,
+    });
+  },
+
+  deleteServiceRecord(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    wx.showModal({
+      title: "确认删除",
+      content: "确定要删除这条服务履约记录吗？关联金额将重新聚合计算。",
+      confirmText: "删除",
+      confirmColor: "#ba1a1a",
+      success: async (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: "正在删除...", mask: true });
+          try {
+            await api.deleteProjectServiceRecord(id, this.data.projectId);
+            wx.showToast({ title: "记录已删除", icon: "success" });
+            this.loadDetail();
+          } catch (err) {
+            wx.showToast({ title: err.message || "删除失败", icon: "none" });
+          } finally {
+            wx.hideLoading();
+          }
+        }
+      },
+    });
+  },
+
+  previewVoucherUrls(e) {
+    const urls = e.currentTarget.dataset.urls || [];
+    if (urls.length) {
+      wx.previewImage({ current: urls[0], urls });
+    }
+  },
+
+  onServiceRecordClose() {
+    this.setData({ serviceModalVisible: false });
+  },
+
+  onServiceRecordSuccess() {
+    this.setData({ serviceModalVisible: false });
+    this.loadDetail();
   },
 
   openReceipt() {

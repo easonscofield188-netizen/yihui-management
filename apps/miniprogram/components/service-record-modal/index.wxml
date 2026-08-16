@@ -1,0 +1,255 @@
+<t-popup
+  visible="{{visible}}"
+  placement="bottom"
+  close-on-overlay-click
+  t-class-content="service-popup"
+  z-index="{{11500}}"
+  overlay-props="{{ { zIndex: 11000 } }}"
+  bindvisible-change="onPopupVisibleChange"
+>
+  <view class="service-dialog">
+    <view class="dialog-header">
+      <view class="dialog-title-wrap">
+        <view class="dialog-badge">长期合作</view>
+        <text class="dialog-title">{{isEdit ? '编辑服务记录' : '新增服务履约与记账'}}</text>
+      </view>
+      <view class="close-btn" bindtap="closeModal">
+        <t-icon name="close" size="40rpx" color="#43474e" />
+      </view>
+    </view>
+
+    <scroll-view class="dialog-body" scroll-y show-scrollbar="{{false}}">
+      <!-- 关联项目提示 -->
+      <view class="project-pill" wx:if="{{projectName}}">
+        <t-icon name="building" size="30rpx" color="#002045" />
+        <text class="project-pill-name">{{projectName}}</text>
+      </view>
+
+      <!-- 服务日期 -->
+      <view class="form-section">
+        <view class="section-label required">服务日期</view>
+        <view class="input-shell select-shell" bindtap="openDatePicker">
+          <t-input
+            t-class="form-input"
+            borderless
+            readonly
+            value="{{serviceDate}}"
+            placeholder="请选择服务日期"
+            prefix-icon="calendar"
+            suffix-icon="chevron-down"
+          />
+        </view>
+      </view>
+
+      <!-- 服务内容 -->
+      <view class="form-section">
+        <view class="section-label required">服务内容</view>
+        <view class="input-shell select-shell" bindtap="openScenePicker">
+          <t-input
+            t-class="form-input"
+            borderless
+            readonly
+            value="{{content}}"
+            placeholder="请点击选择服务内容"
+            suffix-icon="chevron-down"
+          />
+        </view>
+
+        <!-- 选中的项目场景描述说明 -->
+        <view class="scene-desc-card" wx:if="{{selectedSceneDescription}}">
+          <view class="scene-desc-head">
+            <t-icon name="info-circle" size="28rpx" color="#002045" />
+            <text class="scene-desc-title">场景说明</text>
+          </view>
+          <view class="scene-desc-text">{{selectedSceneDescription}}</view>
+        </view>
+      </view>
+
+      <!-- 成本支出卡片 -->
+      <view class="form-card-box">
+        <view class="card-box-header">
+          <view class="card-box-title">
+            <t-icon name="bill" size="34rpx" color="#002045" />
+            <text>本次成本支出</text>
+          </view>
+          <view class="add-cost-btn" bindtap="addCostItem">
+            <t-icon name="add" size="28rpx" color="#002045" />
+            <text>添加支出</text>
+          </view>
+        </view>
+
+        <!-- 支出为空时 -->
+        <view class="empty-cost-tip" wx:if="{{!costs.length}}">
+          <t-icon name="info-circle" size="30rpx" color="#74777f" />
+          <text>本次未发生额外花销（默认支出 ¥0.00）</text>
+        </view>
+
+        <!-- 支出列表 -->
+        <view class="cost-item-card" wx:for="{{costs}}" wx:key="id">
+          <view class="cost-card-top">
+            <view class="cost-index-tag">支出 {{index + 1}}</view>
+            <view class="cost-delete-btn" data-index="{{index}}" bindtap="deleteCostItem">
+              <t-icon name="delete" size="32rpx" color="#ba1a1a" />
+            </view>
+          </view>
+
+          <view class="cost-fields-grid">
+            <view class="grid-field">
+              <view class="grid-label">分类</view>
+              <view class="grid-input-shell" data-index="{{index}}" bindtap="openCostCategoryPicker">
+                <text class="grid-picker-text">{{item.categoryLabel || '请选择'}}</text>
+                <t-icon name="chevron-down" size="28rpx" color="#74777f" />
+              </view>
+            </view>
+            <view class="grid-field">
+              <view class="grid-label">金额 (元)</view>
+              <view class="grid-input-shell">
+                <t-input
+                  t-class="grid-input"
+                  type="digit"
+                  borderless
+                  value="{{item.amount}}"
+                  placeholder="0.00"
+                  data-index="{{index}}"
+                  bindchange="onCostAmountChange"
+                />
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 客户结算卡片 -->
+      <view class="form-card-box">
+        <view class="card-box-header">
+          <view class="card-box-title">
+            <t-icon name="wallet" size="34rpx" color="#002045" />
+            <text>本次应收客户金额（元）</text>
+          </view>
+        </view>
+
+        <view class="settlement-row">
+          <view class="input-shell">
+            <t-input
+              t-class="form-input"
+              type="digit"
+              borderless
+              value="{{receivableAmount}}"
+              placeholder="0.00 (如无单独计费留空)"
+              bindchange="onReceivableChange"
+            />
+          </view>
+        </view>
+
+        <block wx:if="{{receivableAmount && receivableAmount > 0}}">
+          <view class="settlement-toggle-row">
+            <view class="toggle-info">
+              <view class="toggle-title">客户是否已结清</view>
+              <view class="toggle-desc">{{isSettled ? '已全额收回本次款项' : '存在未收尾款/挂账'}}</view>
+            </view>
+            <t-switch value="{{isSettled}}" bindchange="onSettledChange" />
+          </view>
+
+          <view class="settlement-row" wx:if="{{!isSettled}}">
+            <view class="section-label">本次实收金额 (元)</view>
+            <view class="input-shell">
+              <t-input
+                t-class="form-input"
+                type="digit"
+                borderless
+                value="{{receivedAmount}}"
+                placeholder="输入实际收到的金额"
+                bindchange="onReceivedChange"
+              />
+            </view>
+            <view class="unreceived-badge" wx:if="{{calculatedUnreceived > 0}}">
+              待收尾款：¥{{calculatedUnreceivedText}}
+            </view>
+          </view>
+        </block>
+      </view>
+
+      <!-- 发票凭证卡片 -->
+      <view class="form-card-box voucher-card-box">
+        <view class="card-box-header">
+          <view class="card-box-title">
+            <t-icon name="attach" size="34rpx" color="#002045" />
+            <text>发票凭证（选填）</text>
+          </view>
+        </view>
+
+        <view class="unified-voucher-grid">
+          <view class="unified-voucher-thumb" wx:for="{{vouchers}}" wx:key="*this">
+            <image class="thumb-img" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="previewUnifiedVoucher" />
+            <view class="thumb-del" data-index="{{index}}" catchtap="deleteUnifiedVoucher">
+              <t-icon name="close" size="24rpx" color="#ffffff" />
+            </view>
+          </view>
+          <view class="unified-upload-btn" bindtap="uploadUnifiedVoucher" wx:if="{{vouchers.length < 9}}">
+            <t-icon name="add" size="44rpx" color="#74777f" />
+            <text>上传凭据</text>
+          </view>
+        </view>
+      </view>
+
+      <view style="height: 40rpx;"></view>
+    </scroll-view>
+
+    <!-- 底部提交按钮 -->
+    <view class="dialog-footer">
+      <t-button
+        t-class="submit-btn"
+        theme="primary"
+        block
+        content="保存服务记录"
+        loading="{{submitting}}"
+        disabled="{{submitting}}"
+        bindtap="submitRecord"
+      />
+    </view>
+  </view>
+</t-popup>
+
+<!-- 日期选择器 -->
+<t-date-time-picker
+  t-class-confirm="picker-confirm"
+  visible="{{datePickerVisible}}"
+  mode="date"
+  format="YYYY-MM-DD"
+  value="{{serviceDate}}"
+  end="{{maxDate}}"
+  title="选择服务日期"
+  confirm-btn="确定"
+  popup-props="{{pickerPopupProps}}"
+  bindconfirm="onDateConfirm"
+  bindcancel="closeDatePicker"
+  bindclose="closeDatePicker"
+/>
+
+<!-- 成本分类选择器 -->
+<t-picker
+  t-class-confirm="picker-confirm"
+  visible="{{costPickerVisible}}"
+  value="{{costPickerValue}}"
+  title="选择支出分类"
+  popup-props="{{pickerPopupProps}}"
+  bindconfirm="onCostCategoryConfirm"
+  bindcancel="closeCostCategoryPicker"
+  bindclose="closeCostCategoryPicker"
+>
+  <t-picker-item options="{{costCategories}}" />
+</t-picker>
+
+<!-- 项目场景/服务内容单选弹窗选择器 -->
+<t-picker
+  t-class-confirm="picker-confirm"
+  visible="{{scenePickerVisible}}"
+  value="{{scenePickerValue}}"
+  title="选择服务内容"
+  popup-props="{{pickerPopupProps}}"
+  bindconfirm="onSceneConfirm"
+  bindcancel="closeScenePicker"
+  bindclose="closeScenePicker"
+>
+  <t-picker-item options="{{projectScenes}}" />
+</t-picker>

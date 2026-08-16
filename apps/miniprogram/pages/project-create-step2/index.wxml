@@ -5,7 +5,7 @@
   </view>
 
   <scroll-view class="step2-scroll" scroll-y show-scrollbar="{{false}}">
-    <view class="progress-section">
+    <view class="progress-section" wx:if="{{!isLongTerm}}">
       <view class="progress-text"><text>步骤 2 / 4</text><text class="progress-percent">已完成 50%</text></view>
       <view class="progress"><view class="progress-current"></view></view>
     </view>

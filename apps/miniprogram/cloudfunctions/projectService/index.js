@@ -18,6 +18,7 @@ const ADMIN_COM_ROLE = 'ADMIN_COM';
 const SESSION_COLLECTION = 'auth_sessions';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const NOTIFICATION_COLLECTION = 'notifications';
+const SERVICE_RECORDS_COLLECTION = 'project_service_records';
 const MINI_PROGRAM_STATES = new Set(['developer', 'trial', 'formal']);
 async function getWechatSubscribeTemplateId() {
   try {
@@ -546,6 +547,281 @@ function getServerDateOnly() {
   return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+
+async function recalculateLongTermProjectFinancials(projectId) {
+  const projectDoc = (await db.collection('projects').doc(projectId).get()).data;
+  if (!projectDoc) return null;
+  
+  const recordsRes = await db.collection(SERVICE_RECORDS_COLLECTION)
+    .where({ projectId })
+    .limit(1000)
+    .get();
+  const records = recordsRes.data || [];
+  
+  let totalRecordsCostCents = 0;
+  let totalRecordsReceivableCents = 0;
+  let totalRecordsReceivedCents = 0;
+  
+  records.forEach(r => {
+    totalRecordsCostCents += moneyToCents(r.costAmount || 0);
+    totalRecordsReceivableCents += moneyToCents(r.receivableAmount || 0);
+    totalRecordsReceivedCents += moneyToCents(r.receivedAmount || 0);
+  });
+  
+  const initialAmountCents = moneyToCents(projectDoc.initialContractAmount || projectDoc.contractTotalAmount || 0);
+  const totalAmountCents = Math.max(initialAmountCents, initialAmountCents + totalRecordsReceivableCents);
+  const receivedAmountCents = totalRecordsReceivedCents;
+  const unreceivedAmountCents = Math.max(0, totalAmountCents - receivedAmountCents);
+  const costAmountCents = totalRecordsCostCents;
+  const profitAmountCents = totalAmountCents - costAmountCents;
+  
+  const updateData = {
+    amount: centsToMoney(totalAmountCents),
+    receivedAmount: centsToMoney(receivedAmountCents),
+    unreceivedAmount: centsToMoney(unreceivedAmountCents),
+    payableAmount: centsToMoney(costAmountCents),
+    paidAmount: centsToMoney(costAmountCents),
+    costAmount: centsToMoney(costAmountCents),
+    profitAmount: centsToMoney(profitAmountCents),
+    serviceRecordsCount: records.length,
+    updateTime: db.serverDate()
+  };
+  
+  await db.collection('projects').doc(projectId).update({ data: updateData });
+  return { ...projectDoc, ...updateData };
+}
+
+async function addServiceRecord(params, currentUser) {
+  const { projectId, serviceDate, content, costs = [], receivableAmount = 0, receivedAmount = 0, isSettled = false } = params || {};
+  if (!projectId || !serviceDate || !content) {
+    return { code: 400, message: '请填写服务日期与服务内容' };
+  }
+  
+  const normalizedCosts = Array.isArray(costs) ? costs.map((c, i) => {
+    const cat = normalizeCostCategory(c);
+    return {
+      id: c.id || `cost-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+      category: cat.categoryLabel,
+      categoryCode: cat.categoryCode,
+      categoryLabel: cat.categoryLabel,
+      amount: Number(c.amount) || 0,
+      remark: String(c.remark || '').trim(),
+      voucherFileIds: Array.isArray(c.voucherFileIds) ? c.voucherFileIds : [],
+      settled: c.settled !== undefined ? Boolean(c.settled) : true
+    };
+  }) : [];
+  
+  const recordCostAmount = normalizedCosts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const numReceivable = Number(receivableAmount) || 0;
+  const numReceived = isSettled ? numReceivable : (Number(receivedAmount) || 0);
+  const numUnreceived = Math.max(0, numReceivable - numReceived);
+  
+  const unifiedVoucherFileIds = Array.isArray(params.voucherFileIds) && params.voucherFileIds.length
+    ? params.voucherFileIds
+    : (Array.isArray(params.vouchers) ? params.vouchers : []);
+
+  const recordDoc = {
+    projectId,
+    serviceDate: String(serviceDate).slice(0, 10),
+    scene: params.scene || '',
+    content: String(content).trim(),
+    costs: normalizedCosts,
+    costAmount: recordCostAmount,
+    voucherFileIds: unifiedVoucherFileIds,
+    receivableAmount: numReceivable,
+    receivedAmount: numReceived,
+    unreceivedAmount: numUnreceived,
+    isSettled: Boolean(isSettled),
+    createdAt: db.serverDate(),
+    createdTimestamp: Date.now(),
+    createdBy: currentUser.id || currentUser.userId || '',
+    createdByName: currentUser.nickname || currentUser.username || '管理员'
+  };
+  
+  const addRes = await db.collection(SERVICE_RECORDS_COLLECTION).add({ data: recordDoc });
+  const updatedProject = await recalculateLongTermProjectFinancials(projectId);
+  
+  return {
+    code: 0,
+    message: '服务记录添加成功',
+    data: {
+      id: addRes._id,
+      ...recordDoc,
+      project: updatedProject
+    }
+  };
+}
+
+async function listServiceRecords(params) {
+  const { projectId, page = 1, pageSize = 20 } = params || {};
+  if (!projectId) return { code: 400, message: '缺少项目 ID' };
+  
+  const currentPage = Math.max(1, Number(page) || 1);
+  const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+  const skip = (currentPage - 1) * currentPageSize;
+  
+  let countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where({ projectId }).count();
+  let total = countRes.total || 0;
+
+  // 自动自愈补齐：若长期合作项目的履约记录为空，自动根据项目首次创建数据生成首笔服务履约记录
+  if (total === 0) {
+    try {
+      const projDoc = await db.collection('projects').doc(projectId).get();
+      const proj = projDoc.data;
+      if (proj && proj.type === 'long_term') {
+        const numReceivable = Number(proj.amount) || 0;
+        const numReceived = Number(proj.receivedAmount) || 0;
+        const costsData = Array.isArray(proj.costs) ? proj.costs : [];
+        const recordCostAmount = Number(proj.payableAmount) || costsData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const SCENE_LABEL_MAP = {
+          daily_maintenance: '日常维护',
+          company_scenery: '公司布景',
+          store_landscaping: '门店造景',
+          government_unit: '机关单位',
+          private_residence: '私人住宅',
+          commercial_space: '商业空间'
+        };
+        const projScene = proj.scene || 'daily_maintenance';
+        const sceneLabel = proj.sceneLabel || SCENE_LABEL_MAP[projScene] || '日常维护';
+        const initialDate = String(proj.startDate || proj.completedTime || proj.createTime || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+        const firstRecord = {
+          projectId,
+          serviceDate: initialDate,
+          scene: projScene,
+          content: sceneLabel,
+          costs: costsData,
+          costAmount: recordCostAmount,
+          receivableAmount: numReceivable,
+          receivedAmount: numReceived,
+          unreceivedAmount: Math.max(0, numReceivable - numReceived),
+          isSettled: numReceivable > 0 && numReceived >= numReceivable,
+          createdAt: db.serverDate(),
+          createdTimestamp: Date.now(),
+          createdBy: proj.creatorId || '',
+          createdByName: proj.creatorName || '系统'
+        };
+        await db.collection(SERVICE_RECORDS_COLLECTION).add({ data: firstRecord });
+        await recalculateLongTermProjectFinancials(projectId);
+        countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where({ projectId }).count();
+        total = countRes.total || 1;
+      }
+    } catch (err) {
+      console.warn('自动补齐长期项目初始记录失败', err);
+    }
+  }
+  
+  const listRes = await db.collection(SERVICE_RECORDS_COLLECTION)
+    .where({ projectId })
+    .orderBy('serviceDate', 'desc')
+    .orderBy('createdTimestamp', 'desc')
+    .skip(skip)
+    .limit(currentPageSize)
+    .get();
+
+  const SCENE_LABEL_MAP = {
+    routine_maintenance: '日常维护',
+    daily_maintenance: '日常维护',
+    company_scenery: '公司布景',
+    store_landscaping: '门店造景',
+    government_unit: '机关单位',
+    private_residence: '私人住宅',
+    commercial_space: '商业空间'
+  };
+
+  const rawList = listRes.data || [];
+  const normalizedList = rawList.map((item) => {
+    let cleanContent = String(item.content || '').trim();
+    let cleanScene = item.scene;
+    if (!cleanScene) {
+      cleanScene = Object.keys(SCENE_LABEL_MAP).find(k => SCENE_LABEL_MAP[k] === cleanContent) || 'daily_maintenance';
+    }
+    if (!cleanContent || cleanContent.includes('长期合作') || cleanContent === '首次服务履约' || SCENE_LABEL_MAP[cleanContent]) {
+      cleanContent = SCENE_LABEL_MAP[cleanContent] || SCENE_LABEL_MAP[cleanScene] || '日常维护';
+    }
+    const unifiedVouchers = Array.isArray(item.voucherFileIds) ? [...item.voucherFileIds] : (Array.isArray(item.vouchers) ? [...item.vouchers] : []);
+    (item.costs || []).forEach(c => {
+      (c.voucherFileIds || []).forEach(f => {
+        if (f && !unifiedVouchers.includes(f)) unifiedVouchers.push(f);
+      });
+    });
+    return {
+      ...item,
+      scene: cleanScene,
+      content: cleanContent,
+      voucherFileIds: unifiedVouchers
+    };
+  });
+    
+  return {
+    code: 0,
+    message: '查询成功',
+    data: {
+      list: normalizedList,
+      total,
+      page: currentPage,
+      pageSize: currentPageSize,
+      hasMore: skip + normalizedList.length < total
+    }
+  };
+}
+
+async function deleteServiceRecord(params) {
+  const { recordId, projectId } = params || {};
+  if (!recordId || !projectId) return { code: 400, message: '参数不完整' };
+  
+  await db.collection(SERVICE_RECORDS_COLLECTION).doc(recordId).remove();
+  const updatedProject = await recalculateLongTermProjectFinancials(projectId);
+  
+  return { code: 0, message: '服务记录删除成功', data: { project: updatedProject } };
+}
+
+async function updateServiceRecord(params) {
+  const { recordId, projectId, serviceDate, content, scene, costs = [], receivableAmount = 0, receivedAmount = 0, isSettled = false, voucherFileIds = [], vouchers = [] } = params || {};
+  if (!recordId || !projectId) return { code: 400, message: '参数不完整' };
+  
+  const normalizedCosts = Array.isArray(costs) ? costs.map((c, i) => {
+    const cat = normalizeCostCategory(c);
+    return {
+      id: c.id || `cost-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+      category: cat.categoryLabel,
+      categoryCode: cat.categoryCode,
+      categoryLabel: cat.categoryLabel,
+      amount: Number(c.amount) || 0,
+      remark: String(c.remark || '').trim(),
+      voucherFileIds: Array.isArray(c.voucherFileIds) ? c.voucherFileIds : [],
+      settled: c.settled !== undefined ? Boolean(c.settled) : true
+    };
+  }) : [];
+  
+  const unifiedVoucherFileIds = Array.isArray(voucherFileIds) && voucherFileIds.length
+    ? voucherFileIds
+    : (Array.isArray(vouchers) ? vouchers : []);
+
+  const recordCostAmount = normalizedCosts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const numReceivable = Number(receivableAmount) || 0;
+  const numReceived = isSettled ? numReceivable : (Number(receivedAmount) || 0);
+  const numUnreceived = Math.max(0, numReceivable - numReceived);
+  
+  await db.collection(SERVICE_RECORDS_COLLECTION).doc(recordId).update({
+    data: {
+      serviceDate: String(serviceDate).slice(0, 10),
+      content: String(content).trim(),
+      scene: scene || '',
+      costs: normalizedCosts,
+      costAmount: recordCostAmount,
+      voucherFileIds: unifiedVoucherFileIds,
+      receivableAmount: numReceivable,
+      receivedAmount: numReceived,
+      unreceivedAmount: numUnreceived,
+      isSettled: Boolean(isSettled),
+      updatedAt: db.serverDate()
+    }
+  });
+  
+  const updatedProject = await recalculateLongTermProjectFinancials(projectId);
+  return { code: 0, message: '服务记录更新成功', data: { project: updatedProject } };
+}
+
 exports.main = async (event, context) => {
   let action, data;
   
@@ -597,6 +873,17 @@ exports.main = async (event, context) => {
       case 'quickRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await quickRecord(data, auth.user);
+      case 'listServiceRecords':
+        return await listServiceRecords(data);
+      case 'addServiceRecord':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
+        return await addServiceRecord(data, auth.user);
+      case 'updateServiceRecord':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
+        return await updateServiceRecord(data);
+      case 'deleteServiceRecord':
+        if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
+        return await deleteServiceRecord(data);
       case 'delete':
       case 'deleteBatch':
         if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
@@ -1434,8 +1721,8 @@ async function createProject(params) {
     return { code: 400, message: '缺少必需的项目信息，请确保所有字段均已填写' };
   }
 
-  if (type !== 'normal') {
-    return { code: 400, message: '新建项目仅支持常规类型' };
+  if (type !== 'normal' && type !== 'long_term') {
+    return { code: 400, message: '新建项目仅支持常规类型或长期类型' };
   }
 
   // 合同/预览图校验
@@ -1552,17 +1839,52 @@ async function createProject(params) {
     delete data.authToken;
     delete data.requestSource;
     delete data._miniProgramState;
-    // 常规项目状态完全由收款和成本结算情况决定；交付时间使用用户填写的交付日期。
-    data.completedTime = String(startDate).slice(0, 10);
-    Object.assign(data, buildNormalProjectLifecycle({
-      ...data,
-      settledTime: null,
-      archivedTime: null
-    }, now));
+    if (type === 'long_term') {
+      data.type = 'long_term';
+      data.typeLabel = '长期';
+      data.status = 'in_cooperation';
+      data.statusLabel = '合作中';
+      data.latestServiceDate = String(startDate).slice(0, 10);
+      data.serviceRecordsCount = 0;
+      data.completedTime = String(startDate).slice(0, 10);
+    } else {
+      // 常规项目状态完全由收款和成本结算情况决定；交付时间使用用户填写的交付日期。
+      data.completedTime = String(startDate).slice(0, 10);
+      Object.assign(data, buildNormalProjectLifecycle({
+        ...data,
+        settledTime: null,
+        archivedTime: null
+      }, now));
+    }
 
     const res = await db.collection('projects').add({
       data
     });
+
+    if (type === 'long_term') {
+      // 长期合作项目：自动将首次录入的项目单子生成为第 1 条履约服务记录
+      const numReceivable = parseFloat(amount) || 0;
+      const numReceived = received;
+      const recordCostAmount = costsData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      const firstRecord = {
+        projectId: res._id,
+        serviceDate: String(startDate).slice(0, 10),
+        scene: params.scene || 'daily_maintenance',
+        content: params.sceneLabel || (params.scene === 'daily_maintenance' ? '日常维护' : params.scene) || '日常维护',
+        costs: costsData,
+        costAmount: recordCostAmount,
+        receivableAmount: numReceivable,
+        receivedAmount: numReceived,
+        unreceivedAmount: Math.max(0, numReceivable - numReceived),
+        isSettled: numReceivable > 0 && numReceived >= numReceivable,
+        createdAt: db.serverDate(),
+        createdTimestamp: Date.now(),
+        createdBy: (currentUser && (currentUser.id || currentUser.userId)) || '',
+        createdByName: (currentUser && (currentUser.nickname || currentUser.username)) || '管理员'
+      };
+      await db.collection(SERVICE_RECORDS_COLLECTION).add({ data: firstRecord });
+      await recalculateLongTermProjectFinancials(res._id);
+    }
 
     if (params.clientId) {
       const latestClient = (await db.collection('clients').doc(params.clientId).get()).data;
@@ -1765,43 +2087,58 @@ async function listProjects(params) {
   const {
     page,
     pageSize,
-    keyword = '',
-    status = '',
+    keyword = "",
+    status = "",
+    projectType = "",
+    type = "",
     year
   } = params || {};
   const allowedStatuses = new Set([
-    'negotiating',
-    'constructing',
-    'completed',
-    'settling',
-    'closed',
-    'archived',
-    'in_cooperation',
-    'terminated'
+    "negotiating",
+    "constructing",
+    "completed",
+    "settling",
+    "closed",
+    "archived",
+    "in_cooperation",
+    "terminated"
   ]);
-  const normalizedStatus = String(status || '').trim();
-  const normalizedKeyword = String(keyword || '').trim().slice(0, 50);
+  const normalizedStatus = String(status || "").trim();
+  const normalizedKeyword = String(keyword || "").trim().slice(0, 50);
+  const normalizedProjectType = String(projectType || type || "").trim();
   const normalizedYear = Number(year);
   const hasYear = Number.isInteger(normalizedYear) && normalizedYear >= 2000 && normalizedYear <= 2100;
   if (normalizedStatus && !allowedStatuses.has(normalizedStatus)) {
-    return { code: 400, message: '项目状态筛选值无效' };
+    return { code: 400, message: "项目状态筛选值无效" };
   }
 
-  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus || hasYear;
+  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus || normalizedProjectType || hasYear;
   const currentPage = Math.max(1, Number(page) || 1);
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   try {
-    let query = db.collection('projects');
+    let query = db.collection("projects");
     const _ = db.command;
     const conditions = [];
+
+    if (normalizedProjectType === "long_term") {
+      conditions.push({ type: "long_term" });
+    } else if (normalizedProjectType === "normal") {
+      conditions.push(_.or([
+        { type: "normal" },
+        { type: _.exists(false) },
+        { type: "" },
+        { type: null }
+      ]));
+    }
 
     if (normalizedStatus) {
       conditions.push({ status: normalizedStatus });
     }
     if (normalizedKeyword) {
+      const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const regexp = db.RegExp({
-        regexp: normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-        options: 'i'
+        regexp: escaped,
+        options: "i"
       });
       conditions.push(_.or([
         { name: regexp },
@@ -1811,48 +2148,45 @@ async function listProjects(params) {
         { projectNo: regexp }
       ]));
     }
-    // 按「交付日期」年份筛选（与列表展示字段一致：startDate / completionTime / period[1]）
     if (hasYear) {
       const yearPrefix = db.RegExp({
-        regexp: `^${normalizedYear}-`,
-        options: 'i'
+        regexp: "^" + normalizedYear + "-",
+        options: "i"
       });
-      const dateStart = new Date(`${normalizedYear}-01-01T00:00:00.000+08:00`);
-      const dateEnd = new Date(`${normalizedYear}-12-31T23:59:59.999+08:00`);
+      const dateStart = new Date(normalizedYear + "-01-01T00:00:00.000+08:00");
+      const dateEnd = new Date(normalizedYear + "-12-31T23:59:59.999+08:00");
       conditions.push(_.or([
         { startDate: yearPrefix },
         {
           startDate: _.and(
-            _.gte(`${normalizedYear}-01-01`),
-            _.lte(`${normalizedYear}-12-31`)
+            _.gte(normalizedYear + "-01-01"),
+            _.lte(normalizedYear + "-12-31")
           )
         },
         {
           completionTime: _.and(_.gte(dateStart), _.lte(dateEnd))
         },
-        { 'period.1': yearPrefix },
-        { 'period.0': yearPrefix }
+        { "period.1": yearPrefix },
+        { "period.0": yearPrefix }
       ]));
     }
 
-    if (conditions.length === 1) {
-      query = query.where(conditions[0]);
-    } else if (conditions.length > 1) {
-      query = query.where(_.and(conditions));
-    }
+    conditions.forEach(cond => {
+      query = query.where(cond);
+    });
 
     const countResult = usePagination ? await query.count() : null;
-    let orderedQuery = query.orderBy('createTime', 'desc');
+    let orderedQuery = query.orderBy("createTime", "desc");
     if (usePagination) {
       orderedQuery = orderedQuery.skip((currentPage - 1) * currentPageSize).limit(currentPageSize);
     }
     const res = await orderedQuery.get();
     const list = (res.data || []).map(enrichProjectFinancials);
-    if (!usePagination) return { code: 0, message: '查询成功', data: list };
+    if (!usePagination) return { code: 0, message: "查询成功", data: list };
     const total = countResult.total || 0;
     return {
       code: 0,
-      message: '查询成功',
+      message: "查询成功",
       data: {
         list,
         total,
@@ -1862,8 +2196,8 @@ async function listProjects(params) {
       }
     };
   } catch (err) {
-    console.error('查询项目列表失败:', err);
-    return { code: 500, message: '查询失败', error: err.message };
+    console.error("查询项目列表失败:", err);
+    return { code: 500, message: "查询失败", error: err.message };
   }
 }
 
@@ -1931,7 +2265,11 @@ async function listFinancialProjects(params = {}) {
       return { code: 400, message: '时间范围无效' };
     }
 
-    const allProjects = await fetchAllProjectsForOverview();
+    const projectType = String(params.projectType || params.type || '').trim();
+    let allProjects = await fetchAllProjectsForOverview();
+    if (projectType === 'normal' || projectType === 'long_term') {
+      allProjects = allProjects.filter(p => (p.type || 'normal') === projectType);
+    }
     const rangeProjects = bounds
       ? filterOverviewProjects(allProjects, bounds)
       : allProjects;

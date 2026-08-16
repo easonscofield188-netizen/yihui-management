@@ -9,12 +9,18 @@ const {
 const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
 const NOTIFICATION_COUNT_AT_KEY = "notificationUnreadCountCachedAt";
 const NOTIFICATION_COUNT_TTL_MS = 30 * 1000;
-const STATUS_OPTIONS = [
+const NORMAL_STATUS_OPTIONS = [
   { label: "全部", value: "" },
   { label: "已交付", value: "completed" },
   { label: "已结清", value: "closed" },
   { label: "已归档", value: "archived" },
 ];
+const LONG_TERM_STATUS_OPTIONS = [
+  { label: "全部", value: "" },
+  { label: "合作中", value: "in_cooperation" },
+  { label: "已终止", value: "terminated" },
+];
+const STATUS_OPTIONS = NORMAL_STATUS_OPTIONS;
 const STATUS_LABELS = {
   negotiating: "洽谈中", constructing: "施工中", completed: "已交付",
   settling: "结算中", closed: "已结清", archived: "已归档", in_cooperation: "合作中", terminated: "已终止",
@@ -90,14 +96,15 @@ function decorateProject(project) {
     isClosed,
     usesCheckIcon,
     statusIconColor: statusIconColors[project.status] || "#002045",
-    amountLabel: "订单金额",
+    amountLabel: project.type === "long_term" ? "累计订单金额" : "订单金额",
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount),
     costText: money(project.payableAmount),
     profitText: money(project.profitAmount),
     profitPositive: Number.isFinite(profitAmount) ? profitAmount >= 0 : true,
     deliveryDateText: dateText(
-      project.startDate
+      project.latestServiceDate
+      || project.startDate
       || project.completionTime
       || (project.period && project.period[1])
     ),
@@ -136,6 +143,10 @@ Page({
     selectionMode: false,
     selectedIds: [],
     allSelected: false,
+    projectType: "",
+    serviceModalVisible: false,
+    activeProjectId: "",
+    activeProjectName: "",
   },
 
   onLoad() {
@@ -446,6 +457,41 @@ Page({
     });
   },
 
+  onProjectTypeTap(event) {
+    const projectType = event.currentTarget.dataset.type || "";
+    if (projectType === this.data.projectType) return;
+    const statusOptions = projectType === "long_term" ? LONG_TERM_STATUS_OPTIONS : NORMAL_STATUS_OPTIONS;
+    this.setData({
+      projectType,
+      statusIndex: 0,
+      statusOptions,
+      selectionMode: false,
+      selectedIds: [],
+      allSelected: false,
+    }, () => {
+      const typeLabels = { "": "全部项目", "normal": "常规项目", "long_term": "长期合作" };
+      this.loadProjects(true, `正在加载${typeLabels[projectType]}...`);
+    });
+  },
+
+  openServiceRecordModal(event) {
+    const { id, name } = event.currentTarget.dataset;
+    this.setData({
+      activeProjectId: id,
+      activeProjectName: name || "长期合作项目",
+      serviceModalVisible: true,
+    });
+  },
+
+  onServiceRecordClose() {
+    this.setData({ serviceModalVisible: false });
+  },
+
+  onServiceRecordSuccess(event) {
+    this.setData({ serviceModalVisible: false });
+    this.loadProjects(true, "已同步最新履约与财务...");
+  },
+
   onStatusTap(event) {
     const statusIndex = Number(event.currentTarget.dataset.index);
     if (statusIndex === this.data.statusIndex) return;
@@ -589,7 +635,9 @@ Page({
       loadingMessage: loadingMessage || "正在加载项目...",
     });
     try {
-      const status = this.data.statusOptions[this.data.statusIndex].value;
+      const status = this.data.projectType && this.data.statusOptions[this.data.statusIndex]
+        ? this.data.statusOptions[this.data.statusIndex].value
+        : "";
       const yearParam = this.data.filterYear === ALL_YEARS_VALUE
         ? undefined
         : Number(this.data.filterYear);
@@ -598,6 +646,7 @@ Page({
         pageSize: 20,
         keyword: this.data.keyword.trim(),
         status,
+        projectType: this.data.projectType,
         ...(yearParam ? { year: yearParam } : {}),
       });
       const selectedSet = new Set(this.data.selectedIds);

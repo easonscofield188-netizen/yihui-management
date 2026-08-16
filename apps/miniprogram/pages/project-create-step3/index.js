@@ -60,6 +60,8 @@ Page({
     categoryPickerVisible: false,
     categoryPickerValue: [FALLBACK_CATEGORIES[0].value],
     costForm: { categoryCode: FALLBACK_CATEGORIES[0].value, supplier: FIXED_SUPPLIER, amount: "", isSettled: true },
+    isLongTerm: false,
+    submitting: false,
   },
 
   onLoad() {
@@ -67,10 +69,12 @@ Page({
     const systemInfo = wx.getSystemInfoSync();
     const draft = wx.getStorageSync(DRAFT_KEY) || {};
     const costs = normalizeCosts(draft.costs);
+    const isLongTerm = draft.type === "long_term";
     this.setData({
       ...getNavMetrics(),
       windowHeight: systemInfo.windowHeight || systemInfo.screenHeight || 667,
       isEditMode: draft._mode === "edit",
+      isLongTerm,
       costs,
     }, () => this.updateSummary());
     this.loadCategories();
@@ -227,6 +231,59 @@ Page({
 
   previous() {
     wx.navigateBack();
+  },
+
+  async submitDirectly() {
+    if (this.data.submitting) return;
+    const draft = wx.getStorageSync(DRAFT_KEY) || {};
+    if (!draft.name || !draft.client || !draft.role || !draft.startDate) {
+      wx.showToast({ title: "项目基础信息不完整", icon: "none" });
+      return;
+    }
+    if (!draft.clientId) {
+      wx.showToast({ title: "请选择已有客户，或先新增客户", icon: "none" });
+      return;
+    }
+
+    this.setData({ submitting: true });
+    wx.showLoading({ title: "正在创建长期项目...", mask: true });
+    try {
+      const deliveryDate = String(draft.startDate).slice(0, 10);
+      const res = await api.createProject({
+        type: "long_term",
+        name: draft.name.trim(),
+        client: draft.client.trim(),
+        clientId: draft.clientId,
+        role: draft.role,
+        clientSource: draft.source || "",
+        scene: draft.scene || "",
+        startDate: deliveryDate,
+        amount: Number(draft.amount) || 0,
+        receivedAmount: Number(draft.receivedAmount) || 0,
+        staffCount: Number(draft.staffCount) || 1,
+        costs: [],
+        desc: draft.sceneLabel || (draft.scene === 'daily_maintenance' ? '日常维护' : draft.scene) || '日常维护',
+        isHasContract: "否",
+        isHasPreview: "否",
+        isHasVoucher: "否",
+      });
+
+      wx.removeStorageSync(DRAFT_KEY);
+      wx.showToast({ title: "长期项目创建成功", icon: "success" });
+      const targetId = res.id || res._id || (res.data && (res.data.id || res.data._id)) || "";
+      setTimeout(() => {
+        if (targetId) {
+          wx.redirectTo({ url: `/pages/project-detail/index?id=${targetId}` });
+        } else {
+          wx.switchTab({ url: "/pages/index/index" });
+        }
+      }, 500);
+    } catch (err) {
+      wx.showToast({ title: err.message || "创建失败", icon: "none" });
+    } finally {
+      this.setData({ submitting: false });
+      wx.hideLoading();
+    }
   },
 
   next() {

@@ -2,10 +2,10 @@
   <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px; padding-right: {{menuRightInset}}px;">
     <view class="nav-close" bindtap="close"><t-icon name="close" size="44rpx" color="#002045" /></view>
     <view class="nav-title">{{pageTitle}}</view>
-    <view class="step-count">步骤 1 / 4</view>
+    <view class="step-count" wx:if="{{form.type !== 'long_term'}}">步骤 1 / 4</view>
   </view>
 
-  <view class="progress"><view class="progress-current"></view></view>
+  <view class="progress" wx:if="{{form.type !== 'long_term'}}"><view class="progress-current"></view></view>
 
   <scroll-view
     class="form-scroll"
@@ -15,17 +15,31 @@
     scroll-into-view="{{scrollTarget}}"
     show-scrollbar="{{false}}"
   >
-    <view class="intro"><view class="intro-title">基础与客户信息</view><view>填写核心详情以开启您的项目之旅。</view></view>
+    <view class="intro"><view class="intro-title">{{form.type === 'long_term' ? '长期合作服务项目' : '基础与客户信息'}}</view><view>{{form.type === 'long_term' ? '创建长期周期性服务项目，随时记录日常履约与收支。' : '填写核心详情以开启您的项目之旅。'}}</view></view>
 
     <view class="form-card">
-      <view class="field-label">项目名称</view>
-      <view class="input-shell"><t-input t-class="form-input" borderless value="{{form.name}}" placeholder="例如：西溪湿地动漫展会" bindchange="onNameChange" /></view>
+      <view class="field-label" wx:if="{{!isClosedEdit && !isEditMode}}">项目类型</view>
+      <view class="project-type-segment" wx:if="{{!isClosedEdit && !isEditMode}}">
+        <view class="type-segment-item {{form.type === 'normal' ? 'active' : ''}}" data-type="normal" bindtap="onProjectTypeChange">
+          <t-icon name="assignment" size="32rpx" color="{{form.type === 'normal' ? '#ffffff' : '#002045'}}" />
+          <text>常规项目（单次）</text>
+        </view>
+        <view class="type-segment-item {{form.type === 'long_term' ? 'active' : ''}}" data-type="long_term" bindtap="onProjectTypeChange">
+          <t-icon name="repeat" size="32rpx" color="{{form.type === 'long_term' ? '#ffffff' : '#002045'}}" />
+          <text>长期合作（周期维护）</text>
+        </view>
+      </view>
+
+      <block wx:if="{{form.type !== 'long_term'}}">
+        <view class="field-label">项目名称</view>
+        <view class="input-shell"><t-input t-class="form-input" borderless value="{{form.name}}" placeholder="例如：西溪湿地动漫展会" bindchange="onNameChange" /></view>
+      </block>
 
       <view class="field-label">项目场景</view>
       <view class="input-shell select-shell {{isClosedEdit ? 'field-disabled' : ''}}" data-field="scene" bindtap="openPicker"><t-input t-class="form-input" borderless readonly disabled="{{isClosedEdit}}" value="{{projectScenes[sceneIndex].label}}" suffix-icon="chevron-down" /></view>
 
-      <view class="field-label">交付日期</view>
-      <view class="input-shell select-shell {{isDateLocked ? 'field-disabled' : ''}}" bindtap="openDatePicker"><t-input t-class="form-input" borderless readonly disabled="{{isDateLocked}}" value="{{form.startDate}}" placeholder="请选择交付日期" suffix-icon="calendar" /></view>
+      <view class="field-label">{{form.type === 'long_term' ? '交付日期（首次合作）' : '交付日期'}}</view>
+      <view class="input-shell select-shell {{isDateLocked ? 'field-disabled' : ''}}" bindtap="openDatePicker"><t-input t-class="form-input" borderless readonly disabled="{{isDateLocked}}" value="{{form.startDate}}" placeholder="{{form.type === 'long_term' ? '请选择首次交付日期' : '请选择交付日期'}}" suffix-icon="calendar" /></view>
     </view>
 
     <view class="form-card client-card">
@@ -181,5 +195,9 @@
   </t-popup>
   <t-picker t-class-confirm="picker-confirm" visible="{{newClientPickerVisible}}" value="{{newClientPickerValue}}" title="{{newClientPickerTitle}}" bindconfirm="onNewClientPickerConfirm" bindcancel="closeNewClientPicker" bindclose="closeNewClientPicker"><t-picker-item options="{{newClientPickerOptions}}" /></t-picker>
 
-  <view class="wizard-footer"><t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="上一步" bindtap="previous" /><t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" /><t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled /></view>
+  <view class="wizard-footer">
+    <t-button t-class="footer-text-button" theme="default" variant="text" icon="arrow-left" content="返回" bindtap="previous" />
+    <t-button t-class="next-button" theme="primary" icon="arrow-right" content="下一步" bindtap="next" />
+    <t-button t-class="footer-text-button disabled-button" theme="default" variant="text" icon="check-circle" content="提交" disabled />
+  </view>
 </view>
