@@ -1,3 +1,84 @@
-<view class="page"><view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px"><view class="back" bindtap="back"><t-icon name="chevron-left" size="48rpx" color="#002045"/></view><view class="title">类目审核</view></view><view style="height:{{navHeight}}px"></view>
-<view class="tabs"><view wx:for="{{tabs}}" wx:key="value" data-index="{{index}}" bindtap="changeTab" class="tab {{tabIndex===index?'active':''}}">{{item.label}}</view></view>
-<view class="list"><view class="card" wx:for="{{list}}" wx:key="_id" data-id="{{item._id}}" bindtap="open"><view class="card-head"><view class="name">{{item.proposedLabel}}</view><view class="status status-{{item.status}}">{{item.statusLabel}}</view></view><view class="unit">建议单位：{{item.proposedUnit||'未填写'}}</view><view class="meta">{{item.projectName}} · {{item.submittedByName}}</view><view class="foot"><text>累计出现 {{item.occurrenceCount||1}} 次</text><text>{{item.timeText}}</text></view></view><view class="empty" wx:if="{{!loading&&!list.length}}"><t-icon name="task-checked" size="80rpx" color="#9aa2ae"/><text>{{tabIndex===0?'暂无待审核类目':'暂无审核记录'}}</text></view><view class="loading" wx:if="{{loading}}"><t-loading size="38rpx"/><text>正在加载...</text></view></view></view>
+<view class="page">
+  <view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px">
+    <view class="back" bindtap="back">
+      <t-icon name="chevron-left" size="48rpx" color="#002045"/>
+    </view>
+    <view class="title">类目审核</view>
+  </view>
+  <view style="height:{{navHeight}}px"></view>
+
+  <!-- 多选操作栏 -->
+  <view class="selection-toolbar" wx:if="{{selectionMode}}">
+    <view class="selection-cancel" bindtap="cancelSelection">取消</view>
+    <view class="selection-count">已选择 {{selectedIds.length}} 条</view>
+    <view class="selection-action" bindtap="toggleSelectAll">{{allSelected ? '取消全选' : '全选'}}</view>
+    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelected">
+      {{deleting ? '删除中' : '删除'}}
+    </view>
+  </view>
+
+  <!-- 常规 Tab 栏 -->
+  <view class="tabs" wx:else>
+    <view
+      wx:for="{{tabs}}"
+      wx:key="value"
+      data-index="{{index}}"
+      bindtap="changeTab"
+      class="tab {{tabIndex===index?'active':''}}"
+    >
+      {{item.label}}
+    </view>
+  </view>
+
+  <!-- 列表内容 -->
+  <view class="list">
+    <view
+      class="card {{selectionMode ? 'selecting' : ''}} {{item.selected ? 'card-selected' : ''}} {{selectionMode && !item.isDeletable ? 'card-disabled' : ''}}"
+      wx:for="{{list}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      bindtap="onCardTap"
+      bindlongpress="onCardLongPress"
+    >
+      <!-- 仅已审核（可删除）记录在多选模式下显示勾选框 -->
+      <view class="selection-check" wx:if="{{selectionMode && item.isDeletable}}">
+        <t-icon
+          name="{{item.selected ? 'check-circle-filled' : 'circle'}}"
+          size="42rpx"
+          color="{{item.selected ? '#1a365d' : '#a9b0bb'}}"
+        />
+      </view>
+      <view class="selection-check-disabled" wx:elif="{{selectionMode}}">
+        <t-icon
+          name="lock-on"
+          size="36rpx"
+          color="#b0b8c4"
+        />
+      </view>
+
+      <view class="card-content">
+        <view class="card-head">
+          <view class="name">{{item.proposedLabel}}</view>
+          <view class="status status-{{item.status}}">{{item.statusLabel}}</view>
+        </view>
+        <view class="unit">建议单位：{{item.proposedUnit||'未填写'}}</view>
+        <view class="meta">{{item.projectName}} · {{item.submittedByName}}</view>
+        <view class="foot">
+          <text>累计出现 {{item.occurrenceCount||1}} 次</text>
+          <text>{{item.timeText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading&&!list.length}}">
+      <t-icon name="task-checked" size="80rpx" color="#9aa2ae"/>
+      <text>{{tabIndex===0?'暂无待审核类目':'暂无审核记录'}}</text>
+    </view>
+    <view class="loading" wx:if="{{loading}}">
+      <t-loading size="38rpx"/><text>正在加载...</text>
+    </view>
+    <view class="loading-more" wx:if="{{!loading && list.length && !hasMore && !selectionMode}}">
+      没有更多记录了
+    </view>
+  </view>
+</view>

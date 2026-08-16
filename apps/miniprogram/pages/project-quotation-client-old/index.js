@@ -27,23 +27,16 @@ function money(value) {
   return `${integerPart}.${parts[1]}`;
 }
 
-function getVersionColorClass(versionLabel = "") {
-  const str = String(versionLabel).toLowerCase();
-  if (str.includes("v1") || str.includes("一")) return "version-v1";
-  if (str.includes("v2") || str.includes("二")) return "version-v2";
-  if (str.includes("v3") || str.includes("三")) return "version-v3";
-  if (str.includes("v4") || str.includes("四")) return "version-v4";
-  if (str.includes("v5") || str.includes("五")) return "version-v5";
-  return "version-v1";
+function fileExtension(value) {
+  return String(value || "").split("?")[0].match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || "";
 }
 
-async function resolveDrawingImages(drawings = []) {
-  const validDrawings = drawings.filter(item => {
-    const name = String(item.name || item.url || item.fileId || "").toLowerCase();
-    return !name.endsWith(".pdf");
-  });
+function isPdf(item) {
+  return String(item.fileType || fileExtension(item.name || item.url || item.fileId)).toLowerCase() === "pdf";
+}
 
-  const fileIds = validDrawings.map(item => item.fileId).filter(Boolean);
+async function resolveDrawings(drawings) {
+  const fileIds = drawings.map(item => item.fileId).filter(Boolean);
   const urlMap = {};
   if (fileIds.length) {
     try {
@@ -52,14 +45,14 @@ async function resolveDrawingImages(drawings = []) {
         if (item.fileID && item.tempFileURL) urlMap[item.fileID] = item.tempFileURL;
       });
     } catch (error) {
-      console.warn("解析设计图纸网络地址失败:", error);
+      console.warn("客户报价图纸地址获取失败:", error);
     }
   }
-
-  return validDrawings.map((item, index) => ({
+  return drawings.map((item, index) => ({
     ...item,
+    kind: isPdf(item) ? "pdf" : "image",
     displayUrl: urlMap[item.fileId] || item.url || item.fileId || "",
-    displayName: item.name || `设计效果图 ${index + 1}`,
+    displayName: item.name || `项目设计示意图${index + 1}`,
   }));
 }
 
@@ -72,11 +65,11 @@ Page({
     loading: true,
     quotation: null,
     drawings: [],
-    visibleDrawings: [],
-    drawingsExpanded: false,
     fullTableVisible: false,
+    showAllDrawings: false,
+    versionPickerVisible: false,
     notices: [
-      "本报价单自分享之日起，有效期为 30 天。",
+      "本报价单自分享之日起，有效期为30天。",
       "报价包含清单所列材料、人工及相关项目服务费用。",
       "若设计方案或实施范围发生重大变更，需重新核算报价。",
       "具体付款节点与质保约定以双方最终签订的合同为准。",
@@ -87,12 +80,10 @@ Page({
     const id = String(options.id || "").trim();
     const activeVersionId = String(options.versionId || id).trim();
     const shareToken = String(options.token || "").trim();
-
     if (!id || !shareToken) {
-      this.showUnavailable("客户报价链接不完整或已失效，请联系客服重新发送。");
+      this.showUnavailable("客户报价链接不完整，请联系重新发送。");
       return;
     }
-
     this.setData({ id, activeVersionId, shareToken });
     this.loadDetail();
   },
@@ -101,10 +92,10 @@ Page({
     const quotation = this.data.quotation || {};
     return {
       title: quotation.projectName
-        ? `项目报价｜${quotation.projectName}-报价清单｜${quotation.versionBadgeText || quotation.versionLabel || "版本一"}`
-        : "项目报价详情",
-      path: `/pages/project-quotation-client/index?id=${encodeURIComponent(this.data.id)}&token=${encodeURIComponent(this.data.shareToken)}&versionId=${encodeURIComponent(this.data.activeVersionId || this.data.id)}`,
-      imageUrl: this.data.drawings[0]?.displayUrl || "",
+        ? `项目报价｜${quotation.projectName}｜${quotation.version || "V1.0"}`
+        : "项目报价",
+      path: `/pages/project-quotation-client-old/index?id=${encodeURIComponent(this.data.id)}&token=${encodeURIComponent(this.data.shareToken)}&versionId=${encodeURIComponent(this.data.activeVersionId || this.data.id)}`,
+      imageUrl: this.data.drawings.find(item => item.kind === "image")?.displayUrl || "",
     };
   },
 
@@ -112,9 +103,7 @@ Page({
     wx.exitMiniProgram({
       fail: () => {
         const pages = getCurrentPages();
-        if (pages.length > 1) {
-          wx.navigateBack({ delta: 1 });
-        }
+        if (pages.length > 1) wx.navigateBack({ delta: 1 });
       },
     });
   },
@@ -123,26 +112,23 @@ Page({
     this.setData({ loading: false });
     wx.showModal({
       title: "报价单已失效",
-      content: message || "该报价单已失效，请联系客服重新发送。",
+      content: message || "该报价单已失效，请联系重新发送。",
       showCancel: false,
       confirmText: "确认",
-      confirmColor: "#002045",
+      confirmColor: "#00cfe8",
       success: () => this.closePage(),
     });
   },
 
   async loadDetail() {
     this.setData({ loading: true });
-    wx.showLoading({ title: "正在加载报价详情...", mask: true });
-
     try {
       const result = await api.getPublicProjectQuotation(
         this.data.id,
         this.data.shareToken,
         this.data.activeVersionId || this.data.id
       );
-
-      const drawings = await resolveDrawingImages(result.drawings || []);
+      const drawings = await resolveDrawings(result.drawings || []);
       const items = (result.items || []).map(item => {
         const rawTotal = item.totalAmount !== undefined && item.totalAmount !== null && item.totalAmount !== ""
           ? item.totalAmount
@@ -151,73 +137,40 @@ Page({
           ...item,
           totalAmount: rawTotal,
           totalText: money(rawTotal),
-          unitPriceText: money(item.unitPrice || 0),
-          quantityUnitText: `${item.quantity || 0} ${item.unit || "项"}`.trim(),
+          unitText: `${item.quantity || 0} ${item.unit || ""}`.trim(),
         };
       });
-
+      const visibleRowCount = Math.min(items.length, 5);
       const totalVal = result.totalAmount !== undefined && result.totalAmount !== null && result.totalAmount !== ""
         ? result.totalAmount
         : items.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
-
       const amountStr = money(totalVal);
       const [amountInt, amountDec] = amountStr.split(".");
-      const versionLabel = result.versionDisplayLabel || result.versionLabel || result.version || "版本一";
-      const versions = Array.isArray(result.versions) ? result.versions : [];
-      const maxSequence = versions.length
-        ? Math.max(...versions.map(v => Number(v.versionSequence || 0)))
-        : Number(result.versionSequence || 1);
-      const isLatest = Number(result.versionSequence || 1) >= maxSequence || Boolean(result.isCurrentVersion);
-      const cleanLabel = versionLabel.replace(/（最新）|\(最新\)|（最近）|\(最近\)/g, "").trim();
-      const versionBadgeText = isLatest ? `${cleanLabel}（最新）` : cleanLabel;
-
       const quotation = {
         ...result,
         totalAmount: totalVal,
         amountText: amountStr,
         amountInteger: amountInt || "0",
         amountDecimal: amountDec ? `.${amountDec}` : ".00",
-        versionLabel: cleanLabel,
-        versionBadgeText,
-        versionColorClass: getVersionColorClass(cleanLabel),
+        hasLongRemarks: items.some(item => String(item.remark || "").length > 12),
         items,
+        tableViewportHeight: 180 + visibleRowCount * 78,
       };
-
-      const visibleDrawings = this.data.drawingsExpanded ? drawings : drawings.slice(0, 2);
-
       this.setData({
         quotation,
         drawings,
-        visibleDrawings,
         activeVersionId: result.id || this.data.activeVersionId,
         loading: false,
+        versionPickerVisible: false,
+        showAllDrawings: false,
       });
     } catch (error) {
       this.showUnavailable(error.message);
-    } finally {
-      wx.hideLoading();
-      this.setData({ loading: false });
     }
   },
 
-  toggleDrawings() {
-    const nextState = !this.data.drawingsExpanded;
-    this.setData({
-      drawingsExpanded: nextState,
-      visibleDrawings: nextState ? this.data.drawings : this.data.drawings.slice(0, 2),
-    });
-  },
-
-  previewDrawing(event) {
-    const index = Number(event.currentTarget.dataset.index);
-    const targetDrawing = this.data.visibleDrawings[index] || this.data.drawings[index];
-    if (!targetDrawing || !targetDrawing.displayUrl) return;
-
-    const urls = this.data.drawings.map(d => d.displayUrl).filter(Boolean);
-    wx.previewImage({
-      current: targetDrawing.displayUrl,
-      urls,
-    });
+  viewQuotationItems() {
+    wx.pageScrollTo({ selector: "#client-quotation-table", duration: 260 });
   },
 
   openFullTable() {
@@ -228,5 +181,73 @@ Page({
     this.setData({ fullTableVisible: false });
   },
 
-  preventBubble() {},
+  toggleAllDrawings() {
+    this.setData({ showAllDrawings: !this.data.showAllDrawings });
+  },
+
+  openVersionSelector() {
+    const versions = this.data.quotation && this.data.quotation.versions;
+    if (!Array.isArray(versions) || versions.length <= 1) return;
+    this.setData({ versionPickerVisible: true });
+  },
+
+  closeVersionSelector() {
+    this.setData({ versionPickerVisible: false });
+  },
+
+  onVersionPopupChange(event) {
+    if (!event.detail.visible) this.closeVersionSelector();
+  },
+
+  selectVersion(event) {
+    const versionId = String(event.currentTarget.dataset.id || "").trim();
+    if (!versionId || versionId === this.data.activeVersionId) {
+      this.closeVersionSelector();
+      return;
+    }
+    this.setData({ activeVersionId: versionId, versionPickerVisible: false });
+    this.loadDetail();
+  },
+
+  previewDrawing(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    const drawing = this.data.drawings[index];
+    if (!drawing) return;
+    if (drawing.kind === "image") {
+      const urls = this.data.drawings.filter(item => item.kind === "image").map(item => item.displayUrl).filter(Boolean);
+      if (drawing.displayUrl) wx.previewImage({ current: drawing.displayUrl, urls });
+      return;
+    }
+    this.openPdf(drawing);
+  },
+
+  async openPdf(drawing) {
+    wx.showLoading({ title: "正在打开 PDF" });
+    try {
+      let filePath = "";
+      if (drawing.fileId) {
+        const result = await wx.cloud.downloadFile({ fileID: drawing.fileId });
+        filePath = result.tempFilePath;
+      } else if (drawing.displayUrl) {
+        const result = await new Promise((resolve, reject) => wx.downloadFile({
+          url: drawing.displayUrl,
+          success: response => response.statusCode === 200 ? resolve(response) : reject(new Error("PDF 下载失败")),
+          fail: reject,
+        }));
+        filePath = result.tempFilePath;
+      }
+      if (!filePath) throw new Error("PDF 文件地址无效");
+      await new Promise((resolve, reject) => wx.openDocument({
+        filePath,
+        fileType: "pdf",
+        showMenu: true,
+        success: resolve,
+        fail: reject,
+      }));
+    } catch (error) {
+      wx.showToast({ title: error.message || "PDF 打开失败", icon: "none" });
+    } finally {
+      wx.hideLoading();
+    }
+  },
 });

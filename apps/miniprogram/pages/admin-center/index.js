@@ -2,28 +2,47 @@ const api = require("../../utils/api");
 
 const NOTIFICATION_COUNT_KEY = "notificationUnreadCount";
 
-const MENU_SECTIONS = [
-  {
-    key: "common",
-    title: "常用管理",
-    description: "客户、账号与消息处理",
-    items: [
-      { key: "clients", name: "客户管理", description: "客户资料与项目引用", icon: "usergroup", tone: "blue", route: "/pages/client-management/index" },
-      { key: "accounts", name: "创建账号", description: "创建系统使用账号", icon: "user-add", tone: "violet", route: "/pages/account-create/index" },
-      { key: "notifications", name: "消息通知", description: "查看项目变更消息", icon: "notification", tone: "orange", route: "/pages/notification-list/index", badgeKey: "unread" },
-      { key: "categoryReviews", name: "类目审核", description: "审核报价中发现的新类目", icon: "task", tone: "green", route: "/pages/category-review-list/index", badgeKey: "reviews" },
-    ],
-  },
-  {
-    key: "system",
-    title: "数据与系统",
-    description: "主数据配置与通知设置",
-    items: [
-      { key: "data", name: "数据配置", description: "角色、渠道、成本与场景", icon: "data-base", tone: "green", route: "/pages/data-config/index" },
-      { key: "settings", name: "通知设置", description: "微信提醒与悬浮入口", icon: "setting", tone: "cyan", route: "/pages/system-settings/index" },
-    ],
-  },
-];
+function buildMenuSections(userInfo) {
+  const isRootAdmin = userInfo && userInfo.role === "ADMIN_SUPER" && userInfo.employeeNo === "YH-ADMIN_SUPER-000";
+  const commonItems = [
+    { key: "clients", name: "客户管理", description: "客户资料与项目引用", icon: "usergroup", tone: "blue", route: "/pages/client-management/index" },
+  ];
+
+  if (isRootAdmin) {
+    commonItems.push({
+      key: "accountManage",
+      name: "账号管理",
+      description: "重置密码与账号停用",
+      icon: "user-avatar",
+      tone: "violet",
+      route: "/pages/account-manage/index",
+    });
+  }
+
+  commonItems.push(
+    { key: "accounts", name: "创建账号", description: "创建系统使用账号", icon: "user-add", tone: "violet", route: "/pages/account-create/index" },
+    { key: "notifications", name: "消息通知", description: "查看项目变更消息", icon: "notification", tone: "orange", route: "/pages/notification-list/index", badgeKey: "unread" },
+    { key: "categoryReviews", name: "类目审核", description: "审核报价中发现的新类目", icon: "task", tone: "green", route: "/pages/category-review-list/index", badgeKey: "reviews" }
+  );
+
+  return [
+    {
+      key: "common",
+      title: "常用管理",
+      description: "客户、账号与消息处理",
+      items: commonItems,
+    },
+    {
+      key: "system",
+      title: "数据与系统",
+      description: "主数据配置与通知设置",
+      items: [
+        { key: "data", name: "数据配置", description: "角色、渠道、成本与场景", icon: "data-base", tone: "green", route: "/pages/data-config/index" },
+        { key: "settings", name: "通知设置", description: "微信提醒与悬浮入口", icon: "setting", tone: "cyan", route: "/pages/system-settings/index" },
+      ],
+    },
+  ];
+}
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -39,10 +58,11 @@ Page({
   data: {
     ...getNavMetrics(),
     keyword: "",
-    sections: MENU_SECTIONS,
+    sections: [],
     unreadCount: 0,
     pendingReviewCount: 0,
     loading: false,
+    isRootAdmin: false,
   },
 
   onLoad() {
@@ -79,6 +99,12 @@ Page({
       this.denyAccess("仅超级系统管理员可进入管理中心");
       return;
     }
+    this.rawSections = buildMenuSections(userInfo);
+    const isRootAdmin = userInfo.role === "ADMIN_SUPER" && userInfo.employeeNo === "YH-ADMIN_SUPER-000";
+    this.setData({
+      isRootAdmin,
+      sections: this.rawSections,
+    });
     this.loadUnreadCount();
     this.loadPendingReviewCount();
   },
@@ -100,16 +126,17 @@ Page({
   },
 
   clearSearch() {
-    this.setData({ keyword: "", sections: MENU_SECTIONS });
+    this.setData({ keyword: "", sections: this.rawSections || [] });
   },
 
   applySearch() {
+    const raw = this.rawSections || [];
     const keyword = this.data.keyword.trim().toLowerCase();
     if (!keyword) {
-      this.setData({ sections: MENU_SECTIONS });
+      this.setData({ sections: raw });
       return;
     }
-    const sections = MENU_SECTIONS
+    const sections = raw
       .map(section => ({
         ...section,
         items: section.items.filter(item => `${item.name}${item.description}`.toLowerCase().includes(keyword)),

@@ -1,0 +1,214 @@
+<view class="change-pwd-page">
+  <!-- 自定义顶部导航栏 -->
+  <view class="nav-bar" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">{{step === 'bind' ? '绑定安全邮箱' : '修改登录密码'}}</view>
+    <view class="nav-placeholder"></view>
+  </view>
+  <view style="height: {{navHeight}}px;"></view>
+
+  <view class="content">
+    <!-- 头部账号信息卡片 -->
+    <view class="user-info-card">
+      <view class="user-header">
+        <view class="avatar-box">
+          <image
+            wx:if="{{userInfo.hasCustomAvatar}}"
+            class="avatar-img"
+            src="{{userInfo.avatarDisplayUrl}}"
+            mode="aspectFill"
+            binderror="onAvatarError"
+          />
+          <image
+            wx:else
+            class="avatar-img"
+            src="/images/default-user-avatar.png"
+            mode="aspectFill"
+          />
+        </view>
+        <view class="user-meta">
+          <view class="user-name-line">
+            <text class="username-txt">{{userInfo.username || '当前账号'}}</text>
+            <view class="role-tag">{{userInfo.roleName || '系统用户'}}</view>
+          </view>
+          <view class="user-emp">工号：{{userInfo.employeeNo || '-'}}</view>
+        </view>
+      </view>
+
+      <view class="divider"></view>
+
+      <!-- 已绑定邮箱展示 -->
+      <view class="email-status-row" wx:if="{{userInfo.email && step === 'change'}}">
+        <t-icon name="mail" size="32rpx" color="#1a365d" />
+        <text class="email-label">验证邮箱：</text>
+        <text class="email-value">{{maskedEmail || userInfo.email}}</text>
+        <text class="change-email-btn" bindtap="switchToBindEmail">更换</text>
+      </view>
+
+      <!-- 未绑定邮箱引导提示 -->
+      <view class="bind-guide-notice" wx:else>
+        <t-icon name="info-circle-filled" size="34rpx" color="#1a365d" />
+        <text class="guide-notice-text">修改密码需通过邮箱验证码进行安全校验。请先填写并验证您的安全邮箱。</text>
+      </view>
+    </view>
+
+    <!-- 步骤一：绑定安全邮箱表单 -->
+    <view class="form-card" wx:if="{{step === 'bind'}}">
+      <view class="step-title-row">
+        <view class="step-badge">第 1 步</view>
+        <view class="step-title">绑定您的工作/个人邮箱</view>
+      </view>
+
+      <!-- 邮箱输入 -->
+      <view class="field-label required">邮箱地址</view>
+      <view class="input-shell">
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{bindEmailInput}}"
+          placeholder="请输入您的常用邮箱（如 name@company.com）"
+          maxlength="80"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          bindchange="onBindEmailInput"
+        />
+      </view>
+
+      <!-- 邮箱验证码 -->
+      <view class="field-label required">邮箱验证码</view>
+      <view class="code-input-row">
+        <view class="input-shell code-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            type="number"
+            value="{{bindCodeInput}}"
+            placeholder="请输入 6 位验证码"
+            maxlength="6"
+            cursor-spacing="{{50}}"
+            adjust-position="{{true}}"
+            bindchange="onBindCodeInput"
+          />
+        </view>
+        <view
+          class="send-code-btn {{(!bindEmailInput || bindCountdown > 0 || sendingBindCode) ? 'btn-disabled' : ''}}"
+          bindtap="onSendBindCode"
+        >
+          <t-loading wx:if="{{sendingBindCode}}" size="28rpx" theme="circular" />
+          <text wx:elif="{{bindCountdown > 0}}">{{bindCountdown}}s 后重发</text>
+          <text wx:else>获取验证码</text>
+        </view>
+      </view>
+
+      <view class="pwd-security-tips">
+        <view class="tip-dot">•</view>
+        <view class="tip-text">验证码将发送至上方填写的邮箱，绑定成功后可用于修改密码及找回密码。</view>
+      </view>
+
+      <view class="switch-back-row" wx:if="{{userInfo.email}}">
+        <text class="switch-back-text" bindtap="switchToChangePassword">已有绑定邮箱？返回直接修改密码 ›</text>
+      </view>
+    </view>
+
+    <!-- 步骤二：修改密码表单 -->
+    <view class="form-card" wx:else>
+      <view class="step-title-row">
+        <view class="step-badge active-badge">安全验证</view>
+        <view class="step-title">输入验证码并设置新密码</view>
+      </view>
+
+      <!-- 邮箱验证码 -->
+      <view class="field-label required">邮箱验证码</view>
+      <view class="code-input-row">
+        <view class="input-shell code-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            type="number"
+            value="{{code}}"
+            placeholder="请输入 6 位验证码"
+            maxlength="6"
+            cursor-spacing="{{50}}"
+            adjust-position="{{true}}"
+            bindchange="onCodeInput"
+          />
+        </view>
+        <view
+          class="send-code-btn {{(!canSendCode || countdown > 0 || !userInfo.email || sendingCode) ? 'btn-disabled' : ''}}"
+          bindtap="onSendCode"
+        >
+          <t-loading wx:if="{{sendingCode}}" size="28rpx" theme="circular" />
+          <text wx:elif="{{countdown > 0}}">{{countdown}}s 后重发</text>
+          <text wx:else>获取验证码</text>
+        </view>
+      </view>
+
+      <!-- 新密码 -->
+      <view class="field-label required">新登录密码</view>
+      <view class="input-shell">
+        <t-input
+          t-class="form-input"
+          borderless
+          type="{{showPassword ? 'text' : 'password'}}"
+          suffix-icon="{{showPassword ? 'browse' : 'browse-off'}}"
+          value="{{newPassword}}"
+          placeholder="请输入 6-64 位新密码"
+          maxlength="64"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          bindchange="onNewPasswordInput"
+          bindclick="togglePassword"
+        />
+      </view>
+
+      <!-- 确认新密码 -->
+      <view class="field-label required">确认新密码</view>
+      <view class="input-shell">
+        <t-input
+          t-class="form-input"
+          borderless
+          type="{{showConfirmPassword ? 'text' : 'password'}}"
+          suffix-icon="{{showConfirmPassword ? 'browse' : 'browse-off'}}"
+          value="{{confirmPassword}}"
+          placeholder="请再次输入新密码"
+          maxlength="64"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          bindchange="onConfirmPasswordInput"
+          bindclick="toggleConfirmPassword"
+        />
+      </view>
+
+      <!-- 密码安全说明 -->
+      <view class="pwd-security-tips">
+        <view class="tip-dot">•</view>
+        <view class="tip-text">密码需为 6-64 位字符，建议混合字母与数字以提升账户安全性。</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部固定吸底提交栏 -->
+  <view class="footer-bar">
+    <t-button
+      wx:if="{{step === 'bind'}}"
+      t-class="submit-btn"
+      block
+      theme="primary"
+      content="验证并绑定邮箱"
+      disabled="{{submittingBind}}"
+      bindtap="onBindEmailSubmit"
+    />
+    <t-button
+      wx:else
+      t-class="submit-btn"
+      block
+      theme="primary"
+      content="确认修改密码"
+      disabled="{{submitting}}"
+      bindtap="onSubmit"
+    />
+  </view>
+</view>

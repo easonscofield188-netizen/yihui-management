@@ -1,9 +1,10 @@
 {
   "name": "loginService",
   "version": "1.0.0",
-  "description": "登录云函数",
+  "description": "登录与账号权限服务云函数",
   "main": "index.js",
   "dependencies": {
-    "wx-server-sdk": "latest"
+    "wx-server-sdk": "latest",
+    "nodemailer": "^6.9.16"
   }
 }

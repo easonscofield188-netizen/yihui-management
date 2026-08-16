@@ -1,4 +1,4 @@
-<page-meta page-style="{{fileSourceVisible || submitting ? 'overflow: hidden;' : ''}}" />
+<page-meta page-style="{{fileSourceVisible || submitting || editLoading ? 'overflow: hidden;' : ''}}" />
 <view class="create-page">
   <view class="create-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="nav-back" bindtap="cancel"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
@@ -91,8 +91,17 @@
   </view>
 
   <view class="submit-bar">
-    <t-button class="footer-button-host" t-class="cancel-button" theme="default" variant="outline" shape="round" content="取消" disabled="{{submitting || submissionComplete}}" bindtap="cancel" />
-    <t-button class="footer-button-host" t-class="submit-button" theme="primary" shape="round" icon="send" content="确认提交" disabled="{{submitting || submissionComplete}}" bindtap="submit" />
+    <t-button class="footer-button-host" t-class="cancel-button" theme="default" variant="outline" shape="round" content="取消" disabled="{{submitting || submissionComplete || editLoading}}" bindtap="cancel" />
+    <t-button class="footer-button-host" t-class="submit-button" theme="primary" shape="round" icon="send" content="确认提交" disabled="{{submitting || submissionComplete || editLoading}}" bindtap="submit" />
+  </view>
+
+  <!-- 编辑回显数据加载状态 -->
+  <view wx:if="{{editLoading}}" class="submit-loading-mask" catchtap="preventInteraction" catchtouchmove="preventInteraction">
+    <view class="submit-loading-card">
+      <t-loading size="58rpx" theme="circular" />
+      <view class="submit-loading-title">正在加载报价数据</view>
+      <view class="submit-loading-tip">正在回显原报价单清单与设计图纸...</view>
+    </view>
   </view>
 
   <view wx:if="{{submitting}}" class="submit-loading-mask" catchtap="preventInteraction" catchtouchmove="preventInteraction">

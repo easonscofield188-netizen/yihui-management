@@ -4,7 +4,10 @@ const USER_CACHE_AT_KEY = "userInfoCachedAt";
 const EXPIRES_KEY = "sessionExpiresAt";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const USER_CACHE_TTL_MS = 5 * 60 * 1000;
-const PUBLIC_ROUTES = new Set(["pages/project-quotation-client/index"]);
+const PUBLIC_ROUTES = new Set([
+  "pages/project-quotation-client/index",
+  "pages/project-quotation-client-v2/index",
+]);
 
 function getStoredExpiresAt() {
   return Number(wx.getStorageSync(EXPIRES_KEY) || 0);
@@ -93,13 +96,38 @@ function clearSession() {
   }
 }
 
-function redirectToLogin() {
+let isRedirectingToLogin = false;
+
+function redirectToLogin(reasonMessage) {
   clearSession();
   const pages = getCurrentPages();
   const current = pages[pages.length - 1];
-  if (!current || current.route !== "pages/login/index") {
-    wx.reLaunch({ url: "/pages/login/index" });
+  const message = reasonMessage || "登录状态已失效，请重新登录";
+
+  if (isRedirectingToLogin) return;
+  isRedirectingToLogin = true;
+
+  wx.setStorageSync("logout_notice_message", message);
+
+  if (current && current.route === "pages/login/index") {
+    isRedirectingToLogin = false;
+    wx.showToast({ title: message, icon: "none", duration: 3000 });
+    return;
   }
+
+  wx.showModal({
+    title: "系统安全提示",
+    content: message,
+    showCancel: false,
+    confirmText: "去登录",
+    confirmColor: "#002045",
+    complete: () => {
+      isRedirectingToLogin = false;
+      wx.reLaunch({
+        url: `/pages/login/index?reason=${encodeURIComponent(message)}`,
+      });
+    },
+  });
 }
 
 /** 冷启动 / 切回前台时校验登录态，超时则跳转登录页 */
@@ -116,7 +144,7 @@ function ensureAuthOnShow() {
       clearSession();
       return true;
     }
-    if (!onLoginPage) redirectToLogin();
+    if (!onLoginPage) redirectToLogin("登录已过期，请重新登录");
     else clearSession();
     return false;
   }
@@ -126,7 +154,7 @@ function ensureAuthOnShow() {
 function callFunction(name, action, data = {}, options = {}) {
   const token = getToken();
   if (!token && !options.skipAuthRedirect && action) {
-    redirectToLogin();
+    redirectToLogin("登录状态已失效，请重新登录");
     return Promise.reject(Object.assign(new Error("登录状态已失效，请重新登录"), { code: 401 }));
   }
   let miniProgramState = "formal";
@@ -145,8 +173,8 @@ function callFunction(name, action, data = {}, options = {}) {
 
   return wx.cloud.callFunction({ name, data: payload }).then(({ result }) => {
     const response = result || { code: 500, message: "服务暂无响应" };
-    if (response.code === 401 && !options.skipAuthRedirect) {
-      redirectToLogin();
+    if ((response.code === 401 || response.code === 403) && !options.skipAuthRedirect) {
+      redirectToLogin(response.message);
     }
     if (response.code !== 0) {
       const error = new Error(response.message || "操作失败");
@@ -178,12 +206,70 @@ function getUserInfo() {
   return callFunction("loginService", "getUserInfo");
 }
 
+function updateUserInfo(data) {
+  return callFunction("loginService", "updateUserInfo", data);
+}
+
+function uploadUserAvatar(filePath) {
+  const extension = String(filePath).split(".").pop() || "png";
+  const cloudPath = `avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
+  return wx.cloud.uploadFile({
+    cloudPath,
+    filePath,
+  }).then(res => ({
+    fileID: res.fileID,
+    fileId: res.fileID,
+  }));
+}
+
 function createAccount(data) {
   return callFunction("loginService", "createAccount", data);
 }
 
 function getNextEmployeeNo(role) {
   return callFunction("loginService", "getNextEmployeeNo", { role });
+}
+
+function listAccounts(params = {}) {
+  return callFunction("loginService", "listAccounts", params);
+}
+
+function resetAccountPassword(userId) {
+  return callFunction("loginService", "resetAccountPassword", { userId });
+}
+
+function updateAccountStatus(userId, status) {
+  return callFunction("loginService", "updateAccountStatus", { userId, status });
+}
+
+function deleteAccount(userId) {
+  return callFunction("loginService", "deleteAccount", { userId });
+}
+
+function sendPasswordChangeCode() {
+  return callFunction("loginService", "sendPasswordChangeCode");
+}
+
+function changePasswordWithCode(code, newPassword) {
+  return callFunction("loginService", "changePasswordWithCode", { code, newPassword });
+}
+
+function sendBindEmailCode(email) {
+  return callFunction("loginService", "sendBindEmailCode", { email });
+}
+
+function bindEmailWithCode(email, code) {
+  return callFunction("loginService", "bindEmailWithCode", { email, code });
+}
+
+function isDevelopmentEnvironment() {
+  try {
+    const info = wx.getAccountInfoSync && wx.getAccountInfoSync();
+    const envVersion = (info && info.miniProgram && info.miniProgram.envVersion) || "develop";
+    return envVersion !== "release";
+  } catch (e) {
+    return true;
+  }
 }
 
 function logout() {
@@ -374,6 +460,15 @@ function listCategoryReviews(data = {}) {
   return callFunction("quotationService", "reviewList", data);
 }
 
+function listCategoryReviewIds(data = {}) {
+  return callFunction("quotationService", "reviewListIds", data);
+}
+
+function deleteCategoryReviews(ids) {
+  const normalizedIds = Array.isArray(ids) ? ids : [ids];
+  return callFunction("quotationService", "reviewDelete", { ids: normalizedIds });
+}
+
 function getCategoryReviewDetail(id) {
   return callFunction("quotationService", "reviewDetail", { id });
 }
@@ -453,6 +548,7 @@ module.exports = {
   deleteProjectCase,
   deleteNotification,
   deleteNotifications,
+  deleteCategoryReviews,
   deleteVoucher,
   ensureAuthOnShow,
   getProject,
@@ -473,10 +569,22 @@ module.exports = {
   getServerDate,
   getToken,
   getUserInfo,
+  updateUserInfo,
+  uploadUserAvatar,
   getVouchers,
   getWechatSubscriptionStatus,
   listProjects,
+  listAccounts,
+  resetAccountPassword,
+  updateAccountStatus,
+  deleteAccount,
+  sendPasswordChangeCode,
+  changePasswordWithCode,
+  sendBindEmailCode,
+  bindEmailWithCode,
+  isDevelopmentEnvironment,
   listCategoryReviews,
+  listCategoryReviewIds,
   listManagedClients,
   listProjectIds,
   listFinancialProjects,

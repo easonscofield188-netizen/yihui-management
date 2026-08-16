@@ -193,8 +193,30 @@ Page({
     if (tabBar) tabBar.setData({ selected: 0 });
     const userInfo = api.getCachedUserInfo() || {};
     this.setData({ isSuperAdmin: userInfo.role === "ADMIN_SUPER" });
+    this.checkNeedPasswordChangePrompt(userInfo);
     this.ensureYearThenLoad(true);
     this.loadFloatingNotification();
+  },
+
+  checkNeedPasswordChangePrompt(userInfo) {
+    if (!userInfo || !userInfo.needPasswordChange) return;
+    const sessionKey = `has_prompted_pwd_change_${userInfo.id || userInfo._id || userInfo.username || 'user'}`;
+    const app = getApp();
+    if (app.globalData && app.globalData[sessionKey]) return;
+    if (app.globalData) app.globalData[sessionKey] = true;
+
+    wx.showModal({
+      title: "安全提示：请修改初始密码",
+      content: "当前账号使用的是系统初始/重置密码（yh8888），为了您的账号与项目数据安全，建议尽快修改为您的专属密码。",
+      cancelText: "暂不修改",
+      confirmText: "立即修改",
+      confirmColor: "#002045",
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: "/pages/password-change/index" });
+        }
+      },
+    });
   },
 
   async ensureYearThenLoad(reset, loadingMessage = "") {

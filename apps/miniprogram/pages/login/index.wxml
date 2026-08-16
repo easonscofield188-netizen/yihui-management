@@ -9,6 +9,11 @@
     </view>
 
     <view class="login-form">
+      <view class="logout-notice" wx:if="{{logoutNotice}}">
+        <t-icon name="info-circle-filled" size="34rpx" color="#ba1a1a" />
+        <view class="logout-notice-text">{{logoutNotice}}</view>
+      </view>
+
       <view class="field-group">
         <view class="field-label">账号</view>
         <view class="field-box">
@@ -19,9 +24,8 @@
             placeholder="请输入您的账号"
             placeholder-class="login-placeholder"
             value="{{username}}"
-            always-embed="{{true}}"
             adjust-position="{{true}}"
-            cursor-spacing="{{20}}"
+            cursor-spacing="{{50}}"
             bindchange="onUsernameInput"
           />
         </view>
@@ -40,9 +44,8 @@
             placeholder-class="login-placeholder"
             value="{{password}}"
             confirm-type="done"
-            always-embed="{{true}}"
             adjust-position="{{true}}"
-            cursor-spacing="{{20}}"
+            cursor-spacing="{{50}}"
             bindchange="onPasswordInput"
             bindenter="submit"
             bindclick="togglePassword"

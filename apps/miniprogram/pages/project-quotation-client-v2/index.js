@@ -103,7 +103,7 @@ Page({
       title: quotation.projectName
         ? `项目报价｜${quotation.projectName}-报价清单｜${quotation.versionBadgeText || quotation.versionLabel || "版本一"}`
         : "项目报价详情",
-      path: `/pages/project-quotation-client/index?id=${encodeURIComponent(this.data.id)}&token=${encodeURIComponent(this.data.shareToken)}&versionId=${encodeURIComponent(this.data.activeVersionId || this.data.id)}`,
+      path: `/pages/project-quotation-client-v2/index?id=${encodeURIComponent(this.data.id)}&token=${encodeURIComponent(this.data.shareToken)}&versionId=${encodeURIComponent(this.data.activeVersionId || this.data.id)}`,
       imageUrl: this.data.drawings[0]?.displayUrl || "",
     };
   },

@@ -1,0 +1,180 @@
+<view class="manage-page">
+  <view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px">
+    <view class="back" bindtap="back">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="title">账号管理</view>
+    <view class="nav-action" bindtap="navToCreate">
+      <t-icon name="user-add" size="38rpx" color="#002045" />
+      <text>新建</text>
+    </view>
+  </view>
+  <view style="height:{{navHeight}}px"></view>
+
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-shell">
+      <t-icon name="search" size="34rpx" color="#7b8493" />
+      <input
+        class="search-input"
+        placeholder="搜索账号名、昵称或工号"
+        value="{{keyword}}"
+        confirm-type="search"
+        bindinput="onSearchInput"
+        bindconfirm="loadData"
+      />
+      <t-icon wx:if="{{keyword}}" name="close-circle" size="32rpx" color="#9aa1ac" bindtap="clearSearch" />
+    </view>
+  </view>
+
+  <!-- 状态 Tab 栏与统计 -->
+  <view class="filter-header">
+    <view class="tabs">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="value"
+        data-index="{{index}}"
+        bindtap="changeTab"
+        class="tab {{tabIndex === index ? 'active' : ''}}"
+      >
+        {{item.label}}
+        <text class="tab-count" wx:if="{{item.value === 'ALL'}}">({{totalCount}})</text>
+        <text class="tab-count" wx:if="{{item.value === 'ACTIVE'}}">({{activeCount}})</text>
+        <text class="tab-count" wx:if="{{item.value === 'DISABLED'}}">({{disabledCount}})</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提示条 -->
+  <view class="permission-notice">
+    <t-icon name="shield-check" size="32rpx" color="#1a365d" />
+    <text>仅主超级系统管理员（YH-ADMIN_SUPER-000）拥有账号管理权限{{isDevEnvironment ? ' · 开发环境支持删除并释放工号' : ' · 生产环境禁止删除账号'}}</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{loading && !list.length}}">
+    <t-loading size="48rpx" theme="circular" />
+    <text>正在读取账号数据...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:elif="{{!loading && !list.length}}">
+    <t-icon name="usergroup" size="88rpx" color="#a0a7b2" />
+    <view class="empty-title">未找到相关账号</view>
+    <view class="empty-desc">您可以点击右上角新建系统使用账号</view>
+  </view>
+
+  <!-- 账号列表 -->
+  <view class="account-list" wx:else>
+    <view
+      class="account-card card-theme-{{item.cardTheme}} {{item.isRootAdmin ? 'card-root' : ''}} {{item.status === 'disabled' ? 'card-disabled' : ''}}"
+      wx:for="{{list}}"
+      wx:key="id"
+    >
+      <!-- 头部：昵称与状态徽章 -->
+      <view class="card-header">
+        <view class="user-avatar-badge {{item.isRootAdmin ? 'avatar-root' : ''}}">
+          <image
+            wx:if="{{item.hasCustomAvatar}}"
+            class="avatar-image"
+            src="{{item.avatarDisplayUrl}}"
+            mode="aspectFill"
+            data-index="{{index}}"
+            binderror="onAvatarError"
+          />
+          <image
+            wx:else
+            class="avatar-image default-avatar"
+            src="/images/default-user-avatar.png"
+            mode="aspectFill"
+          />
+          <view class="root-crown-indicator" wx:if="{{item.isRootAdmin}}">👑</view>
+        </view>
+        <view class="user-main-info">
+          <view class="user-name-row">
+            <text class="nickname">{{item.nickname}}</text>
+            <view class="root-badge" wx:if="{{item.isRootAdmin}}">
+              <text>👑 系统主账号</text>
+            </view>
+            <view class="status-badge status-{{item.status}}" wx:else>
+              <text>{{item.statusLabel}}</text>
+            </view>
+          </view>
+          <view class="username-sub">登录账号：{{item.username}}</view>
+        </view>
+      </view>
+
+      <!-- 属性信息网格 -->
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">工号编号</text>
+          <text class="info-value mono-val">{{item.employeeNo || '未分配'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">系统角色</text>
+          <text class="info-value role-val">{{item.roleName}}</text>
+        </view>
+        <view class="info-row" wx:if="{{item.email}}">
+          <text class="info-label">绑定邮箱</text>
+          <text class="info-value">{{item.email}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">最近登录</text>
+          <text class="info-value date-val">{{item.lastLoginFormatted || '暂无登录记录'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">创建时间</text>
+          <text class="info-value date-val">{{item.createdAtFormatted || '-'}}</text>
+        </view>
+      </view>
+
+      <!-- 底部快捷操作栏 -->
+      <view class="card-actions">
+        <!-- 重置密码 -->
+        <view class="action-btn action-reset" data-id="{{item.id}}" data-username="{{item.username}}" bindtap="onResetPassword">
+          <t-icon name="lock-on" size="30rpx" color="#1a365d" />
+          <text>重置密码</text>
+        </view>
+
+        <!-- 状态切换：000 账号不可停用 -->
+        <view wx:if="{{item.isRootAdmin}}" class="action-btn action-protected">
+          <t-icon name="secured" size="30rpx" color="#9aa1ac" />
+          <text>永久受保护</text>
+        </view>
+        <view
+          wx:elif="{{item.status === 'active'}}"
+          class="action-btn action-disable"
+          data-id="{{item.id}}"
+          data-username="{{item.username}}"
+          bindtap="onDisableAccount"
+        >
+          <t-icon name="user-blocked" size="30rpx" color="#ba1a1a" />
+          <text>停用账号</text>
+        </view>
+        <view
+          wx:else
+          class="action-btn action-enable"
+          data-id="{{item.id}}"
+          data-username="{{item.username}}"
+          bindtap="onEnableAccount"
+        >
+          <t-icon name="check-circle" size="30rpx" color="#176c4b" />
+          <text>恢复启用</text>
+        </view>
+
+        <!-- 开发环境删除账号 -->
+        <view
+          wx:if="{{isDevEnvironment && !item.isRootAdmin}}"
+          class="action-btn action-delete"
+          data-id="{{item.id}}"
+          data-username="{{item.username}}"
+          data-employeeno="{{item.employeeNo}}"
+          bindtap="onDeleteAccount"
+        >
+          <t-icon name="delete" size="30rpx" color="#cf1322" />
+          <text>删除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

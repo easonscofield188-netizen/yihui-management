@@ -19,8 +19,6 @@ Page({
     submitting: false,
     form: {
       username: "",
-      password: "",
-      confirmPassword: "",
       nickname: "",
       email: "",
       role: ROLE_OPTIONS[1].value,
@@ -88,14 +86,6 @@ Page({
       wx.showToast({ title: "账号须为 3-32 位字母、数字或 ._-", icon: "none" });
       return;
     }
-    if (form.password.length < 6 || form.password.length > 64) {
-      wx.showToast({ title: "密码长度须为 6-64 位", icon: "none" });
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      wx.showToast({ title: "两次输入的密码不一致", icon: "none" });
-      return;
-    }
     if (!nickname) {
       wx.showToast({ title: "请输入账户昵称", icon: "none" });
       return;
@@ -105,16 +95,17 @@ Page({
     try {
       const createdAccount = await api.createAccount({
         username,
-        passwordPlain: form.password,
         nickname,
         email,
         role: form.role,
       });
       await new Promise((resolve) => {
         wx.showModal({
-          title: "创建成功",
-          content: `账号 ${username} 已创建，工号：${createdAccount.employeeNo}。`,
+          title: "账号创建成功",
+          content: `账号【${username}】已创建！\n分配工号：${createdAccount.employeeNo}\n初始默认密码：yh8888\n\n使用人首次登录时系统将主动提醒修改密码。`,
           showCancel: false,
+          confirmText: "知道了",
+          confirmColor: "#002045",
           success: resolve,
         });
       });

@@ -124,10 +124,9 @@ Page({
       projectName: "",
       createdDate: today(),
     },
-    versionValue: "V1.0",
-    versionLabel: "版本一",
     versionLoading: false,
     editMode: false,
+    editLoading: false,
     sourceId: "",
     navTitle: "新增报价单",
     items: [createItem()],
@@ -153,6 +152,7 @@ Page({
         editMode: true,
         sourceId,
         navTitle: "编辑报价单",
+        editLoading: true,
         versionLoading: true,
       });
       this.loadQuotationForEdit(sourceId);
@@ -239,12 +239,13 @@ Page({
         versionValue: nextVersion.value || "V1.0",
         versionLabel: nextVersion.label || "版本一",
         versionLoading: false,
+        editLoading: false,
         items,
         drawings,
       });
       this.refreshTotal(items);
     } catch (error) {
-      this.setData({ versionLoading: false });
+      this.setData({ versionLoading: false, editLoading: false });
       wx.showModal({
         title: "报价单加载失败",
         content: error.message || "无法读取原报价内容",
@@ -594,7 +595,7 @@ Page({
   },
 
   cancel() {
-    if (this.data.submitting || this.data.submissionComplete) return;
+    if (this.data.submitting || this.data.submissionComplete || this.data.editLoading) return;
     wx.showModal({
       title: this.data.editMode ? "取消编辑报价单" : "取消新增报价单",
       content: this.data.editMode ? "当前修改不会保存，确定返回吗？" : "当前内容已经保存为草稿，确定返回吗？",
@@ -667,7 +668,7 @@ Page({
   },
 
   async submit() {
-    if (this.data.submitting || this.data.submissionComplete) return;
+    if (this.data.submitting || this.data.submissionComplete || this.data.editLoading) return;
     const validationMessage = this.validate();
     if (validationMessage) {
       wx.showToast({ title: validationMessage, icon: "none" });

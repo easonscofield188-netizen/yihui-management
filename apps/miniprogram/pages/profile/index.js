@@ -18,18 +18,6 @@ function getNavMetrics() {
   return { statusBarHeight, navHeight: statusBarHeight + contentHeight };
 }
 
-function toCloudFileId(avatarUrl) {
-  const matched = String(avatarUrl || "").match(
-    /^https?:\/\/([^.]+)\.tcb\.qcloud\.la\/(.+)$/i
-  );
-  if (!matched) return "";
-  const cloudId = matched[1];
-  const filePath = matched[2].split("?")[0];
-  const env = (getApp().globalData && getApp().globalData.env) || "";
-  if (!env || !cloudId || !filePath) return "";
-  return `cloud://${env}.${cloudId}/${filePath}`;
-}
-
 function decorateUser(userInfo, avatarUrl = "") {
   const displayName = userInfo.nickname || userInfo.username || "亿辉用户";
   const avatarDisplayUrl = avatarUrl || "";
@@ -65,13 +53,10 @@ Page({
       ...getNavMetrics(),
       versionText: runtimeVersion.displayText,
       unreadNotificationCount: cachedUnreadCount,
-      userInfo: cachedUser
-        ? decorateUser(
-          cachedUser,
-          cachedUser.avatarFileId || toCloudFileId(cachedUser.avatarUrl) || cachedUser.avatarUrl
-        )
-        : null,
     });
+    if (cachedUser) {
+      this.showUser(cachedUser);
+    }
   },
 
   onShow() {
@@ -87,9 +72,7 @@ Page({
       this.loadUnreadNotificationCount();
       this.loadSubscriptionStatuses();
     }
-    if (!cachedUser || !api.isUserInfoCacheFresh()) {
-      this.loadUser({ silent: Boolean(cachedUser) });
-    }
+    this.loadUser({ silent: Boolean(cachedUser) });
   },
 
   onPullDownRefresh() {
@@ -101,13 +84,42 @@ Page({
       .finally(() => wx.stopPullDownRefresh());
   },
 
+  async resolveAvatarIfNeeded(userInfo) {
+    const avatar = userInfo && (userInfo.avatarUrl || userInfo.avatarFileId || "");
+    if (avatar && avatar.startsWith("cloud://")) {
+      try {
+        const res = await wx.cloud.getTempFileURL({ fileList: [avatar] });
+        if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+          const tempUrl = res.fileList[0].tempFileURL;
+          this.setData({
+            "userInfo.avatarDisplayUrl": tempUrl,
+            "userInfo.hasCustomAvatar": true,
+          });
+          const cached = api.getCachedUserInfo();
+          if (cached) {
+            cached.avatarUrl = tempUrl;
+            api.cacheUserInfo(cached);
+          }
+        }
+      } catch (e) {
+        console.warn("解析云存储头像直链失败:", e);
+      }
+    }
+  },
+
   showUser(userInfo) {
     if (!userInfo) return;
-    const avatarUrl = userInfo.avatarFileId
-      || toCloudFileId(userInfo.avatarUrl)
-      || userInfo.avatarUrl
+    const rawUrl = String(userInfo.avatarUrl || "").trim();
+    const validHttpUrl = !rawUrl.startsWith("http://tmp") && !rawUrl.startsWith("wxfile://") && !rawUrl.startsWith("cloud://") ? rawUrl : "";
+    const avatarUrl = validHttpUrl
+      || (userInfo.avatarFileId && !userInfo.avatarFileId.startsWith("http") ? userInfo.avatarFileId : "")
+      || (rawUrl.startsWith("cloud://") ? rawUrl : "")
       || "";
+
     this.setData({ userInfo: decorateUser(userInfo, avatarUrl) });
+    if (avatarUrl && avatarUrl.startsWith("cloud://")) {
+      this.resolveAvatarIfNeeded(userInfo);
+    }
   },
 
   loadUser({ force = false, silent = false } = {}) {
@@ -184,14 +196,12 @@ Page({
     });
   },
 
+  openProfileEdit() {
+    wx.navigateTo({ url: "/pages/profile-edit/index" });
+  },
+
   openSecurity() {
-    const userInfo = this.data.userInfo || {};
-    wx.showModal({
-      title: "账号安全",
-      content: `当前账号：${userInfo.username || "未设置"}\n登录状态：正常`,
-      showCancel: false,
-      confirmText: "知道了",
-    });
+    wx.navigateTo({ url: "/pages/password-change/index" });
   },
 
   openProjects() {

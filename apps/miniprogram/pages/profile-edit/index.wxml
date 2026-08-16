@@ -1,0 +1,164 @@
+<view class="profile-edit-page">
+  <!-- 自定义顶部导航栏 -->
+  <view class="nav-bar" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">编辑个人资料</view>
+    <view class="nav-placeholder"></view>
+  </view>
+  <view style="height: {{navHeight}}px;"></view>
+
+  <view class="content">
+    <!-- 头像编辑区 -->
+    <view class="avatar-card">
+      <view class="avatar-picker-wrap" bindtap="chooseAvatar">
+        <image
+          wx:if="{{tempAvatarUrl || userInfo.avatarDisplayUrl}}"
+          class="avatar-preview"
+          src="{{tempAvatarUrl || userInfo.avatarDisplayUrl}}"
+          mode="aspectFill"
+          binderror="onAvatarError"
+        />
+        <image
+          wx:else
+          class="avatar-preview default-avatar"
+          src="/images/default-user-avatar.png"
+          mode="aspectFill"
+        />
+        <view class="avatar-camera-btn">
+          <t-loading wx:if="{{uploadingAvatar}}" size="32rpx" theme="circular" />
+          <t-icon wx:else name="camera" size="32rpx" color="#ffffff" />
+        </view>
+      </view>
+      <view class="avatar-tip">点击更换头像</view>
+    </view>
+
+    <!-- 资料表单卡片 -->
+    <view class="form-card">
+      <!-- 登录账号 -->
+      <view class="field-label required">登录账号 (用户名)</view>
+      <view class="input-shell">
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{usernameInput}}"
+          placeholder="请输入 3-32 位字母、数字或下划线"
+          maxlength="32"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          bindchange="onUsernameInput"
+        />
+      </view>
+      <view class="field-hint">
+        <t-icon name="info-circle" size="24rpx" color="#64748b" />
+        <text>修改后，下次登录请使用新的账号名称</text>
+      </view>
+
+      <!-- 用户昵称 -->
+      <view class="field-label required">用户昵称</view>
+      <view class="input-shell">
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{nicknameInput}}"
+          placeholder="请输入您的昵称（1-30位）"
+          maxlength="30"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          bindchange="onNicknameInput"
+        />
+      </view>
+
+      <view class="form-divider"></view>
+
+      <!-- 系统固定信息展示 -->
+      <view class="readonly-row">
+        <text class="readonly-label">工号编号</text>
+        <view class="readonly-val mono">
+          <t-icon name="lock-on" size="26rpx" color="#94a3b8" />
+          <text>{{userInfo.employeeNo || '未分配'}}</text>
+        </view>
+      </view>
+
+      <view class="readonly-row">
+        <text class="readonly-label">系统角色</text>
+        <view class="role-badge">
+          <text>{{userInfo.roleName || '系统用户'}}</text>
+        </view>
+      </view>
+
+      <view class="readonly-row">
+        <text class="readonly-label">安全邮箱</text>
+        <view class="email-meta" bindtap="navToPasswordChange">
+          <text class="email-txt">{{maskedEmail || '未绑定'}}</text>
+          <text class="link-txt">去修改密码/换绑 ›</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部保存按钮 -->
+  <view class="footer-bar">
+    <t-button
+      t-class="submit-btn"
+      block
+      theme="primary"
+      content="保存修改"
+      disabled="{{submitting || uploadingAvatar}}"
+      bindtap="onPreSubmit"
+    />
+  </view>
+
+  <!-- 安全验证与确认修改密码弹窗 -->
+  <view class="safe-modal-mask" wx:if="{{showConfirmModal}}" catchtouchmove="preventTouchMove">
+    <view class="safe-modal-box">
+      <view class="modal-header">
+        <view class="modal-shield-icon">
+          <t-icon name="secured" size="44rpx" color="#002045" />
+        </view>
+        <view class="modal-title">安全验证 · 确认修改</view>
+        <view class="modal-desc">检测到以下资料变动，请输入当前登录密码以完成验证：</view>
+      </view>
+
+      <!-- 变更清单 -->
+      <view class="change-diff-card">
+        <view class="diff-title">本次修改内容：</view>
+        <view class="diff-item" wx:for="{{changedDiffList}}" wx:key="index">
+          <text class="diff-bullet">•</text>
+          <text class="diff-text">{{item}}</text>
+        </view>
+      </view>
+
+      <!-- 当前密码输入 -->
+      <view class="modal-pwd-section">
+        <view class="pwd-field-label">当前登录密码</view>
+        <view class="input-shell modal-input-shell">
+          <t-input
+            t-class="form-input"
+            borderless
+            type="{{showModalPassword ? 'text' : 'password'}}"
+            suffix-icon="{{showModalPassword ? 'browse' : 'browse-off'}}"
+            value="{{currentPasswordInput}}"
+            placeholder="请输入当前账号登录密码"
+            maxlength="64"
+            cursor-spacing="{{80}}"
+            adjust-position="{{true}}"
+            bindchange="onCurrentPasswordInput"
+            bindclick="toggleModalPassword"
+          />
+        </view>
+      </view>
+
+      <!-- 弹窗底部操作按钮 -->
+      <view class="modal-actions">
+        <view class="modal-btn btn-cancel" bindtap="closeConfirmModal">取消</view>
+        <view class="modal-btn btn-confirm" bindtap="onFinalSubmit">
+          <text>确认并提交</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

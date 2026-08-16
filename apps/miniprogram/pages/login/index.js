@@ -8,10 +8,19 @@ Page({
     showPassword: false,
     agreementAccepted: false,
     loading: false,
+    logoutNotice: "",
   },
 
-  onLoad() {
-    if (api.getToken()) {
+  onLoad(options = {}) {
+    const reason = options.reason
+      ? decodeURIComponent(options.reason)
+      : (wx.getStorageSync("logout_notice_message") || "");
+    if (reason) {
+      wx.removeStorageSync("logout_notice_message");
+      this.setData({ logoutNotice: reason });
+    }
+
+    if (api.getToken() && !reason) {
       api.getUserInfo()
         .then((userInfo) => {
           wx.setStorageSync("userInfo", userInfo);

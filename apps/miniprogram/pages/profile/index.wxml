@@ -8,8 +8,8 @@
     <view class="user-card">
       <view class="user-card-glow"></view>
       <view class="avatar-wrap">
-        <image wx:if="{{userInfo.hasCustomAvatar}}" class="avatar-image" src="{{userInfo.avatarDisplayUrl}}" mode="aspectFill" binderror="onAvatarError" />
-        <image wx:else class="avatar-image" src="../../images/default-user-avatar.png" mode="aspectFill" />
+        <image wx:if="{{userInfo.hasCustomAvatar && userInfo.avatarDisplayUrl}}" class="avatar-image" src="{{userInfo.avatarDisplayUrl}}" mode="aspectFill" binderror="onAvatarError" />
+        <image wx:else class="avatar-image" src="/images/default-user-avatar.png" mode="aspectFill" />
       </view>
       <view class="user-main">
         <view class="user-name">{{userInfo.displayName}}</view>
@@ -18,6 +18,10 @@
           <text>{{userInfo.roleDisplayName}}</text>
         </view>
         <view class="employee-no">工号: {{userInfo.employeeDisplayNo}}</view>
+      </view>
+      <view class="profile-edit-btn" bindtap="openProfileEdit">
+        <t-icon name="edit" size="28rpx" color="#002045" />
+        <text>编辑资料</text>
       </view>
     </view>
 

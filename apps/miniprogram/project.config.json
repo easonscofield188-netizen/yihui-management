@@ -1,6 +1,34 @@
 {
   "miniprogramRoot": "/",
   "cloudfunctionRoot": "cloudfunctions/",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "cloudfunctions"
+      },
+      {
+        "type": "folder",
+        "value": ".agents"
+      },
+      {
+        "type": "folder",
+        "value": "pages/project-quotation-client-old"
+      },
+      {
+        "type": "file",
+        "value": "**/*.md"
+      },
+      {
+        "type": "file",
+        "value": "package-lock.json"
+      },
+      {
+        "type": "file",
+        "value": "**/.wechatide.*"
+      }
+    ]
+  },
   "setting": {
     "urlCheck": true,
     "es6": true,

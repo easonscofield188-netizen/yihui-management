@@ -1,4 +1,5 @@
 const api = require("../../utils/api");
+const quotationExcel = require("../../utils/quotation-excel");
 
 const DETAIL_REFRESH_KEY = "projectQuotationDetailRefreshV1";
 const LIST_REFRESH_KEY = "projectQuotationListRefreshV1";
@@ -63,7 +64,11 @@ async function resolveDrawings(drawings) {
     try {
       const result = await wx.cloud.getTempFileURL({ fileList: fileIds });
       (result.fileList || []).forEach(item => {
-        if (item.fileID && item.tempFileURL) urlMap[item.fileID] = item.tempFileURL;
+        if (item.fileID && item.tempFileURL) {
+          urlMap[item.fileID] = item.tempFileURL;
+        } else if (item.status !== 0) {
+          console.warn(`云存储文件获取临时链接失败 [${item.fileID}]: status=${item.status}, errMsg=${item.errMsg}`);
+        }
       });
     } catch (error) {
       console.warn("报价图纸临时地址获取失败:", error);
@@ -84,6 +89,8 @@ Page({
     loading: true,
     quotation: null,
     drawings: [],
+    visibleDrawings: [],
+    drawingsExpanded: false,
     fullTableVisible: false,
     shareImageUrl: "",
     clientShareToken: "",
@@ -118,7 +125,7 @@ Page({
     const versionText = quotation.versionButtonText || quotation.versionLabel || "版本一";
     const payload = {
       title: quotation.projectName
-        ? `项目报价｜${quotation.projectName}｜${versionText}`
+        ? `项目报价｜${quotation.projectName}-报价清单｜${versionText}`
         : "项目报价",
       path: `/pages/project-quotation-client/index?id=${encodeURIComponent(this.data.id)}&token=${encodeURIComponent(this.data.clientShareToken)}&versionId=${encodeURIComponent(this.data.id)}`,
     };
@@ -152,7 +159,13 @@ Page({
 
   async loadDetail(id) {
     wx.hideShareMenu({ menus: ["shareAppMessage", "shareTimeline"] });
-    this.setData({ loading: true, fullTableVisible: false, clientShareToken: "", clientShareReady: false });
+    this.setData({
+      loading: true,
+      fullTableVisible: false,
+      drawingsExpanded: false,
+      clientShareToken: "",
+      clientShareReady: false,
+    });
     try {
       const result = await api.getProjectQuotation(id);
       const drawings = await resolveDrawings(result.drawings || []);
@@ -196,7 +209,14 @@ Page({
         amountText: money(result.totalAmount),
         versions: decoratedVersions,
       };
-      this.setData({ quotation, drawings, loading: false, shareImageUrl: "" });
+      this.setData({
+        quotation,
+        drawings,
+        visibleDrawings: drawings.slice(0, 2),
+        drawingsExpanded: false,
+        loading: false,
+        shareImageUrl: "",
+      });
       this.prepareShareImage(drawings);
       this.prepareClientShare(id);
     } catch (error) {
@@ -291,11 +311,21 @@ Page({
     const drawing = this.data.drawings[index];
     if (!drawing) return;
     if (drawing.kind === "image") {
-      const urls = this.data.drawings.filter(item => item.kind === "image").map(item => item.displayUrl).filter(Boolean);
+      const previewDrawings = this.data.drawingsExpanded ? this.data.drawings : this.data.visibleDrawings;
+      const urls = previewDrawings.filter(item => item.kind === "image").map(item => item.displayUrl).filter(Boolean);
       if (drawing.displayUrl) wx.previewImage({ current: drawing.displayUrl, urls });
       return;
     }
     this.openPdf(drawing);
+  },
+
+  toggleDrawings() {
+    if (this.data.drawings.length <= 2) return;
+    const drawingsExpanded = !this.data.drawingsExpanded;
+    this.setData({
+      drawingsExpanded,
+      visibleDrawings: drawingsExpanded ? this.data.drawings : this.data.drawings.slice(0, 2),
+    });
   },
 
   async openPdf(drawing) {
@@ -334,6 +364,28 @@ Page({
 
   closeFullTable() {
     this.setData({ fullTableVisible: false });
+  },
+
+  preventBubble() {},
+
+  /**
+   * 生成表格文件并在微信中调起原生文档预览
+   */
+  async onExportSpreadsheet() {
+    if (!this.data.quotation) return;
+    wx.showLoading({ title: "正在生成表格文件...", mask: true });
+
+    try {
+      await quotationExcel.generateAndPreviewQuotationSpreadsheet(this.data.quotation);
+    } catch (err) {
+      wx.showModal({
+        title: "生成表格失败",
+        content: err.message || "无法生成表格文件，请重试",
+        showCancel: false,
+      });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   editQuotation() {

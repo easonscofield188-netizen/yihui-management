@@ -132,7 +132,7 @@
       </view>
     </view>
 
-    <!-- 公司信息卡片 -->
+    <!-- 公司信息卡片（显示公司Logo图片） -->
     <view class="company-card">
       <view class="card-head-title">
         <t-icon name="city" size="32rpx" color="#002045" />

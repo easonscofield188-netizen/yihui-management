@@ -5,31 +5,52 @@
     </t-navbar>
   </view>
 
-  <scroll-view class="form-scroll" scroll-y show-scrollbar="{{false}}">
+  <view class="form-content">
     <view class="intro">
       <view class="intro-title">新建登录账号</view>
-      <view>账号创建后立即启用，请将初始密码安全地交给使用人。</view>
+      <view>账号创建后立即启用，系统将自动分配初始密码与对应角色工号。</view>
     </view>
 
     <view class="form-card">
       <view class="field-label required">登录账号</view>
       <view class="input-shell">
-        <t-input t-class="form-input" borderless clearable value="{{form.username}}" placeholder="3-32 位字母、数字或 ._-" maxlength="32" data-field="username" bindchange="onInput" />
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{form.username}}"
+          placeholder="3-32 位字母、数字或 ._-"
+          maxlength="32"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          data-field="username"
+          bindchange="onInput"
+        />
       </view>
 
       <view class="field-label required">账户昵称</view>
       <view class="input-shell">
-        <t-input t-class="form-input" borderless clearable value="{{form.nickname}}" placeholder="请输入账户昵称" maxlength="30" data-field="nickname" bindchange="onInput" />
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{form.nickname}}"
+          placeholder="请输入账户昵称"
+          maxlength="30"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          data-field="nickname"
+          bindchange="onInput"
+        />
       </view>
 
-      <view class="field-label required">初始密码</view>
-      <view class="input-shell">
-        <t-input t-class="form-input" borderless type="password" value="{{form.password}}" placeholder="请输入 6-64 位密码" maxlength="64" data-field="password" bindchange="onInput" />
-      </view>
-
-      <view class="field-label required">确认密码</view>
-      <view class="input-shell">
-        <t-input t-class="form-input" borderless type="password" value="{{form.confirmPassword}}" placeholder="请再次输入初始密码" maxlength="64" data-field="confirmPassword" bindchange="onInput" />
+      <!-- 默认初始密码说明 -->
+      <view class="default-pwd-tip">
+        <t-icon name="info-circle-filled" size="36rpx" color="#1a365d" />
+        <view class="default-pwd-content">
+          <view class="default-pwd-title">统一初始密码：yh8888</view>
+          <view class="default-pwd-desc">新账号初始密码统一为 <text class="pwd-highlight">yh8888</text>，首次登录时系统将提醒使用人及时修改。</view>
+        </view>
       </view>
 
       <view class="field-label required">账号角色</view>
@@ -47,10 +68,21 @@
 
       <view class="field-label">邮箱</view>
       <view class="input-shell">
-        <t-input t-class="form-input" borderless clearable value="{{form.email}}" placeholder="选填，用于找回密码" maxlength="80" data-field="email" bindchange="onInput" />
+        <t-input
+          t-class="form-input"
+          borderless
+          clearable
+          value="{{form.email}}"
+          placeholder="选填，用于邮箱验证码修改/找回密码"
+          maxlength="80"
+          cursor-spacing="{{50}}"
+          adjust-position="{{true}}"
+          data-field="email"
+          bindchange="onInput"
+        />
       </view>
     </view>
-  </scroll-view>
+  </view>
 
   <view class="footer">
     <view class="cancel-action">

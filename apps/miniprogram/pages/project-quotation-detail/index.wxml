@@ -29,10 +29,18 @@
 
     <view class="section-head">
       <view class="section-title">设计图纸</view>
-      <view class="section-count">{{drawings.length}} 张已上传</view>
+      <view class="drawing-head-right">
+        <view class="section-count">{{drawings.length}} 张已上传</view>
+        <view wx:if="{{drawings.length > 2}}" class="drawing-toggle" bindtap="toggleDrawings">
+          <text>{{drawingsExpanded ? '收起' : '查看全部'}}</text>
+          <view class="drawing-toggle-arrow {{drawingsExpanded ? 'expanded' : ''}}">
+            <t-icon name="chevron-down" size="24rpx" color="#455f88" />
+          </view>
+        </view>
+      </view>
     </view>
     <view wx:if="{{drawings.length}}" class="drawing-grid">
-      <view wx:for="{{drawings}}" wx:key="displayName" class="drawing-card" data-index="{{index}}" bindtap="previewDrawing">
+      <view wx:for="{{visibleDrawings}}" wx:key="displayName" class="drawing-card" data-index="{{index}}" bindtap="previewDrawing">
         <image wx:if="{{item.kind === 'image'}}" class="drawing-image" src="{{item.displayUrl}}" mode="aspectFill" />
         <view wx:else class="pdf-card"><t-icon name="file-pdf" size="70rpx" color="#ba1a1a" /><text>{{item.displayName}}</text></view>
       </view>
@@ -42,20 +50,22 @@
     <view class="section-head quotation-heading"><view class="section-title">报价清单</view></view>
     <view class="landscape-tip">
       <view class="tip-copy"><view class="rotate-icon"><t-icon name="mobile-vibrate" size="34rpx" color="#455f88" /></view><text>点击全屏横屏观看体验更佳</text></view>
-      <t-button t-class="fullscreen-button" size="extra-small" theme="default" variant="base" icon="fullscreen" content="全屏" bindtap="openFullTable" />
+      <view style="display: flex; align-items: center; gap: 12rpx;">
+        <t-button t-class="fullscreen-button" size="extra-small" theme="default" variant="base" icon="fullscreen" content="全屏" bindtap="openFullTable" />
+      </view>
     </view>
     <view class="quotation-table-frame">
       <scroll-view class="quotation-table-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="quotation-table">
-        <view class="table-row table-header"><view class="cell name-cell">项目名称</view><view class="cell price-cell">单价 (¥)</view><view class="cell quantity-cell">数量</view><view class="cell subtotal-cell">小计 (¥)</view><view class="cell remark-cell">备注</view></view>
-        <view wx:for="{{quotation.items}}" wx:key="itemCode" class="table-row">
-          <view class="cell name-cell"><view class="item-name">{{item.name}}</view></view>
-          <view class="cell price-cell">{{item.unitPriceText}}</view>
-          <view class="cell quantity-cell">{{item.quantityUnitText}}</view>
-          <view class="cell subtotal-cell">{{item.totalText}}</view>
-          <view class="cell remark-cell"><view class="item-remark">{{item.remark || '无备注'}}</view></view>
-        </view>
-        <view class="table-total"><text>各项费用总和 (CNY)</text><text class="total-number">¥ {{quotation.amountText}}</text></view>
+          <view class="table-row table-header"><view class="cell name-cell">项目名称</view><view class="cell price-cell">单价 (¥)</view><view class="cell quantity-cell">数量</view><view class="cell subtotal-cell">小计 (¥)</view><view class="cell remark-cell">备注</view></view>
+          <view wx:for="{{quotation.items}}" wx:key="itemCode" class="table-row">
+            <view class="cell name-cell"><view class="item-name">{{item.name}}</view></view>
+            <view class="cell price-cell">{{item.unitPriceText}}</view>
+            <view class="cell quantity-cell">{{item.quantityUnitText}}</view>
+            <view class="cell subtotal-cell">{{item.totalText}}</view>
+            <view class="cell remark-cell"><view class="item-remark">{{item.remark || '无备注'}}</view></view>
+          </view>
+          <view class="table-total"><text>各项费用总和 (CNY)</text><text class="total-number">¥ {{quotation.amountText}}</text></view>
         </view>
       </scroll-view>
     </view>
@@ -110,7 +120,7 @@
 
   <!-- 版本切换弹窗 -->
   <view wx:if="{{versionPickerVisible}}" class="version-picker-mask" bindtap="closeVersionSelector">
-    <view class="version-picker-sheet" catchtap="true">
+    <view class="version-picker-sheet" catchtap="preventBubble">
       <view class="version-picker-header">
         <text class="version-picker-title">切换报价版本</text>
         <view class="version-picker-close" bindtap="closeVersionSelector">

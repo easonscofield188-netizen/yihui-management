@@ -1,8 +1,8 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTextStyle": "black",
-  "navigationBarBackgroundColor": "#f9f9ff",
-  "backgroundColor": "#f9f9ff",
+  "navigationBarTextStyle": "white",
+  "navigationBarBackgroundColor": "#001019",
+  "backgroundColor": "#001019",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",

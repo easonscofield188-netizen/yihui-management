@@ -739,6 +739,62 @@ async function listCategoryReviews(data, current) {
   return { code: 0, message: '查询成功', data: { list: filtered.slice(start, start + pageSize), total: filtered.length, page, pageSize, hasMore: page * pageSize < filtered.length } };
 }
 
+async function listCategoryReviewIds(data, current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可操作' };
+  await ensureReviewCollection();
+  const status = safeText(data.status, 20) || 'ALL';
+  const deletableStatuses = new Set(['APPROVED', 'REJECTED', 'MERGED']);
+  const result = await db.collection(REVIEW_COLLECTION).limit(1000).get();
+  const ids = (result.data || [])
+    .filter(item => {
+      if (!deletableStatuses.has(item.status)) return false;
+      return status === 'ALL' || item.status === status;
+    })
+    .sort((a, b) => Number(b.latestTimestamp || b.createdTimestamp) - Number(a.latestTimestamp || a.createdTimestamp))
+    .map(item => item._id);
+  return { code: 0, message: '查询成功', data: { ids, total: ids.length } };
+}
+
+async function deleteCategoryReviews(data, current) {
+  if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可删除审核记录' };
+  await ensureReviewCollection();
+  const ids = (Array.isArray(data.ids) ? data.ids : [data.id]).map(id => safeText(id, 80)).filter(Boolean);
+  if (!ids.length) return { code: 400, message: '请选择要删除的审核记录' };
+
+  const _ = db.command;
+  const deletableStatuses = ['APPROVED', 'REJECTED', 'MERGED'];
+  const chunkSize = 100;
+  let deletedCount = 0;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const removeResult = await db.collection(REVIEW_COLLECTION).where({
+      _id: _.in(chunk),
+      status: _.in(deletableStatuses)
+    }).remove();
+    deletedCount += Number(removeResult.stats?.removed) || 0;
+  }
+
+  if (deletedCount === 0) {
+    return { code: 400, message: '待审核状态的记录不允许删除，请先完成审核' };
+  }
+
+  await db.collection('operation_logs').add({
+    data: {
+      uid: current.userId,
+      un: safeText(current.user.nickname || current.user.username, 20),
+      username: safeText(current.user.username, 80),
+      m: '成本类目审核',
+      a: 'delete',
+      c: `批量删除 ${deletedCount} 条已审核的类目记录`,
+      s: '成功',
+      createdTimestamp: Date.now(),
+      createdAt: db.serverDate()
+    }
+  }).catch(error => console.error('记录删除审核日志失败:', error));
+
+  return { code: 0, message: '删除成功', data: { deletedCount } };
+}
+
 async function getCategoryReviewDetail(data, current) {
   if (!ensureSuperAdmin(current)) return { code: 403, message: '仅超级系统管理员可审核类目' };
   const review = await getReviewRecord(safeText(data.id, 80));
@@ -1299,6 +1355,8 @@ exports.main = async event => {
     if (action === 'create') return await createQuotation(data, current);
     if (action === 'createVersion') return await createQuotationVersion(data, current);
     if (action === 'reviewList') return await listCategoryReviews(data, current);
+    if (action === 'reviewListIds') return await listCategoryReviewIds(data, current);
+    if (action === 'reviewDelete') return await deleteCategoryReviews(data, current);
     if (action === 'reviewDetail') return await getCategoryReviewDetail(data, current);
     if (action === 'reviewPendingCount') return await getCategoryReviewPendingCount(current);
     if (action === 'reviewSubmit') return await reviewCategoryRequest(data, current);
