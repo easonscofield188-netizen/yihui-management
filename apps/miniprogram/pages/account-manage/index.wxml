@@ -114,6 +114,10 @@
           <text class="info-label">系统角色</text>
           <text class="info-value role-val">{{item.roleName}}</text>
         </view>
+        <view class="info-row">
+          <text class="info-label">职位</text>
+          <text class="info-value">{{item.jobTitle || '未设置'}}</text>
+        </view>
         <view class="info-row" wx:if="{{item.email}}">
           <text class="info-label">绑定邮箱</text>
           <text class="info-value">{{item.email}}</text>
@@ -130,15 +134,26 @@
 
       <!-- 底部快捷操作栏 -->
       <view class="card-actions">
+        <!-- 编辑职位 -->
+        <view
+          class="action-btn action-edit-job"
+          data-id="{{item.id || item._id}}"
+          data-username="{{item.username}}"
+          data-job-title="{{item.jobTitle}}"
+          bindtap="onEditJobTitle"
+        >
+          <t-icon name="edit" size="26rpx" color="#0b5796" />
+          <text>编辑职位</text>
+        </view>
         <!-- 重置密码 -->
         <view class="action-btn action-reset" data-id="{{item.id}}" data-username="{{item.username}}" bindtap="onResetPassword">
-          <t-icon name="lock-on" size="30rpx" color="#1a365d" />
+          <t-icon name="lock-on" size="26rpx" color="#1a365d" />
           <text>重置密码</text>
         </view>
 
         <!-- 状态切换：000 账号不可停用 -->
         <view wx:if="{{item.isRootAdmin}}" class="action-btn action-protected">
-          <t-icon name="secured" size="30rpx" color="#9aa1ac" />
+          <t-icon name="secured" size="26rpx" color="#9aa1ac" />
           <text>永久受保护</text>
         </view>
         <view
@@ -148,7 +163,7 @@
           data-username="{{item.username}}"
           bindtap="onDisableAccount"
         >
-          <t-icon name="user-blocked" size="30rpx" color="#ba1a1a" />
+          <t-icon name="user-blocked" size="26rpx" color="#ba1a1a" />
           <text>停用账号</text>
         </view>
         <view
@@ -158,7 +173,7 @@
           data-username="{{item.username}}"
           bindtap="onEnableAccount"
         >
-          <t-icon name="check-circle" size="30rpx" color="#176c4b" />
+          <t-icon name="check-circle" size="26rpx" color="#176c4b" />
           <text>恢复启用</text>
         </view>
 
@@ -171,10 +186,23 @@
           data-employeeno="{{item.employeeNo}}"
           bindtap="onDeleteAccount"
         >
-          <t-icon name="delete" size="30rpx" color="#cf1322" />
+          <t-icon name="delete" size="26rpx" color="#cf1322" />
           <text>删除</text>
         </view>
       </view>
     </view>
   </view>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{jobTitlePickerVisible}}"
+    value="{{jobTitlePickerValue}}"
+    title="修改职位"
+    z-index="{{12000}}"
+    bindconfirm="onJobTitleConfirm"
+    bindcancel="closeJobTitlePicker"
+    bindclose="closeJobTitlePicker"
+  >
+    <t-picker-item options="{{jobTitleOptions}}" />
+  </t-picker>
 </view>

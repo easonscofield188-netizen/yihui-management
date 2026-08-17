@@ -17,11 +17,18 @@ Page({
     employeeNo: "",
     employeeNoLoading: false,
     submitting: false,
+    // 职位选择相关
+    jobTitleOptions: [],
+    jobTitleLoading: false,
+    jobTitleIndex: -1,
+    jobTitlePickerVisible: false,
+    jobTitlePickerValue: [],
     form: {
       username: "",
       nickname: "",
       email: "",
       role: ROLE_OPTIONS[1].value,
+      jobTitle: "",
     },
   },
 
@@ -33,6 +40,27 @@ Page({
       return;
     }
     this.loadNextEmployeeNo();
+    this.loadJobTitleOptions();
+  },
+
+  /** 加载岗位名称配置选项 */
+  async loadJobTitleOptions() {
+    this.setData({ jobTitleLoading: true });
+    try {
+      const result = await api.queryConfigs("JOB_TITLE");
+      const list = Array.isArray(result) ? result : [];
+      // 只取启用中的配置项
+      const activeList = list.filter((item) => item.isActive !== false);
+      const options = activeList.map((item) => ({
+        label: item.label,
+        value: item.label,
+      }));
+      this.setData({ jobTitleOptions: options });
+    } catch (error) {
+      console.warn("加载岗位配置失败:", error);
+    } finally {
+      this.setData({ jobTitleLoading: false });
+    }
   },
 
   onInput(event) {
@@ -57,6 +85,30 @@ Page({
       rolePickerVisible: false,
       "form.role": role,
     }, () => this.loadNextEmployeeNo());
+  },
+
+  /** 打开职位选择器 */
+  openJobTitlePicker() {
+    if (!this.data.jobTitleOptions.length) {
+      wx.showToast({ title: "暂无岗位配置，请先在数据配置中心添加", icon: "none" });
+      return;
+    }
+    this.setData({ jobTitlePickerVisible: true });
+  },
+
+  closeJobTitlePicker() {
+    this.setData({ jobTitlePickerVisible: false });
+  },
+
+  onJobTitleConfirm(event) {
+    const selected = event.detail.value[0];
+    const idx = this.data.jobTitleOptions.findIndex((item) => item.value === selected);
+    this.setData({
+      jobTitleIndex: idx,
+      jobTitlePickerValue: [selected],
+      jobTitlePickerVisible: false,
+      "form.jobTitle": selected,
+    });
   },
 
   async loadNextEmployeeNo() {
@@ -98,6 +150,7 @@ Page({
         nickname,
         email,
         role: form.role,
+        jobTitle: form.jobTitle,
       });
       await new Promise((resolve) => {
         wx.showModal({

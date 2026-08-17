@@ -60,6 +60,14 @@
         </t-input>
       </view>
 
+      <view class="field-label">职位</view>
+      <view class="input-shell select-shell" bindtap="openJobTitlePicker">
+        <t-input t-class="form-input" borderless readonly value="{{form.jobTitle || ''}}" placeholder="{{jobTitleLoading ? '正在加载...' : '选填，点击选择岗位'}}">
+          <view slot="suffix" class="select-chevron"></view>
+        </t-input>
+      </view>
+      <view class="field-help">从数据配置中心管理的岗位名称中选择</view>
+
       <view class="field-label">工号</view>
       <view class="input-shell readonly-shell">
         <t-input t-class="form-input" borderless readonly value="{{employeeNo}}" placeholder="{{employeeNoLoading ? '正在生成...' : '选择角色后自动生成'}}" />
@@ -103,5 +111,17 @@
     bindclose="closeRolePicker"
   >
     <t-picker-item options="{{roleOptions}}" />
+  </t-picker>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{jobTitlePickerVisible}}"
+    value="{{jobTitlePickerValue}}"
+    title="选择职位"
+    bindconfirm="onJobTitleConfirm"
+    bindcancel="closeJobTitlePicker"
+    bindclose="closeJobTitlePicker"
+  >
+    <t-picker-item options="{{jobTitleOptions}}" />
   </t-picker>
 </view>

@@ -91,6 +91,13 @@
       </view>
 
       <view class="readonly-row">
+        <text class="readonly-label">职位</text>
+        <view class="readonly-val">
+          <text>{{userInfo.jobTitle || userInfo.job_title || '未设置'}}</text>
+        </view>
+      </view>
+
+      <view class="readonly-row">
         <text class="readonly-label">安全邮箱</text>
         <view class="email-meta" bindtap="navToPasswordChange">
           <text class="email-txt">{{maskedEmail || '未绑定'}}</text>

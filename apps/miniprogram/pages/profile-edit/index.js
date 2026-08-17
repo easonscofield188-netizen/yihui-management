@@ -51,7 +51,10 @@ Page({
 
   async onLoad() {
     let user = api.getCachedUserInfo();
-    if (!user || !user.username) {
+    const cacheHasJobTitle = user
+      && (Object.prototype.hasOwnProperty.call(user, "jobTitle")
+        || Object.prototype.hasOwnProperty.call(user, "job_title"));
+    if (!user || !user.username || !cacheHasJobTitle) {
       try {
         user = await api.getUserInfo();
         api.cacheUserInfo(user);

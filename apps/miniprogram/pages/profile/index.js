@@ -29,6 +29,7 @@ function decorateUser(userInfo, avatarUrl = "") {
     hasCustomAvatar: Boolean(avatarDisplayUrl),
     roleDisplayName: userInfo.roleName || userInfo.role || "普通用户",
     employeeDisplayNo: userInfo.employeeNo || "未设置",
+    jobTitleDisplay: userInfo.jobTitle || userInfo.job_title || "",
   };
 }
 
@@ -124,7 +125,10 @@ Page({
 
   loadUser({ force = false, silent = false } = {}) {
     const cachedUser = api.getCachedUserInfo();
-    if (!force && cachedUser && api.isUserInfoCacheFresh()) {
+    const cacheHasJobTitle = cachedUser
+      && (Object.prototype.hasOwnProperty.call(cachedUser, "jobTitle")
+        || Object.prototype.hasOwnProperty.call(cachedUser, "job_title"));
+    if (!force && cacheHasJobTitle && api.isUserInfoCacheFresh()) {
       this.showUser(cachedUser);
       return Promise.resolve(cachedUser);
     }

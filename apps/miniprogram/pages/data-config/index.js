@@ -5,6 +5,7 @@ const CONFIG_GROUPS = [
   { group: "CLIENT_ROLE", name: "客户角色", description: "配置客户在项目中的身份", icon: "usergroup", tone: "blue" },
   { group: "COST_CATEGORY", name: "成本项目", description: "维护项目材料与劳务成本", icon: "money", tone: "orange" },
   { group: "PROJECT_SCENE", name: "项目场景", description: "维护项目基础场景选项", icon: "map", tone: "violet" },
+  { group: "JOB_TITLE", name: "岗位名称", description: "配置企业岗位与职能头衔", icon: "user-avatar", tone: "teal" },
 ];
 
 function getNavMetrics() {

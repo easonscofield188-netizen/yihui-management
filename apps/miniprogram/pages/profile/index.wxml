@@ -13,9 +13,15 @@
       </view>
       <view class="user-main">
         <view class="user-name">{{userInfo.displayName}}</view>
-        <view class="role-badge">
-          <t-icon name="check-circle" size="24rpx" color="#002045" />
-          <text>{{userInfo.roleDisplayName}}</text>
+        <view class="user-badges">
+          <view class="role-badge">
+            <t-icon name="check-circle" size="24rpx" color="#002045" />
+            <text>{{userInfo.roleDisplayName}}</text>
+          </view>
+          <view class="job-badge" wx:if="{{userInfo.jobTitleDisplay}}">
+            <t-icon name="user" size="24rpx" color="#0b5796" />
+            <text>{{userInfo.jobTitleDisplay}}</text>
+          </view>
         </view>
         <view class="employee-no">工号: {{userInfo.employeeDisplayNo}}</view>
       </view>

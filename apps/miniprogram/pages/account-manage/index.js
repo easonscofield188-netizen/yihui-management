@@ -57,11 +57,32 @@ Page({
     activeCount: 0,
     disabledCount: 0,
     isDevEnvironment: true,
+    jobTitleOptions: [],
+    jobTitlePickerVisible: false,
+    jobTitlePickerValue: [],
+    editingAccountId: "",
+    editingAccountUsername: "",
   },
 
   onLoad() {
     this.setData({ isDevEnvironment: api.isDevelopmentEnvironment() });
     this.checkPermissionAndLoad();
+    this.loadJobTitleOptions();
+  },
+
+  async loadJobTitleOptions() {
+    try {
+      const result = await api.queryConfigs("JOB_TITLE");
+      const list = Array.isArray(result) ? result : [];
+      const activeList = list.filter((item) => item.isActive !== false);
+      const options = activeList.map((item) => ({
+        label: item.label,
+        value: item.label,
+      }));
+      this.setData({ jobTitleOptions: options });
+    } catch (error) {
+      console.warn("加载岗位配置失败:", error);
+    }
   },
 
   onShow() {
@@ -172,6 +193,8 @@ Page({
 
         return {
           ...item,
+          jobTitle: item.jobTitle || item.job_title || "",
+          job_title: item.jobTitle || item.job_title || "",
           avatarDisplayUrl,
           hasCustomAvatar: Boolean(avatarDisplayUrl),
           isRootAdmin,
@@ -277,6 +300,127 @@ Page({
         }
       },
     });
+  },
+
+  async onEditJobTitle(event) {
+    const dataset = (event && event.currentTarget && event.currentTarget.dataset) || {};
+    const id = dataset.id || "";
+    const username = dataset.username || "";
+    const jobTitle = dataset.jobTitle || dataset.jobtitle || "";
+    if (!id && !username) return;
+
+    if (!this.data.jobTitleOptions.length) {
+      wx.showLoading({ title: "正在加载配置..." });
+      await this.loadJobTitleOptions();
+      wx.hideLoading();
+      if (!this.data.jobTitleOptions.length) {
+        wx.showToast({ title: "暂无岗位配置，请先在数据配置中心添加", icon: "none" });
+        return;
+      }
+    }
+
+    const defaultVal = jobTitle || (this.data.jobTitleOptions[0] ? this.data.jobTitleOptions[0].value : "");
+
+    // 打开选择器时，将系统胶囊文字设为白色以完美融入深色遮罩层
+    try {
+      wx.setNavigationBarColor({ frontColor: "#ffffff", backgroundColor: "#000000" });
+    } catch (e) {}
+
+    this.setData({
+      editingAccountId: id,
+      editingAccountUsername: username,
+      jobTitlePickerValue: defaultVal ? [defaultVal] : [],
+      jobTitlePickerVisible: true,
+    });
+  },
+
+  closeJobTitlePicker(event) {
+    try {
+      wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#ffffff" });
+    } catch (e) {}
+
+    const trigger = event && event.detail && event.detail.trigger;
+    // TDesign Picker 会先触发 close，再触发 confirm。确认关闭时必须保留
+    // 当前账号，交给 onJobTitleConfirm 完成保存；取消/遮罩关闭才清空。
+    const closingByConfirm = trigger === "confirm-btn";
+    this.setData({
+      jobTitlePickerVisible: false,
+      ...(closingByConfirm ? {} : {
+        editingAccountId: "",
+        editingAccountUsername: "",
+      }),
+    });
+  },
+
+  async onJobTitleConfirm(event) {
+    try {
+      wx.setNavigationBarColor({ frontColor: "#000000", backgroundColor: "#ffffff" });
+    } catch (e) {}
+
+    const detail = (event && event.detail) || {};
+    let selectedJobTitle = "";
+    if (Array.isArray(detail.value) && detail.value.length > 0) {
+      selectedJobTitle = String(detail.value[0] || "").trim();
+    } else if (typeof detail.value === "string") {
+      selectedJobTitle = detail.value.trim();
+    }
+    if (!selectedJobTitle && Array.isArray(detail.label) && detail.label.length > 0) {
+      selectedJobTitle = String(detail.label[0] || "").trim();
+    }
+    if (!selectedJobTitle && Array.isArray(detail.columns) && detail.columns.length > 0) {
+      const opt = this.data.jobTitleOptions[detail.columns[0].index];
+      if (opt) selectedJobTitle = String(opt.value || opt.label || "").trim();
+    }
+    if (!selectedJobTitle && this.data.jobTitleOptions[0]) {
+      selectedJobTitle = String(this.data.jobTitleOptions[0].value || "").trim();
+    }
+
+    const accountId = this.data.editingAccountId;
+    const username = this.data.editingAccountUsername;
+    this.setData({
+      jobTitlePickerVisible: false,
+      editingAccountId: "",
+      editingAccountUsername: "",
+    });
+
+    if (!accountId && !username) return;
+
+    // 1. 立即前端本地乐观更新，确保 0 毫秒实时刷新界面
+    const updatedList = (this.data.list || []).map(item => {
+      const matchId = accountId && (String(item.id) === String(accountId) || String(item._id) === String(accountId));
+      const matchUsername = username && String(item.username).toLowerCase() === String(username).toLowerCase();
+      if (matchId || matchUsername) {
+        return {
+          ...item,
+          jobTitle: selectedJobTitle,
+          job_title: selectedJobTitle,
+        };
+      }
+      return item;
+    });
+    this.setData({ list: updatedList });
+
+    // 2. 如果修改的是当前登录用户自身的账号，同步更新本地全局用户信息缓存
+    const currentUser = api.getCachedUserInfo();
+    if (currentUser && ((accountId && (currentUser.id === accountId || currentUser._id === accountId)) || (username && currentUser.username === username))) {
+      currentUser.jobTitle = selectedJobTitle;
+      currentUser.job_title = selectedJobTitle;
+      api.cacheUserInfo(currentUser);
+    }
+
+    wx.showLoading({ title: "正在更新职位..." });
+    try {
+      await api.updateAccountJobTitle(accountId || username, selectedJobTitle, username);
+      wx.hideLoading();
+      wx.showToast({ title: "职位已更新", icon: "success" });
+      this.setData({ loading: false });
+      await this.loadData();
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || "更新职位失败", icon: "none" });
+      this.setData({ loading: false });
+      this.loadData();
+    }
   },
 
   onDeleteAccount(event) {

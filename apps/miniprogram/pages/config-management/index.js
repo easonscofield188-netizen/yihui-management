@@ -5,6 +5,7 @@ const GROUP_META = {
   CLIENT_ROLE: { title: "客户角色", description: "配置客户在项目中的身份", icon: "usergroup" },
   COST_CATEGORY: { title: "成本项目", description: "维护项目材料与劳务成本科目", icon: "money" },
   PROJECT_SCENE: { title: "项目场景", description: "维护项目基础场景选项", icon: "map" },
+  JOB_TITLE: { title: "岗位名称", description: "配置企业岗位与职能头衔", icon: "user-avatar" },
 };
 
 function getNavMetrics() {
@@ -132,9 +133,12 @@ Page({
         const quotationTip = usage.quotationReferenceCount
           ? "；历史报价单会保留原有名称和单位，不会随配置变化"
           : "";
+        const syncTarget = this.data.group === "JOB_TITLE"
+          ? "账号中的职位"
+          : "客户及项目中的显示名称";
         wx.showModal({
           title: "配置已被引用",
-          content: `“${config.label}”正在被 ${usage.referenceCount} 条数据引用：${names}${suffix}。修改名称后客户及项目中的显示名称会同步更新${quotationTip}，是否继续？`,
+          content: `“${config.label}”正在被 ${usage.referenceCount} 条数据引用：${names}${suffix}。修改名称后${syncTarget}会同步更新${quotationTip}，是否继续？`,
           confirmText: "继续编辑",
           success: result => { if (result.confirm) this.openEditor(config); },
         });

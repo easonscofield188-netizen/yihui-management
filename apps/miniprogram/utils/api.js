@@ -246,6 +246,15 @@ function deleteAccount(userId) {
   return callFunction("loginService", "deleteAccount", { userId });
 }
 
+function updateAccountJobTitle(userId, jobTitle, username = "") {
+  return callFunction("loginService", "updateAccountJobTitle", {
+    userId,
+    id: userId,
+    username,
+    jobTitle,
+  });
+}
+
 function sendPasswordChangeCode() {
   return callFunction("loginService", "sendPasswordChangeCode");
 }
@@ -634,4 +643,5 @@ module.exports = {
   listProjectServiceRecords,
   updateProjectServiceRecord,
   deleteProjectServiceRecord,
+  updateAccountJobTitle,
 };

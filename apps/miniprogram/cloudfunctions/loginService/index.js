@@ -89,6 +89,8 @@ exports.main = async (event, context) => {
           return await sendBindEmailCode(data, event);
         case 'bindEmailWithCode':
           return await bindEmailWithCode(data, event);
+        case 'updateAccountJobTitle':
+          return await updateAccountJobTitle(data, event);
         case 'logout':
           return await logout(data, event);
         default:
@@ -180,6 +182,8 @@ exports.main = async (event, context) => {
             nickname: user.nickname || user.username,
             avatarUrl: finalAvatarUrl,
             avatarFileId: finalAvatarFileId,
+            jobTitle: user.jobTitle || user.job_title || '',
+            job_title: user.jobTitle || user.job_title || '',
             needPasswordChange: Boolean(user.needPasswordChange),
             lastLoginTime: loginTime
           }
@@ -425,9 +429,20 @@ function formatUser(user, userId) {
     nickname: user.nickname || user.username,
     avatarUrl: user.avatarUrl || '',
     avatarFileId: user.avatarFileId || '',
+    jobTitle: user.jobTitle || user.job_title || '',
+    job_title: user.jobTitle || user.job_title || '',
     needPasswordChange: Boolean(user.needPasswordChange),
     lastLoginTime: user.lastLoginTime || user.updateTime || null
   };
+}
+
+async function validateJobTitle(jobTitle) {
+  if (!jobTitle) return true;
+  const result = await db.collection('system_configs').where({
+    group: 'JOB_TITLE',
+    label: jobTitle
+  }).limit(1).get();
+  return Boolean(result.data && result.data.some(item => item.isActive !== false));
 }
 
 async function getUserInfo(data, event) {
@@ -671,6 +686,7 @@ async function createAccount(data, event) {
   const nickname = String(data.nickname || '').trim();
   const email = String(data.email || '').trim().toLowerCase();
   const role = String(data.role || '').trim();
+  const jobTitle = String(data.jobTitle || '').trim();
   const allowedRoles = new Set([
     'ADMIN_SUPER',
     'ADMIN_COM',
@@ -684,6 +700,9 @@ async function createAccount(data, event) {
   }
   if (!nickname || nickname.length > 30 || !isSafeInput(nickname)) {
     return { code: 400, message: '请输入 1-30 位有效账户昵称' };
+  }
+  if (!(await validateJobTitle(jobTitle))) {
+    return { code: 400, message: '所选职位不存在或已停用，请刷新岗位配置后重试' };
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { code: 400, message: '邮箱格式不正确' };
@@ -723,6 +742,8 @@ async function createAccount(data, event) {
       roleName,
       employeeNo,
       nickname,
+      jobTitle,
+      job_title: jobTitle,
       avatarUrl: '',
       avatarFileId: '',
       lastLoginTime: '',
@@ -769,6 +790,7 @@ async function createAccount(data, event) {
       employeeNo,
       role,
       roleName,
+      jobTitle,
       status: 'active',
       defaultPassword
     }
@@ -837,7 +859,8 @@ async function listAccounts(data, event) {
       const employeeNo = String(item.employeeNo || '').toLowerCase();
       const email = String(item.email || '').toLowerCase();
       const roleName = String(item.roleName || getRoleName(item.role)).toLowerCase();
-      if (!username.includes(keyword) && !nickname.includes(keyword) && !employeeNo.includes(keyword) && !email.includes(keyword) && !roleName.includes(keyword)) {
+      const jobTitle = String(item.jobTitle || item.job_title || '').toLowerCase();
+      if (!username.includes(keyword) && !nickname.includes(keyword) && !employeeNo.includes(keyword) && !email.includes(keyword) && !roleName.includes(keyword) && !jobTitle.includes(keyword)) {
         return false;
       }
     }
@@ -895,6 +918,8 @@ async function listAccounts(data, event) {
       roleName: item.roleName || getRoleName(item.role),
       employeeNo: item.employeeNo || '',
       email: item.email || '',
+      jobTitle: item.jobTitle || item.job_title || '',
+      job_title: item.jobTitle || item.job_title || '',
       status: item.status || 'active',
       statusLabel: item.status === 'disabled' ? '已停用' : '正常',
       isRootAdmin: item.employeeNo === ROOT_SUPER_ADMIN_NO,
@@ -913,6 +938,98 @@ async function listAccounts(data, event) {
       disabledCount: allUsers.filter(u => u.status === 'disabled').length
     }
   };
+}
+
+/**
+ * 超级管理员更新指定账号的职位
+ */
+async function updateAccountJobTitle(data, event) {
+  const current = await getCurrentUserDoc(data, event);
+  if (current.error) return current.error;
+  if (current.user.role !== 'ADMIN_SUPER') {
+    return { code: 403, message: '仅超级系统管理员可以修改账号职位' };
+  }
+
+  const targetId = String(data.userId || data.id || '').trim();
+  const targetUsername = String(data.username || '').trim();
+  const jobTitle = String(data.jobTitle || '').trim();
+  if (!targetId && !targetUsername) {
+    return { code: 400, message: '缺少目标账号信息' };
+  }
+  if (!(await validateJobTitle(jobTitle))) {
+    return { code: 400, message: '所选职位不存在或已停用，请刷新岗位配置后重试' };
+  }
+
+  try {
+    let targetUser = null;
+    let docId = targetId;
+
+    if (targetId) {
+      try {
+        const targetRes = await db.collection('users').doc(targetId).get();
+        targetUser = targetRes.data;
+        if (targetUser) docId = targetUser._id || targetId;
+      } catch (e) {
+        // doc(targetId) 异常时通过 where 查询
+      }
+      if (!targetUser) {
+        const queryRes = await db.collection('users').where({ _id: targetId }).limit(1).get();
+        if (queryRes.data && queryRes.data.length > 0) {
+          targetUser = queryRes.data[0];
+          docId = targetUser._id;
+        }
+      }
+    }
+
+    if (!targetUser && targetUsername) {
+      const queryRes = await db.collection('users').where({ username: targetUsername }).limit(1).get();
+      if (queryRes.data && queryRes.data.length > 0) {
+        targetUser = queryRes.data[0];
+        docId = targetUser._id;
+      }
+    }
+
+    if (!targetUser) {
+      return { code: 404, message: '目标账号不存在' };
+    }
+
+    await db.collection('users').doc(docId).update({
+      data: {
+        jobTitle,
+        job_title: jobTitle,
+        updatedAt: Date.now(),
+        updateTime: db.serverDate()
+      }
+    });
+
+    // 记录操作日志
+    const now = Date.now();
+    await db.collection(OPERATION_LOG_COLLECTION).add({
+      data: {
+        uid: current.userId,
+        un: String(current.user.nickname || current.user.username || '').slice(0, 20),
+        username: current.user.username || '',
+        m: '账号管理',
+        a: 'update_job_title',
+        c: `修改账号 ${targetUser.username || docId} 的职位为「${jobTitle || '空'}」`,
+        s: '成功',
+        ip: getClientIp(event),
+        user_agent: getUserAgent(event),
+        ts: now,
+        create_time: new Date(now).toISOString(),
+        create_timestamp: now,
+        createdAt: new Date(now).toISOString()
+      }
+    }).catch(() => {});
+
+    return {
+      code: 0,
+      message: '职位修改成功',
+      data: { userId: docId, jobTitle }
+    };
+  } catch (error) {
+    return { code: 500, message: error.message || '修改职位失败' };
+  }
 }
 
 async function resetAccountPassword(data, event) {

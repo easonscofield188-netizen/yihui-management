@@ -21,7 +21,7 @@ const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
-const ALLOWED_GROUPS = new Set(['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE']);
+const ALLOWED_GROUPS = new Set(['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE', 'JOB_TITLE']);
 
 // --- 服务器内存缓存变量 ---
 // 注意：云函数实例在“温热”状态下会保留全局变量
@@ -644,6 +644,7 @@ async function collectConfigUsage(config) {
   const clientReferences = [];
   const projectReferences = [];
   const quotationReferences = [];
+  const userReferences = [];
 
   if (config.group === 'CLIENT_ROLE') {
     clients.forEach(client => {
@@ -679,6 +680,13 @@ async function collectConfigUsage(config) {
       ));
       if (used) quotationReferences.push(quotation);
     });
+  } else if (config.group === 'JOB_TITLE') {
+    const users = await fetchAllConfigDocuments(db.collection('users'));
+    users.forEach(user => {
+      if (String(user.jobTitle || user.job_title || '').trim() === config.label) {
+        userReferences.push(user);
+      }
+    });
   }
 
   const previews = [
@@ -688,12 +696,18 @@ async function collectConfigUsage(config) {
       type: 'quotation',
       id: quotation._id,
       name: `报价单：${quotation.projectName || quotation.title || '未命名报价'}${quotation.versionLabel ? `（${quotation.versionLabel}）` : ''}`
+    })),
+    ...userReferences.map(user => ({
+      type: 'user',
+      id: user._id,
+      name: `账号：${user.nickname || user.username || '未命名账号'}`
     }))
   ];
   return {
     clientReferences,
     projectReferences,
     quotationReferences,
+    userReferences,
     referenceCount: previews.length,
     previews
   };
@@ -724,6 +738,7 @@ async function getConfigUsage(params = {}) {
       clientReferenceCount: usage.clientReferences.length,
       projectReferenceCount: usage.projectReferences.length,
       quotationReferenceCount: usage.quotationReferences.length,
+      userReferenceCount: usage.userReferences.length,
       references: usage.previews
     }
   };
@@ -742,6 +757,7 @@ async function syncConfigLabel(config, nextLabel) {
   const usage = await collectConfigUsage(config);
   const clientUpdates = [];
   const projectUpdates = [];
+  const userUpdates = [];
 
   usage.clientReferences.forEach(client => {
     const data = { updateTime: db.serverDate() };
@@ -773,9 +789,22 @@ async function syncConfigLabel(config, nextLabel) {
     projectUpdates.push({ id: project._id, data });
   });
 
+  usage.userReferences.forEach(user => {
+    userUpdates.push({
+      id: user._id,
+      data: {
+        jobTitle: nextLabel,
+        job_title: nextLabel,
+        updatedAt: Date.now(),
+        updateTime: db.serverDate()
+      }
+    });
+  });
+
   await batchUpdateDocuments('clients', clientUpdates);
   await batchUpdateDocuments('projects', projectUpdates);
-  return usage.clientReferences.length + usage.projectReferences.length;
+  await batchUpdateDocuments('users', userUpdates);
+  return usage.clientReferences.length + usage.projectReferences.length + usage.userReferences.length;
 }
 
 async function updateConfig(params = {}, currentUser) {

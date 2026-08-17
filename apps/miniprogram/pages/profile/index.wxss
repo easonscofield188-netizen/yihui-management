@@ -123,9 +123,16 @@ page {
   white-space: nowrap;
 }
 
+.user-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+
 .role-badge {
   display: inline-flex;
-  margin-top: 8rpx;
   padding: 6rpx 16rpx;
   align-items: center;
   gap: 7rpx;
@@ -133,6 +140,20 @@ page {
   border-radius: 999rpx;
   background: #dee8ff;
   color: #002045;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 28rpx;
+}
+
+.job-badge {
+  display: inline-flex;
+  padding: 6rpx 16rpx;
+  align-items: center;
+  gap: 7rpx;
+  border: 2rpx solid #cbe4fa;
+  border-radius: 999rpx;
+  background: #eef7fe;
+  color: #0b5796;
   font-size: 22rpx;
   font-weight: 700;
   line-height: 28rpx;

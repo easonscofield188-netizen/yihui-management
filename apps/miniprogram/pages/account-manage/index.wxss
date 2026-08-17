@@ -1,7 +1,6 @@
 page {
   background: #f7f9fd;
 }
-
 .manage-page {
   min-height: 100vh;
   padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
@@ -14,7 +13,7 @@ page {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -392,27 +391,43 @@ page {
   font-size: 22rpx;
 }
 
-/* 底部操作按钮 */
+/* 底部快捷操作栏 */
 .card-actions {
-  padding: 18rpx 26rpx;
+  padding: 16rpx 20rpx;
   border-top: 2rpx solid #f2f6fc;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 18rpx;
+  gap: 12rpx;
   background: #fafcff;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card-actions::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .action-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  height: 60rpx;
-  padding: 0 22rpx;
-  border-radius: 14rpx;
-  font-size: 24rpx;
+  justify-content: center;
+  gap: 6rpx;
+  height: 56rpx;
+  padding: 0 16rpx;
+  border-radius: 12rpx;
+  font-size: 23rpx;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: opacity 0.15s ease;
+}
+
+.action-btn text {
+  white-space: nowrap;
 }
 
 .action-btn:active {
@@ -423,6 +438,12 @@ page {
   background: #eef4fe;
   border: 1rpx solid #d2e1fa;
   color: #1a365d;
+}
+
+.action-edit-job {
+  background: #eef7fe;
+  border: 1rpx solid #cbe4fa;
+  color: #0b5796;
 }
 
 .action-disable {
@@ -447,4 +468,9 @@ page {
   background: #fff1f0;
   border: 1rpx solid #ffa39e;
   color: #cf1322;
+}
+
+.picker-confirm {
+  color: #1a365d !important;
+  font-weight: 700;
 }

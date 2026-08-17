@@ -1,10 +1,13 @@
 {
   "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
   "enablePullDownRefresh": true,
   "backgroundColor": "#f7f9fd",
   "usingComponents": {
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-loading": "tdesign-miniprogram/loading/loading"
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-picker": "tdesign-miniprogram/picker/picker",
+    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item"
   }
 }
