@@ -310,6 +310,25 @@ page { background: #f9f9ff; }
 .empty { padding: 140rpx 0; color: #74777f; font-size: 26rpx; text-align: center; }
 .empty-title { margin-top: 20rpx; margin-bottom: 10rpx; color: #43474e; font-size: 30rpx; font-weight: 600; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 14rpx; padding: 26rpx; color: #989fa6; font-size: 24rpx; }
+
+.list-end-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  padding: 40rpx 32rpx 16rpx;
+  color: #b0b5bd;
+  font-size: 23rpx;
+}
+.list-end-line {
+  flex: 1;
+  height: 1rpx;
+  max-width: 120rpx;
+  background: linear-gradient(90deg, transparent, #d0d5dd, transparent);
+}
+.list-bottom-safe {
+  height: 280rpx;
+}
 .picker-confirm { color: #1a365d !important; font-weight: 700; }
 .floating-notification { position: fixed; z-index: 46; display: flex; box-sizing: border-box; width: 104rpx; height: 104rpx; align-items: center; justify-content: center; border: 4rpx solid rgba(255,255,255,.94); border-radius: 50%; background: linear-gradient(145deg, #356bb8, #002f65); box-shadow: 0 12rpx 30rpx rgba(0,32,69,.28); transition: box-shadow .16s ease, transform .16s ease; touch-action: none; }
 .floating-notification.has-unread { background: linear-gradient(145deg, #2d78c8, #073e78); box-shadow: 0 12rpx 34rpx rgba(0,54,112,.34), 0 0 0 8rpx rgba(80,139,213,.1); }

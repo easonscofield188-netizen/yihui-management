@@ -163,7 +163,12 @@
       <view class="empty-title">暂无匹配项目</view><view>可更换年份、类型或状态后重试</view>
     </view>
     <view class="loading" wx:if="{{loading && !queryLoading}}"><t-loading size="36rpx" theme="circular" /><text>正在加载项目...</text></view>
-    <view class="loading" wx:if="{{!loading && projects.length && !hasMore}}">没有更多项目了</view>
+    <view class="list-end-hint" wx:if="{{!loading && projects.length > 0}}">
+      <view class="list-end-line"></view>
+      <text>没有更多项目了</text>
+      <view class="list-end-line"></view>
+    </view>
+    <view class="list-bottom-safe"></view>
   </view>
 
   <view
