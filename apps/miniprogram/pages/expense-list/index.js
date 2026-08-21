@@ -93,6 +93,17 @@ Page({
   },
 
   onLoad() {
+    const userInfo = api.getCachedUserInfo() || {};
+    if (userInfo.role === 'VISITOR') {
+      wx.showModal({
+        title: '访问受限',
+        content: '访客账号无公司支出数据访问权限',
+        showCancel: false,
+        confirmText: '返回',
+        success: () => this.goBack()
+      });
+      return;
+    }
     this.checkAdminRole();
     this.loadCategories();
     this.loadList(true);

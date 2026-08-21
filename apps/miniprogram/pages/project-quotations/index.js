@@ -8,7 +8,8 @@ function getNavMetrics() {
   const contentHeight = menuButton && menuButton.height
     ? menuButton.height + Math.max(0, menuButton.top - statusBarHeight) * 2
     : 44;
-  return { statusBarHeight, navHeight: statusBarHeight + contentHeight };
+  const selectionToolbarHeight = Math.round((systemInfo.windowWidth || 375) * 88 / 750);
+  return { statusBarHeight, navHeight: statusBarHeight + contentHeight, selectionToolbarHeight };
 }
 
 function defaultYears() {

@@ -13,6 +13,9 @@ const REVIEW_COLLECTION = 'config_review_requests';
 const NOTIFICATION_COLLECTION = 'notifications';
 const CATEGORY_REVIEW_TEMPLATE_ID = 'osXcvIp2RwA4HpYNqVienL9R3gq-PNw5iDe0LQprkok';
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const REVIEW_ROLE = 'ADMIN_REVIEW';
+const VISITOR_ROLE = 'VISITOR';
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -25,6 +28,7 @@ const READ_ROLES = new Set([
   'PROJECT_MANAGER',
   'FINANCE_MANAGER',
   'VISITOR',
+  'ADMIN_REVIEW',
   'user'
 ]);
 const MANAGE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
@@ -77,6 +81,9 @@ async function authenticate(event, data) {
   }
   if (!READ_ROLES.has(user.role || 'user')) {
     return { error: { code: 403, message: '当前账号无项目报价访问权限' } };
+  }
+  if (user.role === REVIEW_ROLE && user.reviewEnabled === false) {
+    return { error: { code: 403, message: '当前账号无权访问该内容' } };
   }
   return { userId: session.userId, user };
 }
@@ -573,6 +580,7 @@ async function createQuotation(data, current) {
   const projectCode = buildProjectCode(createdDate);
   const createdTimestamp = Date.now();
   const record = {
+    dataScope: DATA_SCOPE.REAL,
     projectName,
     projectCode,
     quotationNo: projectCode,
@@ -663,6 +671,7 @@ async function createQuotationVersion(data, current) {
   const rootQuotationId = safeText(source.rootQuotationId || source.quotationGroupId || source._id, 80);
   const now = Date.now();
   const record = {
+    dataScope: DATA_SCOPE.REAL,
     projectId: safeText(source.projectId, 80),
     projectName: safeText(source.projectName, 120),
     projectCode: safeText(source.projectCode || source.quotationNo, 80),
@@ -1014,7 +1023,8 @@ async function getQuotationDetail(data, current) {
   if (!id) return { code: 400, message: '缺少报价单 ID' };
   let item;
   try {
-    item = (await db.collection(QUOTATION_COLLECTION).doc(id).get()).data;
+    const result = await db.collection(QUOTATION_COLLECTION).where({ _id: id, dataScope: current.dataScope }).limit(1).get();
+    item = (result.data || [])[0];
   } catch (error) {
     return { code: 404, message: '报价单不存在或已删除' };
   }
@@ -1025,13 +1035,13 @@ async function getQuotationDetail(data, current) {
   const projectName = safeText(item.projectName || item.title || item.name, 120);
   const projectNameKey = safeText(item.projectNameKey || projectName, 120).toLowerCase();
   const [rootResult, groupResult, nameKeyResult, nameResult] = await Promise.all([
-    db.collection(QUOTATION_COLLECTION).where({ rootQuotationId }).limit(100).get(),
-    db.collection(QUOTATION_COLLECTION).where({ quotationGroupId: rootQuotationId }).limit(100).get(),
+    db.collection(QUOTATION_COLLECTION).where({ rootQuotationId, dataScope: current.dataScope }).limit(100).get(),
+    db.collection(QUOTATION_COLLECTION).where({ quotationGroupId: rootQuotationId, dataScope: current.dataScope }).limit(100).get(),
     projectNameKey
-      ? db.collection(QUOTATION_COLLECTION).where({ projectNameKey }).limit(100).get()
+      ? db.collection(QUOTATION_COLLECTION).where({ projectNameKey, dataScope: current.dataScope }).limit(100).get()
       : Promise.resolve({ data: [] }),
     projectName
-      ? db.collection(QUOTATION_COLLECTION).where({ projectName }).limit(100).get()
+      ? db.collection(QUOTATION_COLLECTION).where({ projectName, dataScope: current.dataScope }).limit(100).get()
       : Promise.resolve({ data: [] })
   ]);
   const versionMap = new Map();
@@ -1182,7 +1192,7 @@ async function listQuotations(data, current) {
   await ensureQuotationCollection();
   const page = Math.max(1, Number(data.page) || 1);
   const pageSize = Math.min(30, Math.max(1, Number(data.pageSize) || 10));
-  const { filtered, years } = await getFilteredQuotationList(data);
+  const { filtered, years } = await getFilteredQuotationList(data, current.dataScope);
   const start = (page - 1) * pageSize;
   return {
     code: 0,
@@ -1199,10 +1209,10 @@ async function listQuotations(data, current) {
   };
 }
 
-async function getFilteredQuotationList(data = {}) {
+async function getFilteredQuotationList(data = {}, dataScope = DATA_SCOPE.REAL) {
   const keyword = safeText(data.keyword, 120).toLowerCase();
   const year = safeText(data.year, 4);
-  const result = await db.collection(QUOTATION_COLLECTION).limit(1000).get();
+  const result = await db.collection(QUOTATION_COLLECTION).where({ dataScope }).limit(1000).get();
   const formattedItems = (result.data || [])
     .filter(item => item.status !== QUOTATION_STATUS.DELETED)
     .map(formatQuotation)
@@ -1347,6 +1357,11 @@ exports.main = async event => {
     if (action === 'publicDetail') return await getPublicQuotationDetail(data);
     const current = await authenticate(event, data);
     if (current.error) return current.error;
+    const isDemoUser = [REVIEW_ROLE, VISITOR_ROLE].includes(current.user.role);
+    current.dataScope = isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL;
+    if (isDemoUser && !['list', 'detail'].includes(action)) {
+      return { code: 403, message: '当前账号仅可查看演示数据' };
+    }
     if (action === 'list') return await listQuotations(data, current);
     if (action === 'listIds') return await listQuotationIds(data, current);
     if (action === 'deleteBatch') return await deleteQuotations(data, current);

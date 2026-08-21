@@ -64,9 +64,7 @@ page { background: #f9f9ff; }
 }
 
 .selection-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  /* 位于 top-nav-bar 内，随顶部项目标签作为一个整体吸顶。 */
   display: flex;
   height: 100rpx;
   padding: 0 32rpx;

@@ -123,6 +123,10 @@ async function authenticate(event, data) {
   if (!READ_ROLES.has(user.role || 'user')) {
     return { error: { code: 403, message: '当前账号无支出数据访问权限' } };
   }
+  // 访客不得访问公司支出；该接口尚未提供独立的 DEMO 财务数据集。
+  if (user.role === 'VISITOR') {
+    return { error: { code: 403, message: '访客账号无公司支出数据访问权限' } };
+  }
   return { userId: session.userId, user };
 }
 

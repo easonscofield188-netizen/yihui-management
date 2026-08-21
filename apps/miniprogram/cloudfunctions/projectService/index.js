@@ -15,6 +15,8 @@ cloud.init({
 const db = cloud.database();
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const ADMIN_COM_ROLE = 'ADMIN_COM';
+const ROLE = Object.freeze({ ADMIN_REVIEW: 'ADMIN_REVIEW', VISITOR: 'VISITOR' });
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
 const SESSION_COLLECTION = 'auth_sessions';
 const PROJECT_CHANGE_EVENT_COLLECTION = 'project_change_events';
 const NOTIFICATION_COLLECTION = 'notifications';
@@ -33,9 +35,30 @@ async function getWechatSubscribeTemplateId() {
 }
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
-const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
+const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'ADMIN_REVIEW', 'user']);
 const WRITE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER']);
 const ADMIN_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
+const REVIEW_FORBIDDEN_ACTIONS = new Set([
+  'create', 'createProject', 'update', 'quickRecord', 'addServiceRecord',
+  'updateServiceRecord', 'deleteServiceRecord', 'delete', 'deleteBatch',
+  'syncFinancials', 'syncHistoryFinancials'
+]);
+
+function buildAccessContext(user) {
+  const isReview = user && user.role === ROLE.ADMIN_REVIEW;
+  const isDemoUser = user && [ROLE.ADMIN_REVIEW, ROLE.VISITOR].includes(user.role);
+  if (isReview && user.reviewEnabled === false) {
+    return { error: { code: 403, message: '当前账号无权访问该内容' } };
+  }
+  return {
+    userId: user && (user.id || user._id),
+    role: user && user.role,
+    isReview,
+    isDemoUser,
+    dataScope: isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL,
+    permissions: { view: true, create: !isDemoUser, update: !isDemoUser, delete: !isDemoUser, export: !isDemoUser, downloadSensitiveFile: !isDemoUser }
+  };
+}
 const PROJECT_STATUS = Object.freeze({
   COMPLETED: 'completed',
   CLOSED: 'closed',
@@ -644,6 +667,7 @@ async function addServiceRecord(params, currentUser) {
 
   const recordDoc = {
     projectId,
+    dataScope: DATA_SCOPE.REAL,
     serviceDate: String(serviceDate).slice(0, 10),
     scene: params.scene || '',
     content: String(content).trim(),
@@ -674,7 +698,7 @@ async function addServiceRecord(params, currentUser) {
   };
 }
 
-async function listServiceRecords(params) {
+async function listServiceRecords(params, access) {
   const { projectId, page = 1, pageSize = 20 } = params || {};
   if (!projectId) return { code: 400, message: '缺少项目 ID' };
   
@@ -682,11 +706,15 @@ async function listServiceRecords(params) {
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   const skip = (currentPage - 1) * currentPageSize;
   
-  let countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where({ projectId }).count();
+  const scopedProject = await db.collection('projects').where({ _id: projectId, dataScope: access.dataScope }).limit(1).get();
+  if (!scopedProject.data || !scopedProject.data.length) return { code: 404, message: '项目不存在或无权访问' };
+
+  const recordWhere = { projectId, dataScope: access.dataScope };
+  let countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where(recordWhere).count();
   let total = countRes.total || 0;
 
   // 自动自愈补齐：若长期合作项目的履约记录为空，自动根据项目首次创建数据生成首笔服务履约记录
-  if (total === 0) {
+  if (total === 0 && !access.isReview) {
     try {
       const projDoc = await db.collection('projects').doc(projectId).get();
       const proj = projDoc.data;
@@ -708,6 +736,7 @@ async function listServiceRecords(params) {
         const initialDate = String(proj.startDate || proj.completedTime || proj.createTime || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
         const firstRecord = {
           projectId,
+          dataScope: access.dataScope,
           serviceDate: initialDate,
           scene: projScene,
           content: sceneLabel,
@@ -724,7 +753,7 @@ async function listServiceRecords(params) {
         };
         await db.collection(SERVICE_RECORDS_COLLECTION).add({ data: firstRecord });
         await recalculateLongTermProjectFinancials(projectId);
-        countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where({ projectId }).count();
+        countRes = await db.collection(SERVICE_RECORDS_COLLECTION).where(recordWhere).count();
         total = countRes.total || 1;
       }
     } catch (err) {
@@ -733,7 +762,7 @@ async function listServiceRecords(params) {
   }
   
   const listRes = await db.collection(SERVICE_RECORDS_COLLECTION)
-    .where({ projectId })
+    .where(recordWhere)
     .orderBy('serviceDate', 'desc')
     .orderBy('createdTimestamp', 'desc')
     .skip(skip)
@@ -862,6 +891,9 @@ exports.main = async (event, context) => {
     if (!READ_ROLES.has(auth.user.role || 'user')) {
       return { code: 403, message: '当前账号无项目访问权限' };
     }
+    const access = buildAccessContext(auth.user);
+    if (access.error) return access.error;
+    if (access.isReview && REVIEW_FORBIDDEN_ACTIONS.has(action)) return forbidden();
     switch (action) {
       case 'getServerDate':
         return { code: 0, message: '查询成功', data: { date: getServerDateOnly() } };
@@ -874,17 +906,17 @@ exports.main = async (event, context) => {
           requestSource: event.body ? CREATION_CHANNEL.ADMIN_WEB : CREATION_CHANNEL.MINIPROGRAM
         });
       case 'list':
-        return await listProjects(data);
+        return await listProjects(data, access);
       case 'listIds':
         if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
-        return await listProjectIds(data);
+        return await listProjectIds(data, access);
       case 'financialList':
-        return await listFinancialProjects(data);
+        return await listFinancialProjects(data, access);
       case 'overview':
       case 'getOverview':
-        return await getOverview(data);
+        return await getOverview(data, access);
       case 'get':
-        return await getProject(data);
+        return await getProject(data, access);
       case 'update':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await updateProject({
@@ -896,7 +928,7 @@ exports.main = async (event, context) => {
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await quickRecord(data, auth.user);
       case 'listServiceRecords':
-        return await listServiceRecords(data);
+        return await listServiceRecords(data, access);
       case 'addServiceRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
         return await addServiceRecord(data, auth.user);
@@ -1840,6 +1872,7 @@ async function createProject(params) {
     
     const data = {
       ...params,
+      dataScope: DATA_SCOPE.REAL,
       creationChannel,
       creationChannelLabel: getCreationChannelLabel(creationChannel),
       isHasContract: normalizeYesNo(isHasContract),
@@ -1890,6 +1923,7 @@ async function createProject(params) {
       const recordCostAmount = costsData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       const firstRecord = {
         projectId: res._id,
+        dataScope: DATA_SCOPE.REAL,
         serviceDate: String(startDate).slice(0, 10),
         scene: params.scene || 'daily_maintenance',
         content: params.sceneLabel || (params.scene === 'daily_maintenance' ? '日常维护' : params.scene) || '日常维护',
@@ -1975,13 +2009,14 @@ async function createProject(params) {
   }
 }
 
-async function getProject(params) {
+async function getProject(params, access) {
   const { id } = params || {};
   if (!id) return { code: 400, message: '缺少项目 ID' };
   try {
-    const result = await db.collection('projects').doc(id).get();
-    if (!result.data) return { code: 404, message: '项目不存在' };
-    return { code: 0, message: '查询成功', data: enrichProjectFinancials(result.data) };
+    const result = await db.collection('projects').where({ _id: id, dataScope: access.dataScope }).limit(1).get();
+    const project = (result.data || [])[0];
+    if (!project) return { code: 404, message: '项目不存在或无权访问' };
+    return { code: 0, message: '查询成功', data: enrichProjectFinancials(project) };
   } catch (err) {
     console.error('查询项目详情失败:', err);
     return { code: 500, message: '查询失败', error: err.message };
@@ -2105,7 +2140,7 @@ async function quickRecord(params, currentUser) {
   }
 }
 
-async function listProjects(params) {
+async function listProjects(params, access) {
   const {
     page,
     pageSize,
@@ -2138,9 +2173,10 @@ async function listProjects(params) {
   const currentPage = Math.max(1, Number(page) || 1);
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   try {
-    let query = db.collection("projects");
     const _ = db.command;
-    const conditions = [];
+    // CloudBase 多次链式 where 会覆盖前一次条件，必须合并为一个 AND，
+    // 否则切换“常规/长期”标签时会丢失 dataScope 过滤并泄露真实项目。
+    const conditions = [{ dataScope: access.dataScope }];
 
     if (normalizedProjectType === "long_term") {
       conditions.push({ type: "long_term" });
@@ -2193,9 +2229,7 @@ async function listProjects(params) {
       ]));
     }
 
-    conditions.forEach(cond => {
-      query = query.where(cond);
-    });
+    const query = db.collection("projects").where(_.and(conditions));
 
     const countResult = usePagination ? await query.count() : null;
     let orderedQuery = query.orderBy("createTime", "desc");
@@ -2223,13 +2257,13 @@ async function listProjects(params) {
   }
 }
 
-async function listProjectIds(params = {}) {
+async function listProjectIds(params = {}, access) {
   try {
     const ids = [];
     let page = 1;
     let hasMore = true;
     while (hasMore) {
-      const result = await listProjects({ ...params, page, pageSize: 50 });
+      const result = await listProjects({ ...params, page, pageSize: 50 }, access);
       if (!result || result.code !== 0) return result;
       const data = result.data || {};
       ids.push(...(data.list || []).map(item => item._id).filter(Boolean));
@@ -2247,7 +2281,7 @@ async function listProjectIds(params = {}) {
   }
 }
 
-async function listFinancialProjects(params = {}) {
+async function listFinancialProjects(params = {}, access) {
   const {
     type = '',
     rangeType = 'all',
@@ -2288,7 +2322,7 @@ async function listFinancialProjects(params = {}) {
     }
 
     const projectType = String(params.projectType || params.type || '').trim();
-    let allProjects = await fetchAllProjectsForOverview();
+    let allProjects = await fetchAllProjectsForOverview(access.dataScope);
     if (projectType === 'normal' || projectType === 'long_term') {
       allProjects = allProjects.filter(p => (p.type || 'normal') === projectType);
     }
@@ -2543,9 +2577,9 @@ function getOverviewStatusMeta(status) {
   return { label: labels[status] || '进行中', tone: 'doing' };
 }
 
-async function fetchAllProjectsForOverview() {
+async function fetchAllProjectsForOverview(dataScope = DATA_SCOPE.REAL) {
   const MAX_LIMIT = 100;
-  const collection = db.collection('projects');
+  const collection = db.collection('projects').where({ dataScope });
   const countResult = await collection.count();
   const total = countResult.total || 0;
   if (!total) return [];
@@ -2561,7 +2595,7 @@ async function fetchAllProjectsForOverview() {
   return results.reduce((list, result) => list.concat(result.data || []), []);
 }
 
-async function getOverview(params = {}) {
+async function getOverview(params = {}, access) {
   const rangeType = String(params.rangeType || 'all').trim();
   const startDate = params.startDate ? String(params.startDate).slice(0, 10) : '';
   const endDate = params.endDate ? String(params.endDate).slice(0, 10) : '';
@@ -2582,7 +2616,7 @@ async function getOverview(params = {}) {
       : getOverviewRangeBounds(rangeType, startDate, endDate);
     if (rangeType !== 'all' && !bounds) return { code: 400, message: '时间范围无效' };
 
-    const allProjects = await fetchAllProjectsForOverview();
+    const allProjects = await fetchAllProjectsForOverview(access.dataScope);
     const currentProjects = rangeType === 'all'
       ? allProjects.slice()
       : filterOverviewProjects(allProjects, bounds);
@@ -2629,13 +2663,13 @@ async function getOverview(params = {}) {
       const expEndDate = rangeType === 'all' ? '' : (endDate || bounds.end.toISOString().slice(0, 10));
       const today = getBeijingToday();
       const actualEndDate = expEndDate && expEndDate < today ? expEndDate : today;
-      let expQuery = { expenseDate: db.command.lte(actualEndDate) };
+      let expQuery = { dataScope: access.dataScope, expenseDate: db.command.lte(actualEndDate) };
       if (expStartDate && expStartDate <= actualEndDate) {
-        expQuery = { expenseDate: db.command.gte(expStartDate).and(db.command.lte(actualEndDate)) };
+        expQuery = { dataScope: access.dataScope, expenseDate: db.command.gte(expStartDate).and(db.command.lte(actualEndDate)) };
       } else if (expStartDate && expStartDate > actualEndDate) {
-        expQuery = { expenseDate: db.command.lt('0000-01-01') };
+        expQuery = { dataScope: access.dataScope, expenseDate: db.command.lt('0000-01-01') };
       } else if (expStartDate) {
-        expQuery = { expenseDate: db.command.gte(expStartDate) };
+        expQuery = { dataScope: access.dataScope, expenseDate: db.command.gte(expStartDate) };
       }
       operatingExpense = await sumOperatingExpenses(expQuery);
     } catch (e) {

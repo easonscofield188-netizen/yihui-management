@@ -11,9 +11,12 @@ const PROJECT_COLLECTION = 'projects';
 const CLIENT_EVENT_COLLECTION = 'operation_logs';
 const SESSION_COLLECTION = 'auth_sessions';
 const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
+const REVIEW_ROLE = 'ADMIN_REVIEW';
+const VISITOR_ROLE = 'VISITOR';
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
-const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
+const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'ADMIN_REVIEW', 'user']);
 const CREATE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
 const PAGE_FETCH_LIMIT = 1000;
 
@@ -63,6 +66,9 @@ async function authenticate(event, data) {
   if (!userResult.data) return { error: { code: 401, message: '用户不存在或已停用' } };
   if (userResult.data.status && userResult.data.status !== 'active') {
     return { error: { code: 403, message: '账号已停用' } };
+  }
+  if (userResult.data.role === REVIEW_ROLE && userResult.data.reviewEnabled === false) {
+    return { error: { code: 403, message: '当前账号无权访问该内容' } };
   }
   return { user: { ...userResult.data, id: session.userId } };
 }
@@ -137,7 +143,7 @@ function impactToken(client, projects) {
 }
 
 async function findActiveDuplicate(normalizedName, excludedId = '') {
-  const allClients = await fetchAll(db.collection(CLIENT_COLLECTION));
+  const allClients = await fetchAll(db.collection(CLIENT_COLLECTION).where({ dataScope: DATA_SCOPE.REAL }));
   return allClients.find(client => (
     client._id !== excludedId
     && isActiveClient(client)
@@ -177,6 +183,7 @@ async function createClient(data, currentUser) {
       paymentCycle: validated.paymentCycle,
       description: validated.description,
       status: 'active',
+      dataScope: DATA_SCOPE.REAL,
       version: 1,
       createdBy: currentUser.id,
       createdByName: currentUser.nickname || currentUser.username || '',
@@ -189,9 +196,9 @@ async function createClient(data, currentUser) {
   return { code: 0, message: '创建成功', data: { id: result._id, ...validated, existed: false, version: 1 } };
 }
 
-async function listForSelection(data = {}) {
+async function listForSelection(data = {}, dataScope = DATA_SCOPE.REAL) {
   const keyword = safeText(data.keyword, 50).toLowerCase();
-  const clients = await fetchAll(db.collection(CLIENT_COLLECTION));
+  const clients = await fetchAll(db.collection(CLIENT_COLLECTION).where({ dataScope }));
   const list = clients
     .filter(isActiveClient)
     .filter(client => !keyword || safeText(client.name, 120).toLowerCase().includes(keyword))
@@ -414,10 +421,13 @@ exports.main = async (event) => {
     const auth = await authenticate(event || {}, data || {});
     if (auth.error) return auth.error;
     if (!READ_ROLES.has(auth.user.role || 'user')) return forbidden();
+    const isDemoUser = [REVIEW_ROLE, VISITOR_ROLE].includes(auth.user.role);
+    const dataScope = isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL;
+    if (isDemoUser && !['listForSelection', 'query'].includes(action)) return forbidden();
     switch (action) {
       case 'listForSelection':
       case 'query':
-        return await listForSelection(data);
+        return await listForSelection(data, dataScope);
       case 'createClient':
         if (!CREATE_ROLES.has(auth.user.role)) return forbidden();
         return await createClient(data, auth.user);

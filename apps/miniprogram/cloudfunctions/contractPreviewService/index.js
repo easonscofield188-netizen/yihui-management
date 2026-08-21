@@ -4,6 +4,7 @@
  */
 'use strict';
 
+const crypto = require('crypto');
 const cloud = require("wx-server-sdk");
 
 cloud.init({
@@ -11,6 +12,37 @@ cloud.init({
 });
 
 const db = cloud.database();
+const SESSION_COLLECTION = 'auth_sessions';
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
+const REVIEW_ROLE = 'ADMIN_REVIEW';
+const VISITOR_ROLE = 'VISITOR';
+const REVIEW_WRITE_ACTIONS = new Set(['upload', 'delete', 'deleteAllByProject', 'updateBatch', 'renameProjectFiles']);
+
+function getAuthToken(event, data) {
+  const headers = event.headers || {};
+  const authorization = headers.authorization || headers.Authorization || '';
+  return String((data && data.authToken) || event.authToken || authorization.replace(/^Bearer\s+/i, '') || '').trim();
+}
+
+async function authenticate(event, data) {
+  const token = getAuthToken(event, data);
+  if (!token) return { error: { code: 401, message: '请先登录' } };
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const sessionRes = await db.collection(SESSION_COLLECTION).where({ tokenHash }).limit(1).get();
+  const session = (sessionRes.data || [])[0];
+  if (!session || Number(session.expiresAt || 0) <= Date.now()) return { error: { code: 401, message: '登录状态已失效，请重新登录' } };
+  const userRes = await db.collection('users').doc(session.userId).get();
+  const user = userRes.data;
+  if (!user || (user.status && user.status !== 'active')) return { error: { code: 403, message: '账号不可用' } };
+  if (user.role === REVIEW_ROLE && user.reviewEnabled === false) return { error: { code: 403, message: '当前账号无权访问该内容' } };
+  const isDemoUser = [REVIEW_ROLE, VISITOR_ROLE].includes(user.role);
+  return { user: { ...user, id: session.userId }, isDemoUser, dataScope: isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL };
+}
+
+async function assertProjectScope(projectId, dataScope) {
+  const projectRes = await db.collection('projects').where({ _id: projectId, dataScope }).limit(1).get();
+  return Boolean(projectRes.data && projectRes.data.length);
+}
 
 /**
  * 解析multipart/form-data请求
@@ -117,13 +149,18 @@ exports.main = async (event, context) => {
   }
 
   try {
+    const auth = await authenticate(event, data || {});
+    if (auth.error) return auth.error;
+    if (auth.isDemoUser && REVIEW_WRITE_ACTIONS.has(action)) {
+      return { code: 403, message: '当前账号仅可查看演示数据' };
+    }
     switch (action) {
       case 'upload':
-        return await handleUpload(event);
+        return await handleUpload(event, auth.dataScope);
       case 'delete':
         return await handleDelete(data);
       case 'list':
-        return await handleList(data);
+        return await handleList(data, auth.dataScope);
       case 'deleteAllByProject':
         return await handleDeleteAllByProject(data);
       case 'updateBatch':
@@ -170,7 +207,7 @@ async function handleUpdateBatch(params) {
 /**
  * 处理上传
  */
-async function handleUpload(event) {
+async function handleUpload(event, dataScope = DATA_SCOPE.REAL) {
   try {
     const formData = await parseMultipartForm(event);
     const { type, projectId, projectName } = formData.fields;
@@ -178,6 +215,9 @@ async function handleUpload(event) {
 
     if (!file || !type || !projectId || !projectName) {
       return { code: 400, message: '缺少必要参数' };
+    }
+    if (!await assertProjectScope(projectId, dataScope)) {
+      return { code: 404, message: '项目不存在或无权访问' };
     }
 
     // 校验
@@ -191,7 +231,7 @@ async function handleUpload(event) {
         return { code: 400, message: '预览图仅支持图片格式' };
       }
       // 检查数量限制 (前端也会校验，后端双重保险)
-      const countRes = await db.collection('project_previews').where({ projectId }).count();
+      const countRes = await db.collection('project_previews').where({ projectId, dataScope }).count();
       if (countRes.total >= 4) {
         return { code: 400, message: '最多可上传4张预览图' };
       }
@@ -231,6 +271,7 @@ async function handleUpload(event) {
     // 记录数据库
     const dbData = {
       projectId,
+      dataScope,
       url: fileUrl,
       fileId: uploadRes.fileID,
       createdAt: db.serverDate()
@@ -380,7 +421,7 @@ async function handleDelete(params) {
 /**
  * 查询列表
  */
-async function handleList(params) {
+async function handleList(params, dataScope = DATA_SCOPE.REAL) {
   const { projectId, type } = params;
   if (!projectId || !type) {
     return { code: 400, message: '缺少参数' };
@@ -389,8 +430,9 @@ async function handleList(params) {
   const collectionName = type === 'contract' ? 'project_contracts' : 'project_previews';
 
   try {
+    if (!await assertProjectScope(projectId, dataScope)) return { code: 404, message: '项目不存在或无权访问' };
     const res = await db.collection(collectionName)
-      .where({ projectId })
+      .where({ projectId, dataScope })
       .orderBy('createdAt', 'desc')
       .get();
     return { code: 0, message: '查询成功', data: res.data };

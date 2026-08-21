@@ -26,6 +26,30 @@ const nodemailer = require('nodemailer');
 
 const ROOT_SUPER_ADMIN_NO = 'YH-ADMIN_SUPER-000';
 const PROD_ENV_ID = 'yihui-management-d0ecax6657aaed0';
+const ROLE = Object.freeze({
+  ADMIN_SUPER: 'ADMIN_SUPER',
+  ADMIN_COM: 'ADMIN_COM',
+  ADMIN_REVIEW: 'ADMIN_REVIEW',
+  VISITOR: 'VISITOR'
+});
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
+
+function buildReviewAccess(user) {
+  const isDemoUser = user && [ROLE.ADMIN_REVIEW, ROLE.VISITOR].includes(user.role);
+  return {
+    isReview: user && user.role === ROLE.ADMIN_REVIEW,
+    isDemoUser,
+    dataScope: isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL,
+    permissions: {
+      view: true,
+      create: !isDemoUser,
+      update: !isDemoUser,
+      delete: !isDemoUser,
+      export: !isDemoUser,
+      downloadSensitiveFile: !isDemoUser
+    }
+  };
+}
 
 function isRootSuperAdmin(user) {
   if (!user) return false;
@@ -91,6 +115,8 @@ exports.main = async (event, context) => {
           return await bindEmailWithCode(data, event);
         case 'updateAccountJobTitle':
           return await updateAccountJobTitle(data, event);
+        case 'migrateDataScope':
+          return await migrateDataScope(data, event);
         case 'logout':
           return await logout(data, event);
         default:
@@ -135,6 +161,9 @@ exports.main = async (event, context) => {
       : null;
 
     if (user) {
+      if (user.role === ROLE.ADMIN_REVIEW && user.reviewEnabled === false) {
+        return { code: 403, message: '当前账号暂不可用' };
+      }
       const loginTime = new Date().toISOString();
       const clientIp = getClientIp(event);
       const ipResult = buildLoginIpStats(user.login_ip_stats, clientIp, loginTime);
@@ -185,7 +214,8 @@ exports.main = async (event, context) => {
             jobTitle: user.jobTitle || user.job_title || '',
             job_title: user.jobTitle || user.job_title || '',
             needPasswordChange: Boolean(user.needPasswordChange),
-            lastLoginTime: loginTime
+            lastLoginTime: loginTime,
+            permissions: buildReviewAccess(user).permissions
           }
         }
       };
@@ -290,6 +320,7 @@ function getRoleName(role) {
   const roleMap = {
     ADMIN_SUPER: '超级系统管理员',
     ADMIN_COM: '系统管理员',
+    ADMIN_REVIEW: '审核账号',
     ADMIN: '系统管理员',
     PROJECT_MANAGER: '项目经理',
     FINANCE_MANAGER: '项目主管',
@@ -413,6 +444,9 @@ async function getCurrentUserDoc(data, event) {
   if (res.data.status && res.data.status !== 'active') {
     return { error: { code: 403, message: res.data.sessionRevokeMessage || '该账号已被超级系统管理员停用，所有权限已回收' } };
   }
+  if (res.data.role === ROLE.ADMIN_REVIEW && res.data.reviewEnabled === false) {
+    return { error: { code: 403, message: '当前账号暂不可用' } };
+  }
 
   await touchSession(session);
   return { userId: session.userId, user: res.data };
@@ -431,9 +465,58 @@ function formatUser(user, userId) {
     avatarFileId: user.avatarFileId || '',
     jobTitle: user.jobTitle || user.job_title || '',
     job_title: user.jobTitle || user.job_title || '',
+    permissions: buildReviewAccess(user).permissions,
     needPasswordChange: Boolean(user.needPasswordChange),
     lastLoginTime: user.lastLoginTime || user.updateTime || null
   };
+}
+
+// 仅供根超级管理员在云端执行一次：给历史记录补 REAL 数据域。
+// 只处理 dataScope 缺失的记录，绝不覆盖已明确标记为 DEMO 的演示数据。
+async function migrateDataScope(data, event) {
+  const current = await getCurrentUserDoc(data, event);
+  if (current.error) return current.error;
+  if (!isRootSuperAdmin(current.user)) {
+    return { code: 403, message: '仅系统主管理员可以执行数据域迁移' };
+  }
+
+  const collections = [
+    'projects', 'clients', 'project_cases', 'project_quotations', 'project_service_records',
+    'project_vouchers', 'project_contracts', 'project_previews',
+    'company_expenses', 'company_expense_rules', 'notifications',
+    'project_change_events', 'operation_logs'
+  ];
+  const name = String(data.collection || collections[0]);
+  if (!collections.includes(name)) return { code: 400, message: '不支持迁移该集合' };
+  // 小程序云函数默认超时较短：每次仅处理一批，调用端据 hasMore 继续。
+  const batchSize = Math.min(10, Math.max(1, Number(data.batchSize) || 5));
+  try {
+    const result = await db.collection(name)
+      .where({ dataScope: db.command.exists(false) })
+      .limit(batchSize)
+      .get();
+    const records = result.data || [];
+    await Promise.all(records.map(record => db.collection(name).doc(record._id).update({
+      data: { dataScope: DATA_SCOPE.REAL, dataScopeMigratedAt: db.serverDate() }
+    })));
+    const remainingResult = await db.collection(name)
+      .where({ dataScope: db.command.exists(false) })
+      .limit(1)
+      .get();
+    return {
+      code: 0,
+      message: '数据域迁移批次完成',
+      data: {
+        collection: name,
+        migrated: records.length,
+        hasMore: Boolean(remainingResult.data && remainingResult.data.length),
+        collections
+      }
+    };
+  } catch (error) {
+    // 可选集合不存在时反馈跳过，调用端可以继续下一集合。
+    return { code: 0, message: '集合已跳过', data: { collection: name, migrated: 0, hasMore: false, skipped: true, reason: error.message || '迁移失败', collections } };
+  }
 }
 
 async function validateJobTitle(jobTitle) {
@@ -690,6 +773,7 @@ async function createAccount(data, event) {
   const allowedRoles = new Set([
     'ADMIN_SUPER',
     'ADMIN_COM',
+    'ADMIN_REVIEW',
     'PROJECT_MANAGER',
     'FINANCE_MANAGER',
     'VISITOR'
@@ -740,6 +824,8 @@ async function createAccount(data, event) {
       status: 'active',
       role,
       roleName,
+      ...(role === ROLE.ADMIN_REVIEW ? { reviewEnabled: true } : {}),
+      dataScope: [ROLE.ADMIN_REVIEW, ROLE.VISITOR].includes(role) ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL,
       employeeNo,
       nickname,
       jobTitle,
@@ -807,6 +893,7 @@ async function getNextEmployeeNo(data, event) {
   const allowedRoles = new Set([
     'ADMIN_SUPER',
     'ADMIN_COM',
+    'ADMIN_REVIEW',
     'PROJECT_MANAGER',
     'FINANCE_MANAGER',
     'VISITOR'

@@ -7,6 +7,9 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const CASE_COLLECTION = 'project_cases';
+const DATA_SCOPE = Object.freeze({ REAL: 'REAL', DEMO: 'DEMO' });
+const REVIEW_ROLE = 'ADMIN_REVIEW';
+const VISITOR_ROLE = 'VISITOR';
 const SESSION_COLLECTION = 'auth_sessions';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -21,6 +24,7 @@ const READ_ROLES = new Set([
   'PROJECT_MANAGER',
   'FINANCE_MANAGER',
   'VISITOR',
+  'ADMIN_REVIEW',
   'user'
 ]);
 const MANAGE_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN']);
@@ -72,7 +76,11 @@ async function authenticate(event, data) {
   if (!READ_ROLES.has(user.role || 'user')) {
     return { error: { code: 403, message: '当前账号无项目案例访问权限' } };
   }
-  return { userId: session.userId, user };
+  if (user.role === REVIEW_ROLE && user.reviewEnabled === false) {
+    return { error: { code: 403, message: '当前账号无权访问该内容' } };
+  }
+  const isDemoUser = [REVIEW_ROLE, VISITOR_ROLE].includes(user.role);
+  return { userId: session.userId, user, isDemoUser, dataScope: isDemoUser ? DATA_SCOPE.DEMO : DATA_SCOPE.REAL };
 }
 
 async function ensureCaseCollection() {
@@ -218,13 +226,14 @@ function buildCaseCode(caseDate) {
   return `YH-${datePart}-${randomPart}`;
 }
 
-async function getCaseDetail(data, current = null) {
+async function getCaseDetail(data, current) {
   await ensureCaseCollection();
   const id = safeText(data.id, 80);
   if (!id) return { code: 400, message: '缺少案例 ID' };
   let item;
   try {
-    item = (await db.collection(CASE_COLLECTION).doc(id).get()).data;
+    const result = await db.collection(CASE_COLLECTION).where({ _id: id, dataScope: current.dataScope }).limit(1).get();
+    item = (result.data || [])[0];
   } catch (error) {
     item = null;
   }
@@ -346,6 +355,7 @@ async function createCase(data, current) {
   const now = Date.now();
   const caseCode = buildCaseCode(caseDate);
   const record = {
+    dataScope: DATA_SCOPE.REAL,
     caseCode,
     projectId,
     projectCode: safeText(data.projectCode, 80),
@@ -489,7 +499,10 @@ async function listCases(data, current) {
   }
   const page = Math.max(1, Number(data.page) || 1);
   const pageSize = Math.min(30, Math.max(1, Number(data.pageSize) || 10));
-  const result = await db.collection(CASE_COLLECTION).limit(1000).get();
+  const result = await db.collection(CASE_COLLECTION)
+    .where({ dataScope: current.dataScope, status: CASE_STATUS.PUBLISHED })
+    .limit(1000)
+    .get();
   const published = (result.data || [])
     .filter(item => item.status === CASE_STATUS.PUBLISHED)
     .map(item => applySceneTranslation(formatCase(item), categories))
@@ -522,17 +535,11 @@ exports.main = async (event) => {
   const action = body.action;
   const data = body.data || {};
   try {
-    if (action === 'detail') {
-      let current = null;
-      if (getAuthToken(event, data)) {
-        const authResult = await authenticate(event, data);
-        if (!authResult.error) current = authResult;
-      }
-      return await getCaseDetail(data, current);
-    }
     const current = await authenticate(event, data);
     if (current.error) return current.error;
     switch (action) {
+      case 'detail':
+        return await getCaseDetail(data, current);
       case 'list':
         return await listCases(data, current);
       case 'syncProject':

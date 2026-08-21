@@ -97,7 +97,6 @@ function clearSession() {
 }
 
 let isRedirectingToLogin = false;
-
 function redirectToLogin(reasonMessage) {
   clearSession();
   const pages = getCurrentPages();
@@ -173,7 +172,8 @@ function callFunction(name, action, data = {}, options = {}) {
 
   return wx.cloud.callFunction({ name, data: payload }).then(({ result }) => {
     const response = result || { code: 500, message: "服务暂无响应" };
-    if ((response.code === 401 || response.code === 403) && !options.skipAuthRedirect) {
+    // 401 才代表会话失效；403 是权限不足，必须保留当前登录态。
+    if (response.code === 401 && !options.skipAuthRedirect) {
       redirectToLogin(response.message);
     }
     if (response.code !== 0) {

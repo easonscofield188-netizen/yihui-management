@@ -1,17 +1,19 @@
 <view class="quotation-page">
-  <view class="quotation-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
-    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
-    <view class="nav-title">报价单列表</view>
+  <view class="quotation-nav" style="padding-top: {{statusBarHeight}}px;">
+    <view class="nav-header">
+      <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="50rpx" color="#002045" /></view>
+      <view class="nav-title">报价单列表</view>
+    </view>
+    <view class="selection-toolbar" wx:if="{{selectionMode}}">
+      <view class="selection-cancel" bindtap="cancelSelection">取消</view>
+      <view class="selection-count">已选择 {{selectedIds.length}} 份</view>
+      <view class="selection-action" bindtap="toggleSelectAll">{{allSelected ? '取消全选' : '全选'}}</view>
+      <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelected">{{deleting ? '删除中' : '删除'}}</view>
+    </view>
   </view>
-  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+  <view class="nav-placeholder" style="height: {{navHeight + (selectionMode ? selectionToolbarHeight : 0)}}px;"></view>
 
-  <view class="selection-toolbar" wx:if="{{selectionMode}}">
-    <view class="selection-cancel" bindtap="cancelSelection">取消</view>
-    <view class="selection-count">已选择 {{selectedIds.length}} 份</view>
-    <view class="selection-action" bindtap="toggleSelectAll">{{allSelected ? '取消全选' : '全选'}}</view>
-    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelected">{{deleting ? '删除中' : '删除'}}</view>
-  </view>
-  <view class="quotation-tools" wx:else>
+  <view class="quotation-tools" wx:if="{{!selectionMode}}">
     <view class="search-shell">
       <t-input t-class="quotation-search" borderless clearable prefix-icon="search" value="{{keyword}}" placeholder="输入项目名称搜索" bindchange="onKeywordChange" />
     </view>

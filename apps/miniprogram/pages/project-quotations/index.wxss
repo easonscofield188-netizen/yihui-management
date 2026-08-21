@@ -2,8 +2,9 @@ page { background: #f9f9ff; }
 .quotation-page { min-height: 100vh; padding-bottom: calc(150rpx + env(safe-area-inset-bottom)); background: #f9f9ff; color: #121c2c; }
 .quotation-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #edf0f5; background: rgba(249,249,255,.97); }
 .nav-placeholder { width: 100%; }
-.nav-back { position: absolute; bottom: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
-.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.nav-header { position: relative; height: 88rpx; }
+.nav-back { position: absolute; top: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
+.nav-title { position: absolute; top: 0; right: 150rpx; left: 150rpx; height: 88rpx; color: #002045; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 .selection-toolbar { display: flex; min-height: 88rpx; padding: 0 32rpx; align-items: center; gap: 24rpx; border-bottom: 2rpx solid #dce5f6; background: #fff; }
 .selection-cancel, .selection-action { color: #1a365d; font-size: 25rpx; font-weight: 600; }
 .selection-count { min-width: 0; flex: 1; color: #43474e; font-size: 25rpx; text-align: center; }

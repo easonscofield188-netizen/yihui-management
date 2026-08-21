@@ -24,15 +24,15 @@
         bindtap="onProjectTypeTap"
       >长期合作</view>
     </view>
-  </view>
 
-  <view class="selection-toolbar" wx:if="{{selectionMode}}">
-    <view class="selection-cancel" bindtap="cancelProjectSelection">取消</view>
-    <view class="selection-count">已选择 {{selectedIds.length}} 个</view>
-    <view class="selection-action" bindtap="toggleSelectAllProjects">{{allSelected ? '取消全选' : '全选'}}</view>
-    <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelectedProjects">删除</view>
+    <view class="selection-toolbar" wx:if="{{selectionMode}}">
+      <view class="selection-cancel" bindtap="cancelProjectSelection">取消</view>
+      <view class="selection-count">已选择 {{selectedIds.length}} 个</view>
+      <view class="selection-action" bindtap="toggleSelectAllProjects">{{allSelected ? '取消全选' : '全选'}}</view>
+      <view class="selection-delete {{selectedIds.length && !deleting ? '' : 'disabled'}}" bindtap="deleteSelectedProjects">删除</view>
+    </view>
   </view>
-  <view class="filter-panel" wx:else>
+  <view class="filter-panel" wx:if="{{!selectionMode}}">
     <!-- 搜索与年份合并为单行紧凑布局 -->
     <view class="search-filter-row">
       <view class="search-box">
