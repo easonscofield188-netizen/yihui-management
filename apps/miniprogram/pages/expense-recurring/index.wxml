@@ -1,0 +1,141 @@
+<view class="recurring-page">
+  <!-- 自定义导航栏 -->
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">固定支出管理</view>
+    <view class="nav-action" bindtap="goToCreate">
+      <t-icon name="add" size="42rpx" color="#002045" />
+    </view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <!-- 概览卡片 -->
+  <view class="overview-banner">
+    <view class="overview-item">
+      <text class="overview-label">进行中规则</text>
+      <text class="overview-val">{{activeCount}} 项</text>
+    </view>
+    <view class="overview-divider"></view>
+    <view class="overview-item">
+      <text class="overview-label">每月固定支出合计</text>
+      <text class="overview-val amount">¥{{totalMonthlyAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 规则列表 -->
+  <view class="rules-container">
+    <view class="rules-header">
+      <text class="rules-title">分摊规则清单</text>
+      <text class="rules-tip">固定支出按月自动计入各月报表</text>
+    </view>
+
+    <view class="rule-card" wx:for="{{rules}}" wx:key="_id">
+      <view class="rule-top">
+        <view class="rule-info">
+          <view class="rule-category-row">
+            <text class="rule-category">{{item.categoryLabel || item.category}}</text>
+            <view class="status-badge {{item.statusTone}}">
+              {{item.statusText}}
+            </view>
+          </view>
+          <view class="rule-period">{{item.isLongTerm ? item.startMonth + ' 起长期有效' : item.startMonth + ' ~ ' + item.endMonth + '（共 ' + item.totalMonths + ' 个月）'}}</view>
+        </view>
+        <view class="rule-amount-wrap">
+          <text class="amount-per-month">¥{{item.amountText}}</text>
+          <text class="amount-unit">/月</text>
+        </view>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="progress-wrap">
+        <view class="progress-info">
+          <text class="progress-text">{{item.isLongTerm ? '已进入第 ' + item.passedMonths + ' 个月' : '已分摊 ' + item.passedMonths + ' / ' + item.totalMonths + ' 个月'}}</text>
+          <text class="progress-total">{{item.isLongTerm ? '长期规则，手动停用' : '累计预估 ¥' + item.totalAmountText}}</text>
+        </view>
+        <view class="progress-bar-bg">
+          <view class="progress-bar-fill" style="width: {{item.progressPercent}}%;"></view>
+        </view>
+      </view>
+
+      <view class="rule-remark" wx:if="{{item.remark}}">
+        <text class="remark-prefix">备注：</text>{{item.remark}}
+      </view>
+
+      <!-- 操作按钮（仅管理员） -->
+      <view class="rule-actions" wx:if="{{isAdmin}}">
+        <view class="action-btn edit-btn" data-rule="{{item}}" bindtap="openEditModal">
+          <t-icon name="edit" size="28rpx" color="#002045" />
+          <text>调整金额</text>
+        </view>
+        <view
+          class="action-btn stop-btn"
+          wx:if="{{item.isActive}}"
+          data-rule="{{item}}"
+          bindtap="onStopRule"
+        >
+          <t-icon name="pause-circle" size="28rpx" color="#d97706" />
+          <text>停用规则</text>
+        </view>
+        <view class="action-btn delete-btn" data-rule="{{item}}" bindtap="onDeleteRule">
+          <t-icon name="delete" size="28rpx" color="#ba1a1a" />
+          <text>删除</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && !rules.length}}">
+      <t-icon name="refresh" size="72rpx" color="#cbd5e1" />
+      <text class="empty-text">暂无固定支出规则</text>
+      <button class="empty-btn" bindtap="goToCreate">添加固定分摊支出</button>
+    </view>
+
+    <view class="loading-state" wx:if="{{loading}}">
+      <t-loading size="36rpx" theme="circular" />
+      <text>正在加载规则...</text>
+    </view>
+  </view>
+</view>
+
+<!-- 编辑弹窗 -->
+<t-popup visible="{{editPopupVisible}}" placement="bottom" bindvisible-change="closeEditModal">
+  <view class="edit-modal">
+    <view class="modal-title">调整固定支出金额</view>
+    <view class="modal-subtitle">
+      【{{editingRule.categoryLabel}}】{{editingRule.isLongTerm ? editingRule.startMonth + ' 起长期有效' : editingRule.startMonth + ' ~ ' + editingRule.endMonth}}
+    </view>
+    <view class="modal-hint">
+      修改后，本月及未来未过月份的记账金额将自动同步更新，历史已过去月份不受影响。
+    </view>
+
+    <view class="modal-field">
+      <text class="field-label">每月金额（元）</text>
+      <input
+        class="field-input"
+        type="digit"
+        value="{{editAmount}}"
+        bindinput="onEditAmountInput"
+      />
+    </view>
+
+    <view class="modal-field">
+      <text class="field-label">备注说明</text>
+      <input
+        class="field-input"
+        value="{{editRemark}}"
+        maxlength="100"
+        bindinput="onEditRemarkInput"
+      />
+    </view>
+
+    <view class="modal-actions">
+      <button class="modal-btn cancel" bindtap="closeEditModal">取消</button>
+      <button class="modal-btn confirm" bindtap="onSaveEdit" disabled="{{saving}}">
+        <t-loading wx:if="{{saving}}" size="32rpx" theme="circular" />
+        <text wx:else>保存并更新</text>
+      </button>
+    </view>
+  </view>
+</t-popup>

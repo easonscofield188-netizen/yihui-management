@@ -12,6 +12,79 @@ cloud.init({
 
 const db = cloud.database();
 const _ = db.command;
+const EXPENSE_COLLECTION = 'company_expenses';
+const RECURRING_RULE_COLLECTION = 'company_expense_rules';
+
+function addMonths(month, offset) {
+  const [year, value] = String(month).split('-').map(Number);
+  const date = new Date(Date.UTC(year, value - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseMonthList(startMonth, endMonth) {
+  const result = [];
+  let cursor = startMonth;
+  while (cursor <= endMonth) {
+    result.push(cursor);
+    cursor = addMonths(cursor, 1);
+  }
+  return result;
+}
+
+async function extendLongTermExpenseRules(currentMonth, today) {
+  let rules = [];
+  try {
+    const result = await db.collection(RECURRING_RULE_COLLECTION)
+      .where({ status: 'active' })
+      .limit(1000)
+      .get();
+    rules = result.data || [];
+  } catch (error) {
+    // 支出集合尚未创建时不影响原有项目定时任务。
+    return 0;
+  }
+
+  let created = 0;
+  await db.collection(EXPENSE_COLLECTION).where({
+    recordStatus: 'planned',
+    expenseMonth: _.lte(currentMonth)
+  }).update({
+    data: { recordStatus: 'posted', updatedAt: db.serverDate() }
+  }).catch(() => {});
+  for (const rule of rules) {
+    const isLongTerm = Boolean(rule.isLongTerm || !rule.endMonth);
+    if (!isLongTerm) continue;
+    const materializeEndMonth = addMonths(currentMonth, 12);
+    const existingResult = await db.collection(EXPENSE_COLLECTION)
+      .where({ recurringRuleId: rule._id })
+      .limit(1000)
+      .get();
+    const existingMonths = new Set((existingResult.data || []).map(item => item.expenseMonth));
+
+    for (const month of parseMonthList(rule.startMonth, materializeEndMonth)) {
+      if (existingMonths.has(month)) continue;
+      await db.collection(EXPENSE_COLLECTION).add({
+        data: {
+          category: rule.category,
+          categoryLabel: rule.categoryLabel || rule.category,
+          amount: Number(rule.amountPerMonth || 0),
+          expenseType: 'recurring',
+          expenseDate: `${month}-01`,
+          expenseMonth: month,
+          recurringRuleId: rule._id,
+          recordStatus: month > currentMonth ? 'planned' : 'posted',
+          remark: rule.remark ? `[固定分摊] ${rule.remark}` : '[固定分摊]',
+          createdBy: rule.createdBy || '',
+          createdByName: rule.createdByName || '系统自动分摊',
+          createdAt: db.serverDate(),
+          updatedAt: db.serverDate()
+        }
+      });
+      created += 1;
+    }
+  }
+  return created;
+}
 
 exports.main = async (event, context) => {
   const now = new Date();
@@ -84,7 +157,13 @@ exports.main = async (event, context) => {
       }
     }
 
-    return { code: 0, message: `成功更新 ${updateCount} 个项目`, date: today };
+    const currentMonth = today.slice(0, 7);
+    const recurringExpenseCount = await extendLongTermExpenseRules(currentMonth, today);
+    return {
+      code: 0,
+      message: `成功更新 ${updateCount} 个项目，并补齐 ${recurringExpenseCount} 条固定支出预算`,
+      date: today
+    };
   } catch (err) {
     console.error('每日更新任务失败:', err);
     return { code: 500, message: '任务失败', error: err.message };

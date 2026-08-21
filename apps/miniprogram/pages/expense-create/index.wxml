@@ -1,0 +1,267 @@
+<view class="create-page">
+  <!-- 自定义导航栏 -->
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">记录公司支出</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <view class="form-container">
+    <!-- 支出方式切换 -->
+    <view class="type-selector">
+      <view
+        class="type-tab {{expenseType === 'one_time' ? 'active' : ''}}"
+        data-type="one_time"
+        bindtap="onTypeChange"
+      >
+        <t-icon name="creditcard" size="36rpx" color="{{expenseType === 'one_time' ? '#ffffff' : '#64748b'}}" />
+        <text>一次性支出</text>
+      </view>
+      <view
+        class="type-tab {{expenseType === 'recurring' ? 'active' : ''}} {{!isAdmin ? 'disabled' : ''}}"
+        data-type="recurring"
+        bindtap="onTypeChange"
+      >
+        <t-icon name="refresh" size="36rpx" color="{{expenseType === 'recurring' ? '#ffffff' : '#64748b'}}" />
+        <text>固定/分摊支出{{!isAdmin ? '（管理员）' : ''}}</text>
+      </view>
+    </view>
+
+    <!-- 模式说明提示 -->
+    <view class="mode-tip" wx:if="{{expenseType === 'recurring'}}">
+      <t-icon name="info-circle" size="30rpx" color="#0284c7" />
+      <text>创建后自动生成月度账单；未来月份仅作预算，不计入已发生支出</text>
+    </view>
+
+    <!-- 金额输入卡片 -->
+    <view class="amount-card">
+      <view class="amount-label">
+        <text>{{expenseType === 'recurring' ? '每月分摊金额' : '支出金额'}}</text>
+        <text class="required-star">*</text>
+      </view>
+      <view class="amount-input-wrap">
+        <text class="currency-symbol">¥</text>
+        <input
+          class="amount-input"
+          type="digit"
+          placeholder="0.00"
+          placeholder-class="amount-placeholder"
+          value="{{amount}}"
+          bindinput="onAmountInput"
+        />
+      </view>
+    </view>
+
+    <view class="quick-category-section" wx:if="{{expenseType === 'one_time' && quickCategoryOptions.length}}">
+      <view class="compact-section-heading">
+        <text>常用类目</text>
+        <view class="more-category" bindtap="openCategoryPicker">更多 <t-icon name="chevron-right" size="26rpx" color="#64748b" /></view>
+      </view>
+      <scroll-view class="quick-category-scroll" scroll-x="true" show-scrollbar="false">
+        <view class="quick-category-list">
+          <view
+            wx:for="{{quickCategoryOptions}}"
+            wx:key="value"
+            class="quick-category-chip {{selectedCategoryCode === item.value ? 'selected' : ''}}"
+            data-code="{{item.value}}"
+            bindtap="selectQuickCategory"
+          >{{item.label}}</view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="recent-section" wx:if="{{expenseType === 'one_time' && recentTemplates.length}}">
+      <view class="compact-section-heading"><text>最近使用</text><text class="heading-hint">点一下直接回填</text></view>
+      <scroll-view class="recent-template-scroll" scroll-x="true" show-scrollbar="false">
+        <view class="recent-template-list">
+          <view wx:for="{{recentTemplates}}" wx:key="id" class="recent-template" data-id="{{item.id}}" bindtap="applyRecentTemplate">
+            <text class="recent-template-category">{{item.categoryLabel}}</text>
+            <text class="recent-template-amount">¥{{item.amountText}}</text>
+            <text class="recent-template-remark" wx:if="{{item.remark}}">{{item.remark}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 表单字段列表 -->
+    <view class="form-section">
+      <!-- 支出类目 -->
+      <view class="form-cell" bindtap="openCategoryPicker">
+        <view class="cell-label">
+          <text>支出类目</text>
+          <text class="required-star">*</text>
+        </view>
+        <view class="cell-value-wrap">
+          <text class="cell-value {{selectedCategoryLabel ? '' : 'placeholder'}}">{{selectedCategoryLabel || '请选择支出类目'}}</text>
+          <t-icon name="chevron-right" size="34rpx" color="#94a3b8" />
+        </view>
+      </view>
+
+      <!-- 一次性支出：支出日期 -->
+      <view class="form-cell" wx:if="{{expenseType === 'one_time'}}" bindtap="openDatePicker">
+        <view class="cell-label">
+          <text>支出日期</text>
+          <text class="required-star">*</text>
+        </view>
+        <view class="cell-value-wrap">
+          <text class="cell-value">{{expenseDate}}</text>
+          <t-icon name="calendar" size="34rpx" color="#94a3b8" />
+        </view>
+      </view>
+
+      <!-- 固定支出：开始月份 -->
+      <view class="form-cell" wx:if="{{expenseType === 'recurring'}}" bindtap="openStartMonthPicker">
+        <view class="cell-label">
+          <text>开始月份</text>
+          <text class="required-star">*</text>
+        </view>
+        <view class="cell-value-wrap">
+          <text class="cell-value">{{startMonth}}</text>
+          <t-icon name="calendar" size="34rpx" color="#94a3b8" />
+        </view>
+      </view>
+
+      <!-- 固定支出：有效期 -->
+      <view class="form-cell" wx:if="{{expenseType === 'recurring'}}" bindtap="toggleRecurringDuration">
+        <view class="cell-label">有效期</view>
+        <view class="cell-value-wrap">
+          <text class="cell-value">{{isLongTerm ? '长期有效（手动停用）' : '已设置结束月份'}}</text>
+          <t-icon name="chevron-right" size="34rpx" color="#94a3b8" />
+        </view>
+      </view>
+
+      <!-- 固定支出：结束月份（仅限有期限规则） -->
+      <view class="form-cell" wx:if="{{expenseType === 'recurring' && !isLongTerm}}" bindtap="openEndMonthPicker">
+        <view class="cell-label">
+          <text>结束月份</text>
+          <text class="required-star">*</text>
+        </view>
+        <view class="cell-value-wrap">
+          <text class="cell-value">{{endMonth}}</text>
+          <t-icon name="calendar" size="34rpx" color="#94a3b8" />
+        </view>
+      </view>
+
+      <!-- 固定支出预算汇总 -->
+      <view class="recurring-summary" wx:if="{{expenseType === 'recurring'}}">
+        <view class="summary-item">
+          <text class="summary-label">分摊周期</text>
+          <text class="summary-val">{{isLongTerm ? '长期持续' : recurringMonthsCount + ' 个月'}}</text>
+        </view>
+        <view class="summary-item">
+          <text class="summary-label">预计总支出</text>
+          <text class="summary-val total">{{isLongTerm ? recurringTotalAmount : '¥' + recurringTotalAmount}}</text>
+        </view>
+      </view>
+
+      <!-- 备注 -->
+      <view class="form-cell remark-cell">
+        <view class="cell-label">备注说明</view>
+        <input
+          class="cell-input"
+          placeholder="选填，如：房租、差旅"
+          placeholder-class="input-placeholder"
+          value="{{remark}}"
+          maxlength="100"
+          bindinput="onRemarkInput"
+        />
+      </view>
+    </view>
+
+    <!-- 添加到待提交列表 -->
+    <view class="submit-btn-wrap">
+      <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting || checkingDuplicate}}">
+        <t-loading wx:if="{{checkingDuplicate}}" size="30rpx" theme="circular" />
+        <t-icon wx:else name="add" size="28rpx" color="#0b3e71" />
+        <text>{{expenseType === 'recurring' ? '添加固定规则' : '添加至列表'}}</text>
+      </button>
+    </view>
+
+    <!-- 待提交清单：可连续录入多笔后再一次性提交 -->
+    <view class="queued-section" wx:if="{{queuedExpenses.length}}">
+      <view class="queued-header">
+        <view>
+          <view class="queued-title">本次记录（{{queuedExpenses.length}} 条）</view>
+          <view class="queued-tip">可继续添加，确认后统一提交</view>
+        </view>
+        <view class="queued-total">¥{{queuedTotalAmount}}</view>
+      </view>
+      <view class="queued-item" wx:for="{{queuedExpenses}}" wx:key="id">
+        <view class="queued-item-main">
+          <view class="queued-item-top">
+            <text class="queued-category">{{item.categoryLabel}}</text>
+            <text class="queued-type {{item.expenseType === 'recurring' ? 'recurring-rule' : ''}}">{{item.typeLabel}}</text>
+          </view>
+          <view class="queued-meta">{{item.periodLabel}}{{item.remark ? ' · ' + item.remark : ''}}</view>
+        </view>
+        <view class="queued-item-side">
+          <text class="queued-amount">¥{{item.amountText}}</text>
+          <view class="queued-remove" data-id="{{item.id}}" bindtap="removeQueuedExpense">
+            <t-icon name="close-circle" size="32rpx" color="#94a3b8" />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 固定底部提交栏，始终便于完成本次批量记账 -->
+<view class="fixed-submit-bar" wx:if="{{queuedExpenses.length}}">
+  <view class="fixed-submit-summary">共 {{queuedExpenses.length}} 条 · ¥{{queuedTotalAmount}}</view>
+  <button class="submit-all-btn" bindtap="submitAll" disabled="{{submitting}}">
+    <t-loading wx:if="{{submitting}}" size="34rpx" theme="circular" />
+    <text wx:else>提交全部</text>
+  </button>
+</view>
+
+<!-- 类目选择器 -->
+<t-picker
+  visible="{{categoryPickerVisible}}"
+  value="{{categoryPickerValue}}"
+  title="选择支出类目"
+  confirmBtn="确定"
+  cancelBtn="取消"
+  bindconfirm="onCategoryConfirm"
+  bindcancel="closeCategoryPicker"
+  bindclose="closeCategoryPicker"
+>
+  <t-picker-item options="{{categoryOptions}}" />
+</t-picker>
+
+<!-- 日期选择器（一次性） -->
+<t-date-time-picker
+  visible="{{datePickerVisible}}"
+  mode="date"
+  value="{{expenseDate}}"
+  title="选择支出日期"
+  confirm-btn="确定"
+  bindconfirm="onDateConfirm"
+  bindcancel="closeDatePicker"
+  bindclose="closeDatePicker"
+/>
+
+<!-- 开始月份选择器（固定） -->
+<t-date-time-picker
+  visible="{{startMonthPickerVisible}}"
+  mode="month"
+  value="{{startMonth}}"
+  title="选择开始月份"
+  confirm-btn="确定"
+  bindconfirm="onStartMonthConfirm"
+  bindcancel="closeStartMonthPicker"
+  bindclose="closeStartMonthPicker"
+/>
+
+<!-- 结束月份选择器（固定） -->
+<t-date-time-picker
+  visible="{{endMonthPickerVisible}}"
+  mode="month"
+  value="{{endMonth}}"
+  title="选择结束月份"
+  confirm-btn="确定"
+  bindconfirm="onEndMonthConfirm"
+  bindcancel="closeEndMonthPicker"
+  bindclose="closeEndMonthPicker"
+/>

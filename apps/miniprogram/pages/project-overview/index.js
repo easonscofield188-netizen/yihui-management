@@ -103,6 +103,11 @@ function decorateOverview(result) {
       costRateWidth: Math.max(0, Math.min(100, Number(metrics.costRate || 0))),
       trendText: `${trendPercent >= 0 ? "+" : ""}${trendPercent.toFixed(1)}%`,
       trendPositive: trendPercent >= 0,
+      operatingExpenseText: formatMoney(metrics.operatingExpense),
+      netProfitText: formatMoney(metrics.netProfit),
+      netProfitRateText: `${Number(metrics.netProfitRate || 0).toFixed(1)}%`,
+      netProfitRateWidth: Math.max(0, Math.min(100, Number(metrics.netProfitRate || 0))),
+      netProfitPositive: Number(metrics.netProfit || 0) >= 0,
     },
     recentProjects,
   };
@@ -133,6 +138,11 @@ Page({
       costRateWidth: 0,
       trendText: "0.0%",
       trendPositive: true,
+      operatingExpenseText: "0.00",
+      netProfitText: "0.00",
+      netProfitRateText: "0.0%",
+      netProfitRateWidth: 0,
+      netProfitPositive: true,
     },
     recentProjects: [],
     customPopupVisible: false,
@@ -298,6 +308,10 @@ Page({
       `endDate=${encodeURIComponent(endDate)}`,
     ].join("&");
     wx.navigateTo({ url: `/pages/project-financial-list/index?${query}` });
+  },
+
+  openExpenseList() {
+    wx.navigateTo({ url: "/pages/expense-list/index" });
   },
 
   stopPropagation() {},

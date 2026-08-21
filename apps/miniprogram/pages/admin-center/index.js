@@ -20,7 +20,6 @@ function buildMenuSections(userInfo) {
   }
 
   commonItems.push(
-    { key: "accounts", name: "创建账号", description: "创建系统使用账号", icon: "user-add", tone: "violet", route: "/pages/account-create/index" },
     { key: "notifications", name: "消息通知", description: "查看项目变更消息", icon: "notification", tone: "orange", route: "/pages/notification-list/index", badgeKey: "unread" },
     { key: "categoryReviews", name: "类目审核", description: "审核报价中发现的新类目", icon: "task", tone: "green", route: "/pages/category-review-list/index", badgeKey: "reviews" }
   );

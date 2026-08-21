@@ -1,13 +1,10 @@
+<page-meta page-style="{{createPopupMounted ? 'overflow: hidden;' : ''}}" />
 <view class="manage-page">
   <view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px">
     <view class="back" bindtap="back">
       <t-icon name="chevron-left" size="48rpx" color="#002045" />
     </view>
     <view class="title">账号管理</view>
-    <view class="nav-action" bindtap="navToCreate">
-      <t-icon name="user-add" size="38rpx" color="#002045" />
-      <text>新建</text>
-    </view>
   </view>
   <view style="height:{{navHeight}}px"></view>
 
@@ -193,6 +190,60 @@
     </view>
   </view>
 
+  <view class="bottom-create-bar">
+    <view class="bottom-create-button" bindtap="navToCreate">
+      <view class="bottom-create-icon"><t-icon name="add" size="42rpx" color="#ffffff" /></view>
+      <text>新建账号</text>
+    </view>
+  </view>
+
+  <view class="create-mask {{createPopupVisible ? 'is-visible' : ''}}" wx:if="{{createPopupMounted}}" bindtap="closeCreatePopup" catchtouchmove="stopPopupTouchMove">
+    <view class="create-sheet" catchtap="stopPopupTap">
+      <view class="create-sheet-handle"></view>
+      <view class="create-sheet-header">
+        <view>
+          <view class="create-sheet-title">新建账号</view>
+          <view class="create-sheet-desc">初始密码统一为 yh8888</view>
+        </view>
+        <view class="create-sheet-close" bindtap="closeCreatePopup"><t-icon name="close" size="32rpx" color="#64748b" /></view>
+      </view>
+      <scroll-view class="create-sheet-content" scroll-y>
+        <view class="create-field">
+          <text class="create-field-label">登录账号 <text class="create-required">*</text></text>
+          <input class="create-input" value="{{createForm.username}}" placeholder="3-32 位字母、数字或 ._-" maxlength="32" data-field="username" bindinput="onCreateInput" />
+        </view>
+        <view class="create-field">
+          <text class="create-field-label">账户昵称 <text class="create-required">*</text></text>
+          <input class="create-input" value="{{createForm.nickname}}" placeholder="请输入账户昵称" maxlength="30" data-field="nickname" bindinput="onCreateInput" />
+        </view>
+        <view class="create-field">
+          <text class="create-field-label">账号角色 <text class="create-required">*</text></text>
+          <view class="create-select" bindtap="openCreateRolePicker">
+            <text>{{createRoleOptions[createRoleIndex].label}}</text><t-icon name="chevron-right" size="30rpx" color="#94a3b8" />
+          </view>
+        </view>
+        <view class="create-field">
+          <text class="create-field-label">职位</text>
+          <view class="create-select" bindtap="openCreateJobTitlePicker">
+            <text class="{{createForm.jobTitle ? '' : 'create-placeholder'}}">{{createForm.jobTitle || '选填，点击选择职位'}}</text><t-icon name="chevron-right" size="30rpx" color="#94a3b8" />
+          </view>
+        </view>
+        <view class="create-field">
+          <text class="create-field-label">工号</text>
+          <view class="create-readonly">{{createEmployeeNoLoading ? '正在生成...' : (createEmployeeNo || '自动生成')}}</view>
+        </view>
+        <view class="create-field">
+          <text class="create-field-label">邮箱</text>
+          <input class="create-input" value="{{createForm.email}}" placeholder="选填，用于找回密码" maxlength="80" data-field="email" bindinput="onCreateInput" />
+        </view>
+      </scroll-view>
+      <view class="create-sheet-actions">
+        <view class="create-cancel" bindtap="closeCreatePopup">取消</view>
+        <view class="create-confirm" bindtap="submitCreateAccount">{{createSubmitting ? '正在创建...' : '创建账号'}}</view>
+      </view>
+    </view>
+  </view>
+
   <t-picker
     t-class-confirm="picker-confirm"
     visible="{{jobTitlePickerVisible}}"
@@ -202,6 +253,30 @@
     bindconfirm="onJobTitleConfirm"
     bindcancel="closeJobTitlePicker"
     bindclose="closeJobTitlePicker"
+  >
+    <t-picker-item options="{{jobTitleOptions}}" />
+  </t-picker>
+
+  <t-picker
+    visible="{{createRolePickerVisible}}"
+    value="{{createRolePickerValue}}"
+    title="选择账号角色"
+    z-index="{{12000}}"
+    bindconfirm="onCreateRoleConfirm"
+    bindcancel="closeCreateRolePicker"
+    bindclose="closeCreateRolePicker"
+  >
+    <t-picker-item options="{{createRoleOptions}}" />
+  </t-picker>
+
+  <t-picker
+    visible="{{createJobTitlePickerVisible}}"
+    value="{{createJobTitlePickerValue}}"
+    title="选择职位"
+    z-index="{{12000}}"
+    bindconfirm="onCreateJobTitleConfirm"
+    bindcancel="closeCreateJobTitlePicker"
+    bindclose="closeCreateJobTitlePicker"
   >
     <t-picker-item options="{{jobTitleOptions}}" />
   </t-picker>

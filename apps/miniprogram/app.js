@@ -38,7 +38,6 @@ App({
     } else {
       wx.cloud.init({
         env: this.globalData.env,
-        traceUser: true,
       });
       console.info(
         `小程序运行版本：${this.globalData.envVersion}，云环境：${this.globalData.env}`

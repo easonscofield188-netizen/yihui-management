@@ -220,6 +220,14 @@ Page({
     wx.navigateTo({ url: "/pages/project-quotations/index" });
   },
 
+  openExpenseList() {
+    wx.navigateTo({ url: "/pages/expense-list/index" });
+  },
+
+  openExpenseAnalysis() {
+    wx.navigateTo({ url: "/pages/expense-analysis/index" });
+  },
+
   openNotifications() {
     wx.navigateTo({ url: "/pages/notification-list/index" });
   },

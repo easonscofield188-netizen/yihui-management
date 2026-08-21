@@ -203,6 +203,38 @@
 - `verifyToken` (string): 验证成功后生成的重置凭证
 - `createdAt` (number): 创建时间戳
 
+
+### 1.15 公司支出记录表 (`company_expenses`)
+存储公司日常运营支出明细（含一次性支出与固定分摊生成的月度支出）：
+- `category` (string): 支出类目标识（如 `rent`, `utility`, `salary`）
+- `categoryLabel` (string): 支出类目中文标签
+- `amount` (number): 支出金额（元，两位小数）
+- `expenseType` (string): 支出类型（`one_time`: 一次性支出, `recurring`: 固定分摊支出）
+- `expenseDate` (string): 归属日期（YYYY-MM-DD）
+- `expenseMonth` (string): 归属月份（YYYY-MM）
+- `recurringRuleId` (string): 关联的固定支出规则 ID（仅固定分摊记录存在）
+- `remark` (string): 备注说明
+- `createdBy` (string): 创建人用户 ID
+- `createdByName` (string): 创建人姓名
+- `createdAt` (timestamp): 创建时间
+- `updatedAt` (timestamp): 更新时间
+
+### 1.16 固定支出规则表 (`company_expense_rules`)
+存储房租、物业费等长期固定支出的自动分摊规则配置：
+- `category` (string): 支出类目标识
+- `categoryLabel` (string): 支出类目中文标签
+- `amountPerMonth` (number): 每月分摊金额
+- `startMonth` (string): 开始月份（YYYY-MM）
+- `endMonth` (string): 结束月份（YYYY-MM）
+- `totalMonths` (number): 总分摊月数
+- `totalAmount` (number): 预计总金额
+- `status` (string): 规则状态（`active`: 进行中, `stopped`: 已停用, `completed`: 已结束）
+- `remark` (string): 备注说明
+- `createdBy` (string): 创建人用户 ID
+- `createdByName` (string): 创建人姓名
+- `createdAt` (timestamp): 创建时间
+- `updatedAt` (timestamp): 更新时间
+
 ---
 
 ## 2. 数据库集合列表清单
@@ -225,3 +257,5 @@
 | 12 | `operation_logs` | 全站操作审计日志表 | `user_id`, `create_timestamp` |
 | 13 | `notifications` | 消息提醒与通知表 | `recipientId`, `read` |
 | 14 | `password_reset_codes` | 忘记密码邮箱验证码校验表 | `email`, `verifyToken` |
+| 15 | `company_expenses` | 公司运营支出记录表（含分摊与一次性） | `expenseMonth`, `category`, `expenseDate` |
+| 16 | `company_expense_rules` | 固定支出自动分摊规则表 | `status`, `startMonth`, `endMonth` |

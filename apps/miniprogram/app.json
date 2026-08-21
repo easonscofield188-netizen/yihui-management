@@ -29,6 +29,10 @@
     "pages/project-quotation-client/index",
     "pages/project-quotation-client-v2/index",
     "pages/project-financial-list/index",
+    "pages/expense-list/index",
+    "pages/expense-create/index",
+    "pages/expense-recurring/index",
+    "pages/expense-analysis/index",
     "pages/notification-list/index",
     "pages/notification-detail/index",
     "pages/system-settings/index"

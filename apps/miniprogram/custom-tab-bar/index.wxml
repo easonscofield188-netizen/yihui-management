@@ -5,9 +5,11 @@
       <text>项目</text>
     </view>
   </view>
-  <view class="create-item" bindtap="createProject">
-    <view class="create-button"><t-icon name="add" size="58rpx" color="#ffffff" /></view>
-    <text>新建项目</text>
+  <view class="create-item" bindtap="openCreateMenu">
+    <view class="create-button {{menuVisible ? 'active' : ''}}">
+      <t-icon name="add" size="58rpx" color="#ffffff" />
+    </view>
+    <text>快捷记账</text>
   </view>
   <view class="tab-item {{selected === 1 ? 'selected' : ''}}" data-index="1" data-path="/pages/profile/index" bindtap="switchTab">
     <view class="tab-pill">
@@ -16,3 +18,38 @@
     </view>
   </view>
 </view>
+
+<!-- 快捷操作弹层 -->
+<view class="action-mask {{menuVisible ? 'show' : ''}}" bindtap="closeCreateMenu" catchtouchmove="noop">
+  <view class="action-sheet {{menuVisible ? 'show' : ''}}" catchtap="noop">
+    <view class="action-header">
+      <text class="action-title">快捷新建与记账</text>
+      <view class="action-close" bindtap="closeCreateMenu">
+        <t-icon name="close" size="36rpx" color="#64748b" />
+      </view>
+    </view>
+    <view class="action-list">
+      <view class="action-card project-card" bindtap="navigateToCreateProject">
+        <view class="action-icon project-icon">
+          <t-icon name="add-circle" size="44rpx" color="#ffffff" />
+        </view>
+        <view class="action-info">
+          <view class="action-item-title">新建项目</view>
+          <view class="action-item-desc">创建常规工程或长期合作项目</view>
+        </view>
+        <t-icon name="chevron-right" size="36rpx" color="#94a3b8" />
+      </view>
+      <view class="action-card expense-card" bindtap="navigateToCreateExpense">
+        <view class="action-icon expense-icon">
+          <t-icon name="wallet" size="44rpx" color="#ffffff" />
+        </view>
+        <view class="action-info">
+          <view class="action-item-title">记录支出</view>
+          <view class="action-item-desc">记录日常运营支出</view>
+        </view>
+        <t-icon name="chevron-right" size="36rpx" color="#94a3b8" />
+      </view>
+    </view>
+  </view>
+</view>
+

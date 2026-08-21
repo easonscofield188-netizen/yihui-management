@@ -21,6 +21,28 @@ const COST_SETTLEMENT_DICTIONARY = Object.freeze({
   false: { value: false, label: '待支付' }
 });
 
+const EXPENSE_TYPE = Object.freeze({
+  ONE_TIME: 'one_time',
+  RECURRING: 'recurring'
+});
+
+const EXPENSE_TYPE_DICTIONARY = Object.freeze({
+  [EXPENSE_TYPE.ONE_TIME]: { value: EXPENSE_TYPE.ONE_TIME, label: '一次性支出' },
+  [EXPENSE_TYPE.RECURRING]: { value: EXPENSE_TYPE.RECURRING, label: '固定分摊支出' }
+});
+
+const RECURRING_STATUS = Object.freeze({
+  ACTIVE: 'active',
+  STOPPED: 'stopped',
+  COMPLETED: 'completed'
+});
+
+const RECURRING_STATUS_DICTIONARY = Object.freeze({
+  [RECURRING_STATUS.ACTIVE]: { value: RECURRING_STATUS.ACTIVE, label: '进行中' },
+  [RECURRING_STATUS.STOPPED]: { value: RECURRING_STATUS.STOPPED, label: '已停用' },
+  [RECURRING_STATUS.COMPLETED]: { value: RECURRING_STATUS.COMPLETED, label: '已结束' }
+});
+
 function getDictionaryValue(value, dictionary, defaultValue) {
   if (Object.prototype.hasOwnProperty.call(dictionary, value)) return value;
   return defaultValue;
@@ -39,6 +61,12 @@ module.exports = {
   YES_NO_DICTIONARY,
   CREATION_CHANNEL,
   CREATION_CHANNEL_DICTIONARY,
+  COST_SETTLEMENT_DICTIONARY,
+  EXPENSE_TYPE,
+  EXPENSE_TYPE_DICTIONARY,
+  RECURRING_STATUS,
+  RECURRING_STATUS_DICTIONARY,
   normalizeYesNo,
   isSettled
 };
+

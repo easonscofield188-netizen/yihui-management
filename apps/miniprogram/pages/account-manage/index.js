@@ -1,6 +1,13 @@
 const api = require("../../utils/api");
 
 const ROOT_SUPER_ADMIN_NO = "YH-ADMIN_SUPER-000";
+const CREATE_ROLE_OPTIONS = [
+  { label: "超级系统管理员", value: "ADMIN_SUPER" },
+  { label: "系统管理员", value: "ADMIN_COM" },
+  { label: "项目经理", value: "PROJECT_MANAGER" },
+  { label: "项目主管", value: "FINANCE_MANAGER" },
+  { label: "普通访客", value: "VISITOR" },
+];
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -62,6 +69,24 @@ Page({
     jobTitlePickerValue: [],
     editingAccountId: "",
     editingAccountUsername: "",
+    createPopupVisible: false,
+    createPopupMounted: false,
+    createSubmitting: false,
+    createRoleOptions: CREATE_ROLE_OPTIONS,
+    createRoleIndex: 1,
+    createRolePickerVisible: false,
+    createRolePickerValue: [CREATE_ROLE_OPTIONS[1].value],
+    createJobTitlePickerVisible: false,
+    createJobTitlePickerValue: [],
+    createEmployeeNo: "",
+    createEmployeeNoLoading: false,
+    createForm: {
+      username: "",
+      nickname: "",
+      email: "",
+      role: CREATE_ROLE_OPTIONS[1].value,
+      jobTitle: "",
+    },
   },
 
   onLoad() {
@@ -132,7 +157,147 @@ Page({
   },
 
   navToCreate() {
-    wx.navigateTo({ url: "/pages/account-create/index" });
+    if (this.createPopupCloseTimer) clearTimeout(this.createPopupCloseTimer);
+    if (this.createPopupOpenTimer) clearTimeout(this.createPopupOpenTimer);
+    this.setData({
+      createPopupMounted: true,
+      createPopupVisible: false,
+      createSubmitting: false,
+      createRoleIndex: 1,
+      createRolePickerValue: [CREATE_ROLE_OPTIONS[1].value],
+      createJobTitlePickerValue: [],
+      createForm: {
+        username: "",
+        nickname: "",
+        email: "",
+        role: CREATE_ROLE_OPTIONS[1].value,
+        jobTitle: "",
+      },
+    }, () => {
+      this.loadNextCreateEmployeeNo();
+      this.createPopupOpenTimer = setTimeout(() => {
+        this.setData({ createPopupVisible: true });
+        this.createPopupOpenTimer = null;
+      }, 20);
+    });
+  },
+
+  closeCreatePopup() {
+    if (this.data.createSubmitting) return;
+    if (this.createPopupOpenTimer) clearTimeout(this.createPopupOpenTimer);
+    this.setData({ createPopupVisible: false });
+    if (this.createPopupCloseTimer) clearTimeout(this.createPopupCloseTimer);
+    this.createPopupCloseTimer = setTimeout(() => {
+      this.setData({ createPopupMounted: false });
+      this.createPopupCloseTimer = null;
+    }, 260);
+  },
+
+  stopPopupTap() {},
+
+  stopPopupTouchMove() {},
+
+  onCreateInput(event) {
+    const field = event.currentTarget.dataset.field;
+    if (!field) return;
+    this.setData({ [`createForm.${field}`]: event.detail.value || "" });
+  },
+
+  openCreateRolePicker() {
+    this.setData({ createRolePickerVisible: true });
+  },
+
+  closeCreateRolePicker() {
+    this.setData({ createRolePickerVisible: false });
+  },
+
+  onCreateRoleConfirm(event) {
+    const role = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value;
+    const roleIndex = this.data.createRoleOptions.findIndex(item => item.value === role);
+    this.setData({
+      createRolePickerVisible: false,
+      createRoleIndex: roleIndex < 0 ? 1 : roleIndex,
+      createRolePickerValue: [role],
+      "createForm.role": role,
+    }, () => this.loadNextCreateEmployeeNo());
+  },
+
+  openCreateJobTitlePicker() {
+    if (!this.data.jobTitleOptions.length) {
+      wx.showToast({ title: "暂无职位配置，请先在配置中心添加", icon: "none" });
+      return;
+    }
+    this.setData({ createJobTitlePickerVisible: true });
+  },
+
+  closeCreateJobTitlePicker() {
+    this.setData({ createJobTitlePickerVisible: false });
+  },
+
+  onCreateJobTitleConfirm(event) {
+    const jobTitle = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value;
+    this.setData({
+      createJobTitlePickerVisible: false,
+      createJobTitlePickerValue: jobTitle ? [jobTitle] : [],
+      "createForm.jobTitle": jobTitle || "",
+    });
+  },
+
+  async loadNextCreateEmployeeNo() {
+    this.setData({ createEmployeeNoLoading: true, createEmployeeNo: "" });
+    try {
+      const result = await api.getNextEmployeeNo(this.data.createForm.role);
+      this.setData({ createEmployeeNo: result.employeeNo || "" });
+    } catch (error) {
+      this.setData({ createEmployeeNo: "获取失败，请重试" });
+    } finally {
+      this.setData({ createEmployeeNoLoading: false });
+    }
+  },
+
+  async submitCreateAccount() {
+    if (this.data.createSubmitting) return;
+    const form = this.data.createForm;
+    const username = String(form.username || "").trim();
+    const nickname = String(form.nickname || "").trim();
+    const email = String(form.email || "").trim();
+    if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) {
+      wx.showToast({ title: "账号须为 3-32 位字母、数字或 ._-", icon: "none" });
+      return;
+    }
+    if (!nickname) {
+      wx.showToast({ title: "请输入账户昵称", icon: "none" });
+      return;
+    }
+
+    this.setData({ createSubmitting: true });
+    try {
+      const createdAccount = await api.createAccount({
+        username,
+        nickname,
+        email,
+        role: form.role,
+        jobTitle: form.jobTitle,
+      });
+      this.setData({ createPopupVisible: false });
+      if (this.createPopupCloseTimer) clearTimeout(this.createPopupCloseTimer);
+      this.createPopupCloseTimer = setTimeout(() => {
+        this.setData({ createPopupMounted: false });
+        this.createPopupCloseTimer = null;
+      }, 260);
+      await this.loadData();
+      wx.showModal({
+        title: "账号创建成功",
+        content: `账号“${username}”已创建\n分配工号：${createdAccount.employeeNo || "-"}\n初始密码：yh8888`,
+        showCancel: false,
+        confirmText: "知道了",
+        confirmColor: "#002045",
+      });
+    } catch (error) {
+      wx.showToast({ title: error.message || "账号创建失败", icon: "none" });
+    } finally {
+      this.setData({ createSubmitting: false });
+    }
   },
 
   changeTab(event) {

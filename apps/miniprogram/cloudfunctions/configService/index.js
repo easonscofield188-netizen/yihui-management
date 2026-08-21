@@ -21,7 +21,7 @@ const ADMIN_SUPER_ROLE = 'ADMIN_SUPER';
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 const READ_ROLES = new Set(['ADMIN_SUPER', 'ADMIN_COM', 'ADMIN', 'PROJECT_MANAGER', 'FINANCE_MANAGER', 'VISITOR', 'user']);
-const ALLOWED_GROUPS = new Set(['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE', 'JOB_TITLE']);
+const ALLOWED_GROUPS = new Set(['CLIENT_ROLE', 'COST_CATEGORY', 'CLIENT_SOURCE', 'PROJECT_SCENE', 'JOB_TITLE', 'EXPENSE_CATEGORY']);
 
 // --- 服务器内存缓存变量 ---
 // 注意：云函数实例在“温热”状态下会保留全局变量
@@ -180,13 +180,24 @@ async function getGlobalConfig(params) {
         label: item.label || '未命名',
         value: val,
         commonUnit: String(item.commonUnit || '').trim(),
+        expenseScope: item.expenseScope === 'recurring' ? 'recurring' : 'one_time',
+        isCommon: item.isCommon === true,
+        usageCount: Number(item.usageCount) || 0,
         sortOrder: item.sortOrder !== undefined ? item.sortOrder : 999 // 默认排在最后
       });
     });
 
     // 4. 在内存中进行排序，确保即使字段缺失也能正常显示
     Object.keys(groupedConfig).forEach(key => {
-      groupedConfig[key].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      groupedConfig[key].sort((a, b) => {
+        if (key !== 'EXPENSE_CATEGORY') return (a.sortOrder || 0) - (b.sortOrder || 0);
+        const aCommon = a.isCommon || a.usageCount >= 3;
+        const bCommon = b.isCommon || b.usageCount >= 3;
+        return Number(bCommon) - Number(aCommon)
+          || Number(b.isCommon) - Number(a.isCommon)
+          || b.usageCount - a.usageCount
+          || (a.sortOrder || 0) - (b.sortOrder || 0);
+      });
     });
 
     // 5. 更新内存缓存及时间戳
@@ -450,6 +461,8 @@ async function queryConfig(params) {
 async function createConfig(params) {
   const { group, label, description = '' } = params || {};
   const commonUnit = group === 'COST_CATEGORY' ? String(params.commonUnit || '').trim().slice(0, 30) : '';
+  const expenseScope = group === 'EXPENSE_CATEGORY' && params.expenseScope === 'recurring' ? 'recurring' : 'one_time';
+  const isCommon = group === 'EXPENSE_CATEGORY' && params.isCommon === true;
 
   if (!group || !ALLOWED_GROUPS.has(group)) {
     return { code: 400, message: '配置分组不支持新增' };
@@ -510,6 +523,9 @@ async function createConfig(params) {
       isActive: true,
       description: String(description || '').trim().slice(0, 240),
       commonUnit,
+      expenseScope,
+      isCommon,
+      usageCount: 0,
       createdAt: now,
       updateTime: now
     };
@@ -813,6 +829,8 @@ async function updateConfig(params = {}, currentUser) {
   const label = String(params.label || '').trim().slice(0, 80);
   const description = String(params.description || '').trim().slice(0, 240);
   const commonUnit = group === 'COST_CATEGORY' ? String(params.commonUnit || '').trim().slice(0, 30) : '';
+  const expenseScope = group === 'EXPENSE_CATEGORY' && params.expenseScope === 'recurring' ? 'recurring' : 'one_time';
+  const isCommon = group === 'EXPENSE_CATEGORY' && params.isCommon === true;
   if (!id || !ALLOWED_GROUPS.has(group)) return { code: 400, message: '配置参数不完整' };
   if (!label) return { code: 400, message: '请输入配置名称' };
   if (group === 'COST_CATEGORY' && !commonUnit) return { code: 400, message: '请输入常用单位' };
@@ -828,6 +846,8 @@ async function updateConfig(params = {}, currentUser) {
       label,
       description,
       commonUnit,
+      expenseScope,
+      isCommon,
       updatedBy: currentUser.id,
       updatedByName: currentUser.nickname || currentUser.username || '',
       updateTime: db.serverDate()

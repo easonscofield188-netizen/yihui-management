@@ -1,0 +1,218 @@
+<view class="analysis-page">
+  <!-- cover-view 可覆盖原生 Canvas，防止图表滚动时压住导航栏 -->
+  <!-- 自定义导航栏 -->
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">支出占比分析</view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <!-- 维度选择 Tabs -->
+  <view class="range-tabs-wrap">
+    <view
+      class="range-tab-item {{rangeType === item.value ? 'active' : ''}}"
+      wx:for="{{rangeTabs}}"
+      wx:key="value"
+      data-type="{{item.value}}"
+      bindtap="onRangeChange"
+    >
+      {{item.label}}
+    </view>
+  </view>
+
+  <!-- 当前统计周期说明卡片 -->
+  <view class="period-banner" bindtap="openMonthPicker">
+    <view class="period-left">
+      <t-icon name="calendar" size="32rpx" color="#002045" />
+      <text class="period-text">{{periodLabel || '当前时段'}}</text>
+      <t-icon wx:if="{{rangeType === 'month'}}" name="caret-down-small" size="28rpx" color="#64748b" />
+    </view>
+    <view class="period-total">
+      <text class="period-total-label">合计支出</text>
+      <text class="period-total-val">¥{{totalAmountText}}</text>
+    </view>
+  </view>
+
+  <!-- 最高支出项高亮卡片 -->
+  <view class="max-card" wx:if="{{maxCategory}}">
+    <view class="max-icon-box">
+      <t-icon name="chart-bubble" size="40rpx" color="#ffffff" />
+    </view>
+    <view class="max-info">
+      <view class="max-title-row">
+        <text class="max-title">本期最高支出项：{{maxCategory.categoryLabel}}</text>
+      </view>
+      <view class="max-desc">
+        共支出 <text class="highlight">¥{{maxCategory.amountText}}</text>，占总支出比例高达 <text class="highlight">{{maxCategory.percent}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 1. 类目占比分布图（环形图） -->
+  <view class="chart-card">
+    <view class="chart-header">
+      <view class="chart-title-wrap">
+        <t-icon name="pie-chart" size="36rpx" color="#002045" />
+        <text class="chart-title">支出类目占比分布</text>
+      </view>
+    </view>
+
+    <!-- Canvas 环形图 -->
+    <view class="canvas-wrap">
+      <canvas wx:if="{{!modalActive}}" type="2d" id="donutCanvas" class="donut-canvas"></canvas>
+    </view>
+
+    <!-- 图例列表 -->
+    <view class="legend-grid">
+      <view class="legend-item" wx:for="{{categoryList}}" wx:key="category">
+        <view class="legend-dot" style="background: {{item.color}};"></view>
+        <text class="legend-name">{{item.categoryLabel}}</text>
+        <text class="legend-percent">{{item.percent}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 固定 vs 一次性占比条 -->
+  <view class="ratio-card">
+    <view class="chart-title-wrap" style="margin-bottom: 20rpx;">
+      <t-icon name="control-platform" size="36rpx" color="#002045" />
+      <text class="chart-title">支出结构分布</text>
+    </view>
+
+    <view class="split-bar-wrap">
+      <view class="split-bar-bg">
+        <view class="split-bar-recurring" style="width: {{recurringPercent}}%;"></view>
+        <view class="split-bar-onetime" style="width: {{oneTimePercent}}%;"></view>
+      </view>
+    </view>
+
+    <view class="split-legend-row">
+      <view class="split-item">
+        <view class="split-dot recurring"></view>
+        <text class="split-label">固定分摊支出</text>
+        <text class="split-val">¥{{recurringAmountText}} ({{recurringPercent}}%)</text>
+      </view>
+      <view class="split-item">
+        <view class="split-dot onetime"></view>
+        <text class="split-label">一次性支出</text>
+        <text class="split-val">¥{{oneTimeAmountText}} ({{oneTimePercent}}%)</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 3. 近 12 个月支出走势柱状图 -->
+  <view class="chart-card trend-card">
+    <view class="chart-header">
+      <view class="chart-title-wrap">
+        <t-icon name="chart-column" size="36rpx" color="#002045" />
+        <text class="chart-title">近 12 个月支出走势</text>
+      </view>
+      <view class="trend-info-tag {{activeTrendInfo ? 'active' : ''}}">
+        {{activeTrendInfo || (trendPeak ? '峰值 ' + trendPeak.monthLabel + ' · ¥' + trendPeak.amountText : '近 12 个月走势')}}
+      </view>
+    </view>
+
+    <!-- Canvas 走势图带触摸交互 -->
+    <view class="trend-canvas-wrap">
+      <canvas
+        wx:if="{{!modalActive}}"
+        type="2d"
+        id="trendCanvas"
+        class="trend-canvas"
+        bindtouchstart="onTrendTouch"
+        bindtouchmove="onTrendTouch"
+        bindtouchend="onTrendTouchEnd"
+      ></canvas>
+    </view>
+
+    <view class="trend-tip-row">
+      <t-icon name="info-circle" size="24rpx" color="#94a3b8" />
+      <text>触摸/点击折线数据点可查看当月支出</text>
+    </view>
+
+    <!-- 走势统计摘要三栏卡片 -->
+    <view class="trend-summary-grid" wx:if="{{trendSummary}}">
+      <view class="trend-sum-item">
+        <text class="sum-label">月均支出</text>
+        <text class="sum-val">¥{{trendSummary.avgAmountText}}</text>
+      </view>
+      <view class="trend-sum-divider"></view>
+      <view class="trend-sum-item">
+        <text class="sum-label">单月最高 ({{trendSummary.peakMonth}})</text>
+        <text class="sum-val peak">¥{{trendSummary.peakAmountText}}</text>
+      </view>
+      <view class="trend-sum-divider"></view>
+      <view class="trend-sum-item">
+        <text class="sum-label">单月最低 ({{trendSummary.minMonth}})</text>
+        <text class="sum-val">¥{{trendSummary.minAmountText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 4. 支出明细排行表 -->
+  <view class="ranking-card">
+    <view class="chart-title-wrap" style="margin-bottom: 20rpx;">
+      <t-icon name="order-adjustment-column" size="36rpx" color="#002045" />
+      <text class="chart-title">支出类目明细排行</text>
+    </view>
+
+    <view class="ranking-list">
+      <view class="ranking-row" wx:for="{{categoryList}}" wx:key="category">
+        <view class="rank-index {{index < 3 ? 'top' : ''}}">{{index + 1}}</view>
+        <view class="rank-category">{{item.categoryLabel}}</view>
+        <view class="rank-progress-wrap">
+          <view class="rank-progress-bar" style="width: {{item.percent}}%; background: {{item.color}};"></view>
+        </view>
+        <view class="rank-amount">¥{{item.amountText}}</view>
+        <view class="rank-percent">{{item.percent}}%</view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 月份选择器 -->
+<t-date-time-picker
+  visible="{{monthPickerVisible}}"
+  mode="month"
+  value="{{targetMonth}}"
+  title="选择分析月份"
+  confirm-btn="确定"
+  bindconfirm="onMonthConfirm"
+  bindcancel="closeMonthPicker"
+  bindclose="closeMonthPicker"
+/>
+
+<!-- 自定义时间范围弹窗 -->
+<t-popup visible="{{customPopupVisible}}" placement="bottom" bindvisible-change="closeCustomPopup">
+  <view class="custom-popup">
+    <view class="custom-popup-title">自定义分析时间范围</view>
+    <view class="custom-field-label">开始日期</view>
+    <view class="custom-field" data-field="start" bindtap="openCustomDatePicker">{{customStart}}</view>
+    <view class="custom-field-label">结束日期</view>
+    <view class="custom-field" data-field="end" bindtap="openCustomDatePicker">{{customEnd}}</view>
+    <view class="custom-actions">
+      <view class="custom-cancel" bindtap="closeCustomPopup">取消</view>
+      <view class="custom-confirm" bindtap="onConfirmCustomRange">确认分析</view>
+    </view>
+  </view>
+</t-popup>
+
+<!-- 日期选择器 -->
+<t-date-time-picker
+  visible="{{datePickerVisible}}"
+  mode="date"
+  value="{{datePickerValue}}"
+  title="选择日期"
+  confirm-btn="确定"
+  bindconfirm="onCustomDateConfirm"
+  bindcancel="closeDatePicker"
+  bindclose="closeDatePicker"
+/>
+
+<!-- 必须作为页面根节点，才能覆盖原生 Canvas 图层。 -->
+<cover-view class="canvas-nav-cover" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+  <cover-view class="canvas-nav-back" bindtap="goBack">‹</cover-view>
+  <cover-view class="canvas-nav-title">支出占比分析</cover-view>
+</cover-view>

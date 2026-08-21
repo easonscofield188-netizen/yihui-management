@@ -1,0 +1,194 @@
+<view class="list-page">
+  <!-- 自定义导航栏 -->
+  <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+    </view>
+    <view class="nav-title">公司支出记录</view>
+    <view class="nav-action" bindtap="goToCreate">
+      <t-icon name="add" size="42rpx" color="#002045" />
+    </view>
+  </view>
+  <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
+
+  <!-- 顶部概览统计大卡片 -->
+  <view class="hero-card">
+    <view class="hero-glow hero-glow-one"></view>
+    <view class="hero-glow hero-glow-two"></view>
+    <view class="hero-grid-decoration"></view>
+    <view class="hero-header">
+      <view class="hero-period" bindtap="openMonthPicker">
+        <text>{{selectedMonth ? selectedMonth + ' 支出总计' : '全部支出总计'}}</text>
+        <t-icon name="caret-down-small" size="32rpx" color="#94a3b8" />
+      </view>
+      <view class="analysis-entry-btn" bindtap="goToAnalysis">
+        <view class="analysis-entry-icon"><t-icon name="chart-pie" size="28rpx" color="#ffffff" /></view>
+        <text>占比分析</text>
+      </view>
+    </view>
+    <view class="hero-amount-row">
+      <text class="hero-currency">¥</text>
+      <text class="hero-amount">{{summary.totalAmountText}}</text>
+    </view>
+    <view class="hero-wallet-mark"><t-icon name="wallet" size="54rpx" color="#dbeafe" /></view>
+    <view class="hero-sub-grid">
+      <view class="sub-grid-item">
+        <text class="sub-grid-label">固定分摊支出</text>
+        <text class="sub-grid-val">¥{{summary.recurringAmountText}}</text>
+      </view>
+      <view class="sub-grid-divider"></view>
+      <view class="sub-grid-item">
+        <text class="sub-grid-label">一次性支出</text>
+        <text class="sub-grid-val">¥{{summary.oneTimeAmountText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 筛选条件栏 -->
+  <view class="filter-bar">
+    <view class="filter-chip {{selectedMonth ? 'active' : ''}}" bindtap="openMonthPicker">
+      <t-icon name="calendar" size="28rpx" color="{{selectedMonth ? '#002045' : '#64748b'}}" />
+      <text>{{selectedMonth || '全部月份'}}</text>
+      <t-icon name="chevron-down" size="24rpx" color="{{selectedMonth ? '#002045' : '#64748b'}}" />
+    </view>
+    <view class="filter-chip {{selectedCategory ? 'active' : ''}}" bindtap="openCategoryPicker">
+      <text>{{selectedCategoryLabel}}</text>
+      <t-icon name="chevron-down" size="24rpx" color="{{selectedCategory ? '#002045' : '#64748b'}}" />
+    </view>
+
+    <view class="filter-chip {{selectedType ? 'active' : ''}}" bindtap="openTypePicker">
+      <text>{{selectedTypeLabel}}</text>
+      <t-icon name="chevron-down" size="24rpx" color="{{selectedType ? '#002045' : '#64748b'}}" />
+    </view>
+  </view>
+
+  <!-- 固定支出管理快捷横幅 -->
+  <view class="recurring-banner" bindtap="goToRecurringManagement">
+    <view class="recurring-banner-left">
+      <view class="recurring-icon-wrap">
+        <t-icon name="refresh" size="32rpx" color="#ffffff" />
+      </view>
+      <view class="recurring-banner-text">
+        <view class="recurring-banner-title">固定支出规则管理</view>
+        <view class="recurring-banner-desc">房租、物业费等按月自动分摊项设置</view>
+      </view>
+    </view>
+    <t-icon name="chevron-right" size="34rpx" color="#94a3b8" />
+  </view>
+
+  <!-- 记录列表 -->
+  <view class="list-container">
+    <view class="list-title-row">
+      <text class="list-title">明细列表</text>
+      <text class="list-count" wx:if="{{list.length}}">共 {{list.length}} 笔</text>
+    </view>
+
+    <block wx:if="{{showMonthGroup}}">
+      <view class="month-group" wx:for="{{monthGroups}}" wx:key="month">
+        <view class="month-group-title"><view class="month-title-line"></view><text>{{item.label}}</text><view class="month-title-line"></view></view>
+        <view class="expense-card" wx:for="{{item.items}}" wx:for-item="expense" wx:key="_id">
+          <view class="card-side-accent {{expense.isRecurring ? 'recurring' : 'one-time'}}"></view>
+          <view class="card-left">
+            <view class="category-icon-box {{expense.isRecurring ? 'recurring' : 'one-time'}}"><t-icon name="{{expense.isRecurring ? 'refresh' : 'wallet'}}" size="36rpx" color="#ffffff" /></view>
+            <view class="card-main"><view class="card-title-row"><text class="card-category">{{expense.categoryLabel || expense.category}}</text><view class="type-tag {{expense.isRecurring ? 'tag-recurring' : 'tag-one-time'}}">{{expense.typeLabel}}</view></view><view class="card-meta"><text class="card-date">{{expense.expenseDate}}</text><text class="meta-dot">·</text><text class="card-user">{{expense.createdByName || '员工'}}</text></view><view class="card-remark" wx:if="{{expense.remark}}">{{expense.remark}}</view></view>
+          </view>
+          <view class="card-right"><view class="card-amount">¥{{expense.amountText}}</view><view class="delete-btn" wx:if="{{isAdmin && !expense.isRecurring}}" data-id="{{expense._id}}" data-label="{{expense.categoryLabel}}" data-amount="{{expense.amountText}}" catchtap="onDeleteExpense"><t-icon name="delete" size="30rpx" color="#94a3b8" /></view></view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+    <view class="expense-card" wx:for="{{list}}" wx:key="_id">
+      <view class="card-side-accent {{item.isRecurring ? 'recurring' : 'one-time'}}"></view>
+      <view class="card-left">
+        <view class="category-icon-box {{item.isRecurring ? 'recurring' : 'one-time'}}">
+          <t-icon name="{{item.isRecurring ? 'refresh' : 'wallet'}}" size="36rpx" color="#ffffff" />
+        </view>
+        <view class="card-main">
+          <view class="card-title-row">
+            <text class="card-category">{{item.categoryLabel || item.category}}</text>
+            <view class="type-tag {{item.isRecurring ? 'tag-recurring' : 'tag-one-time'}}">
+              {{item.typeLabel}}
+            </view>
+          </view>
+          <view class="card-meta">
+            <text class="card-date">{{item.expenseDate}}</text>
+            <text class="meta-dot">·</text>
+            <text class="card-user">{{item.createdByName || '员工'}}</text>
+          </view>
+          <view class="card-remark" wx:if="{{item.remark}}">{{item.remark}}</view>
+        </view>
+      </view>
+      <view class="card-right">
+        <view class="card-amount">¥{{item.amountText}}</view>
+        <view
+          class="delete-btn"
+          wx:if="{{isAdmin && !item.isRecurring}}"
+          data-id="{{item._id}}"
+          data-label="{{item.categoryLabel}}"
+          data-amount="{{item.amountText}}"
+          catchtap="onDeleteExpense"
+        >
+          <t-icon name="delete" size="30rpx" color="#94a3b8" />
+        </view>
+      </view>
+    </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && !list.length}}">
+      <t-icon name="info-circle" size="72rpx" color="#cbd5e1" />
+      <text class="empty-text">当前筛选条件下暂无支出记录</text>
+      <button class="empty-create-btn" bindtap="goToCreate">立即记一笔</button>
+    </view>
+
+    <!-- 加载中/没有更多 -->
+    <view class="loading-state" wx:if="{{loading}}">
+      <t-loading size="36rpx" theme="circular" />
+      <text>正在加载支出记录...</text>
+    </view>
+    <view class="no-more" wx:elif="{{list.length > 0 && !hasMore}}">
+      已经到底啦
+    </view>
+  </view>
+</view>
+
+<!-- 月份选择器 -->
+<t-date-time-picker
+  visible="{{monthPickerVisible}}"
+  mode="month"
+  value="{{selectedMonth || currentMonth}}"
+  title="选择查看月份"
+  confirm-btn="确定"
+  bindconfirm="onMonthConfirm"
+  bindcancel="closeMonthPicker"
+  bindclose="closeMonthPicker"
+/>
+
+<!-- 类目选择器 -->
+<t-picker
+  visible="{{categoryPickerVisible}}"
+  value="{{categoryPickerValue}}"
+  title="选择支出类目"
+  confirmBtn="确定"
+  cancelBtn="取消"
+  bindconfirm="onCategoryConfirm"
+  bindcancel="closeCategoryPicker"
+  bindclose="closeCategoryPicker"
+>
+  <t-picker-item options="{{categoryOptions}}" />
+</t-picker>
+
+<!-- 类型选择器 -->
+<t-picker
+  visible="{{typePickerVisible}}"
+  value="{{typePickerValue}}"
+  title="选择支出类型"
+  confirmBtn="确定"
+  cancelBtn="取消"
+  bindconfirm="onTypeConfirm"
+  bindcancel="closeTypePicker"
+  bindclose="closeTypePicker"
+>
+  <t-picker-item options="{{typeOptions}}" />
+</t-picker>

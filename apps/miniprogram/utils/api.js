@@ -554,6 +554,54 @@ function deleteVoucher(data) {
   return callFunction("voucherService", "delete", data);
 }
 
+function createExpense(data) {
+  return callFunction("expenseService", "createExpense", data);
+}
+
+function checkDuplicateExpense(data) {
+  return callFunction("expenseService", "checkDuplicateExpense", data);
+}
+
+function mergeExpense(data) {
+  return callFunction("expenseService", "mergeExpense", data);
+}
+
+function createRecurringExpenseRule(data) {
+  return callFunction("expenseService", "createRecurringRule", data);
+}
+
+function listExpenses(params = {}) {
+  return callFunction("expenseService", "listExpenses", params);
+}
+
+function getExpenseAnalysis(params = {}) {
+  return callFunction("expenseService", "getExpenseAnalysis", params);
+}
+
+function listRecurringExpenseRules(params = {}) {
+  return callFunction("expenseService", "listRecurringRules", params);
+}
+
+function updateRecurringExpenseRule(data) {
+  return callFunction("expenseService", "updateRecurringRule", data);
+}
+
+function stopRecurringExpenseRule(id) {
+  return callFunction("expenseService", "stopRecurringRule", { id });
+}
+
+function deleteRecurringExpenseRule(id) {
+  return callFunction("expenseService", "deleteRecurringRule", { id });
+}
+
+function updateExpense(data) {
+  return callFunction("expenseService", "updateExpense", data);
+}
+
+function deleteExpense(id) {
+  return callFunction("expenseService", "deleteExpense", { id });
+}
+
 module.exports = {
   addVoucher,
   cacheUserInfo,
@@ -562,18 +610,23 @@ module.exports = {
   createAccount,
   createClient,
   createConfig,
+  createExpense,
+  checkDuplicateExpense,
+  createRecurringExpenseRule,
   createProject,
   createProjectCase,
   createProjectQuotation,
   createProjectQuotationVersion,
   deleteClient,
   deleteConfig,
+  deleteExpense,
   deleteProjects,
   deleteProjectQuotations,
   deleteProjectCase,
   deleteNotification,
   deleteNotifications,
   deleteCategoryReviews,
+  deleteRecurringExpenseRule,
   deleteVoucher,
   ensureAuthOnShow,
   getProject,
@@ -581,6 +634,7 @@ module.exports = {
   getCategoryReviewDetail,
   getCategoryReviewPendingCount,
   getCategoryReviewSubscriptionStatus,
+  getExpenseAnalysis,
   getGlobalConfig,
   getConfigUsage,
   getNextEmployeeNo,
@@ -598,6 +652,8 @@ module.exports = {
   uploadUserAvatar,
   getVouchers,
   getWechatSubscriptionStatus,
+  listExpenses,
+  listRecurringExpenseRules,
   listProjects,
   listAccounts,
   resetAccountPassword,
@@ -624,9 +680,11 @@ module.exports = {
   login,
   logout,
   markAllNotificationsRead,
+  mergeExpense,
   saveWechatSubscription,
   saveCategoryReviewSubscription,
   setProjectCaseCover,
+  stopRecurringExpenseRule,
   syncProjectToCase,
   submitCategoryReview,
   invalidateUserInfoCache,
@@ -637,6 +695,8 @@ module.exports = {
   reorderConfig,
   updateConfig,
   updateConfigStatus,
+  updateExpense,
+  updateRecurringExpenseRule,
   updateProject,
   updateClient,
   addProjectServiceRecord,
@@ -645,3 +705,4 @@ module.exports = {
   deleteProjectServiceRecord,
   updateAccountJobTitle,
 };
+

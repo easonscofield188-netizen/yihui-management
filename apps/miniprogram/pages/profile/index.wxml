@@ -37,6 +37,8 @@
         <view class="quick-tile" bindtap="openProjects"><view class="quick-icon blue"><t-icon name="catalog" size="40rpx" color="#285692" /></view><text>项目总览</text></view>
         <view class="quick-tile" bindtap="openProjectQuotations"><view class="quick-icon violet"><t-icon name="bill" size="40rpx" color="#6350a7" /></view><text>项目报价</text></view>
         <view class="quick-tile" bindtap="openProjectCases"><view class="quick-icon green"><t-icon name="image" size="40rpx" color="#26785f" /></view><text>项目案例</text></view>
+        <view class="quick-tile" bindtap="openExpenseList"><view class="quick-icon orange"><t-icon name="wallet" size="40rpx" color="#b45309" /></view><text>公司支出</text></view>
+        <view class="quick-tile" bindtap="openExpenseAnalysis"><view class="quick-icon cyan"><t-icon name="chart-pie" size="40rpx" color="#0891b2" /></view><text>支出分析</text></view>
         <view class="quick-tile" bindtap="openSecurity"><view class="quick-icon gray"><t-icon name="lock-on" size="40rpx" color="#536174" /></view><text>账号安全</text></view>
       </view>
     </view>

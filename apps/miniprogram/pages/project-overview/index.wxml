@@ -102,6 +102,45 @@
       </view>
     </view>
 
+    <!-- 运营支出与净利润（区分纯项目利润与扣除运营成本后的净利润） -->
+    <view class="net-profit-card">
+      <view class="net-profit-header">
+        <view class="net-profit-title">
+          <t-icon name="money" size="36rpx" color="#002045" />
+          <text>运营支出与净利润</text>
+        </view>
+        <view class="expense-detail-link" bindtap="openExpenseList">
+          <text>支出明细</text>
+          <t-icon name="chevron-right" size="28rpx" color="#002045" />
+        </view>
+      </view>
+
+      <view class="profit-compare-grid">
+        <view class="compare-item">
+          <view class="compare-label">纯项目利润 (Gross)</view>
+          <view class="compare-value project-profit">¥{{metrics.profitText}}</view>
+          <view class="compare-hint">未扣除日常运营</view>
+        </view>
+        <view class="compare-divider"></view>
+        <view class="compare-item" bindtap="openExpenseList">
+          <view class="compare-label">公司运营支出 (OpEx)</view>
+          <view class="compare-value operating-cost">¥{{metrics.operatingExpenseText}}</view>
+          <view class="compare-hint">房租/水电/行政等</view>
+        </view>
+      </view>
+
+      <view class="net-profit-highlight {{metrics.netProfitPositive ? 'positive' : 'negative'}}">
+        <view class="net-profit-main">
+          <view class="net-profit-name">综合净利润 (Net Profit)</view>
+          <view class="net-profit-amount">¥{{metrics.netProfitText}}</view>
+        </view>
+        <view class="net-profit-badge">
+          <text class="badge-label">综合净利率</text>
+          <text class="badge-val">{{metrics.netProfitRateText}}</text>
+        </view>
+      </view>
+    </view>
+
     <view class="recent-section">
       <view class="recent-title-row">
         <view class="recent-title">最近订单状态</view>

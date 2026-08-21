@@ -63,6 +63,28 @@ const COST_SETTLEMENT_DICTIONARY = Object.freeze({
   true: { value: true, label: '已支付' },
   false: { value: false, label: '待支付' }
 });
+
+function getBeijingToday() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+async function sumOperatingExpenses(query) {
+  const pageSize = 100;
+  let skip = 0;
+  let total = 0;
+  while (true) {
+    const result = await db.collection('company_expenses')
+      .where(query)
+      .skip(skip)
+      .limit(pageSize)
+      .get();
+    const list = result.data || [];
+    total += list.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    if (list.length < pageSize) break;
+    skip += pageSize;
+  }
+  return total;
+}
 const COST_CATEGORY_DICTIONARY = Object.freeze({
   real_plant: { value: 'real_plant', label: '真植物' },
   fake_plant: { value: 'fake_plant', label: '仿真植物' },
@@ -2600,6 +2622,32 @@ async function getOverview(params = {}) {
       }
     }
 
+    // 统计期间公司运营支出与净利润
+    let operatingExpense = 0;
+    try {
+      const expStartDate = rangeType === 'all' ? '' : (startDate || bounds.start.toISOString().slice(0, 10));
+      const expEndDate = rangeType === 'all' ? '' : (endDate || bounds.end.toISOString().slice(0, 10));
+      const today = getBeijingToday();
+      const actualEndDate = expEndDate && expEndDate < today ? expEndDate : today;
+      let expQuery = { expenseDate: db.command.lte(actualEndDate) };
+      if (expStartDate && expStartDate <= actualEndDate) {
+        expQuery = { expenseDate: db.command.gte(expStartDate).and(db.command.lte(actualEndDate)) };
+      } else if (expStartDate && expStartDate > actualEndDate) {
+        expQuery = { expenseDate: db.command.lt('0000-01-01') };
+      } else if (expStartDate) {
+        expQuery = { expenseDate: db.command.gte(expStartDate) };
+      }
+      operatingExpense = await sumOperatingExpenses(expQuery);
+    } catch (e) {
+      // 集合未创建或查询失败时按 0 处理
+      operatingExpense = 0;
+    }
+
+    const netProfit = currentMetrics.profit - operatingExpense;
+    const netProfitRate = currentMetrics.totalAmount
+      ? (netProfit / currentMetrics.totalAmount) * 100
+      : 0;
+
     return {
       code: 0,
       message: '查询成功',
@@ -2612,6 +2660,9 @@ async function getOverview(params = {}) {
           : getOverviewPeriodLabel(rangeType, startDate, endDate, bounds),
         metrics: {
           ...currentMetrics,
+          operatingExpense: Number(operatingExpense.toFixed(2)),
+          netProfit: Number(netProfit.toFixed(2)),
+          netProfitRate: Number(netProfitRate.toFixed(2)),
           trendPercent: Number(trendPercent.toFixed(2))
         },
         recentProjects

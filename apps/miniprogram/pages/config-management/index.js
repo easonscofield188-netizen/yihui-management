@@ -4,9 +4,15 @@ const GROUP_META = {
   CLIENT_SOURCE: { title: "客户来源", description: "管理客户获客与流量渠道", icon: "root-list" },
   CLIENT_ROLE: { title: "客户角色", description: "配置客户在项目中的身份", icon: "usergroup" },
   COST_CATEGORY: { title: "成本项目", description: "维护项目材料与劳务成本科目", icon: "money" },
+  EXPENSE_CATEGORY: { title: "支出类目", description: "维护公司日常运营支出分类", icon: "wallet" },
   PROJECT_SCENE: { title: "项目场景", description: "维护项目基础场景选项", icon: "map" },
   JOB_TITLE: { title: "岗位名称", description: "配置企业岗位与职能头衔", icon: "user-avatar" },
 };
+
+const EXPENSE_SCOPE_OPTIONS = [
+  { label: '一次性支出', value: 'one_time' },
+  { label: '固定/分摊支出', value: 'recurring' },
+];
 
 function getNavMetrics() {
   const systemInfo = wx.getSystemInfoSync();
@@ -29,7 +35,8 @@ Page({
     editorVisible: false,
     editingId: "",
     editorTitle: "新增配置",
-    form: { label: "", description: "", commonUnit: "" },
+    form: { label: "", description: "", commonUnit: "", expenseScope: "one_time", isCommon: false },
+    expenseScopeOptions: EXPENSE_SCOPE_OPTIONS,
   },
 
   async onLoad(options = {}) {
@@ -83,7 +90,16 @@ Page({
   decorateConfigs(list) {
     const sorted = list.slice().sort((left, right) => {
       const statusDifference = Number(left.isActive === false) - Number(right.isActive === false);
-      return statusDifference || (Number(left.sortOrder) || 0) - (Number(right.sortOrder) || 0);
+      if (statusDifference) return statusDifference;
+      if (this.data.group === 'EXPENSE_CATEGORY') {
+        const leftCommon = left.isCommon === true || Number(left.usageCount) >= 3;
+        const rightCommon = right.isCommon === true || Number(right.usageCount) >= 3;
+        return Number(rightCommon) - Number(leftCommon)
+          || Number(right.isCommon === true) - Number(left.isCommon === true)
+          || (Number(right.usageCount) || 0) - (Number(left.usageCount) || 0)
+          || (Number(left.sortOrder) || 0) - (Number(right.sortOrder) || 0);
+      }
+      return (Number(left.sortOrder) || 0) - (Number(right.sortOrder) || 0);
     });
     return sorted.map(item => {
       const peers = sorted.filter(peer => (peer.isActive !== false) === (item.isActive !== false));
@@ -116,7 +132,7 @@ Page({
   },
 
   openCreate() {
-    this.setData({ editorVisible: true, editingId: "", editorTitle: "新增配置", form: { label: "", description: "", commonUnit: "" } });
+    this.setData({ editorVisible: true, editingId: "", editorTitle: "新增配置", form: { label: "", description: "", commonUnit: "", expenseScope: "one_time", isCommon: false } });
   },
 
   async editConfig(event) {
@@ -156,7 +172,13 @@ Page({
       editorVisible: true,
       editingId: config.id,
       editorTitle: "编辑配置",
-      form: { label: config.label || "", description: config.description || "", commonUnit: config.commonUnit || "" },
+      form: {
+        label: config.label || "",
+        description: config.description || "",
+        commonUnit: config.commonUnit || "",
+        expenseScope: config.expenseScope === "recurring" ? "recurring" : "one_time",
+        isCommon: config.isCommon === true,
+      },
     });
   },
 
@@ -171,6 +193,17 @@ Page({
   onFormInput(event) {
     const field = event.currentTarget.dataset.field;
     this.setData({ [`form.${field}`]: event.detail.value });
+  },
+
+  onExpenseScopeTap(event) {
+    const scope = event.currentTarget.dataset.scope;
+    if (EXPENSE_SCOPE_OPTIONS.some(item => item.value === scope)) {
+      this.setData({ 'form.expenseScope': scope });
+    }
+  },
+
+  onCommonChange(event) {
+    this.setData({ 'form.isCommon': Boolean(event.detail.value) });
   },
 
   async saveConfig() {
@@ -188,9 +221,9 @@ Page({
     this.setData({ operating: true, loadingMessage: isEditing ? "正在更新配置及引用数据..." : "正在新增配置..." });
     try {
       if (isEditing) {
-        await api.updateConfig({ id: this.data.editingId, group: this.data.group, label, description: this.data.form.description.trim(), commonUnit });
+        await api.updateConfig({ id: this.data.editingId, group: this.data.group, label, description: this.data.form.description.trim(), commonUnit, expenseScope: this.data.form.expenseScope, isCommon: this.data.form.isCommon });
       } else {
-        await api.createConfig({ group: this.data.group, label, description: this.data.form.description.trim(), commonUnit });
+        await api.createConfig({ group: this.data.group, label, description: this.data.form.description.trim(), commonUnit, expenseScope: this.data.form.expenseScope, isCommon: this.data.form.isCommon });
       }
       this.setData({ editorVisible: false });
       await this.loadConfigs();
