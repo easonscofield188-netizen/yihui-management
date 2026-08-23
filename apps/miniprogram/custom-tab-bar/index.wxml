@@ -49,6 +49,17 @@
         </view>
         <t-icon name="chevron-right" size="36rpx" color="#94a3b8" />
       </view>
+      <view class="action-card flower-ledger-card" wx:if="{{!flowerLedgerExists}}" bindtap="createFlowerPlantLedger">
+        <view class="action-icon flower-ledger-icon">
+          <t-icon name="tree-square-dot" size="44rpx" color="#ffffff" />
+        </view>
+        <view class="action-info">
+          <view class="action-item-title">生成鲜花绿植供应账本</view>
+          <view class="action-item-desc">唯一账本，客户随每条业务记录单独绑定</view>
+        </view>
+        <t-loading wx:if="{{flowerLedgerLoading}}" size="36rpx" theme="circular" />
+        <t-icon wx:else name="chevron-right" size="36rpx" color="#94a3b8" />
+      </view>
     </view>
   </view>
 </view>

@@ -102,7 +102,9 @@ function decorateProject(project, config) {
         settled: isSettledCost(item.isSettled),
       };
     }),
-    statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
+    statusLabel: project.type === "flower_plant" && project.status === "in_cooperation"
+      ? "进行中"
+      : (STATUS_LABELS[project.status] || project.status || "未设置"),
     usesCheckIcon,
     statusIconColor: statusIconColors[project.status] || "#002045",
     amountText: money(project.amount),
@@ -111,6 +113,7 @@ function decorateProject(project, config) {
     payableText: money(project.payableAmount),
     paidText: money(project.paidAmount),
     profitText: money(project.profitAmount),
+    profitRateText: `${Number(project.profitRate || 0).toFixed(1)}%`,
     profitPositive: Number.isFinite(profitAmount) ? profitAmount >= 0 : true,
     staffCountText: Number(project.staffCount || 0),
     roleText: configLabel(config, "CLIENT_ROLE", project.role),
@@ -149,6 +152,9 @@ Page({
     serviceRecords: [],
     serviceModalVisible: false,
     activeRecord: null,
+    statementModalVisible: false,
+    statementData: null,
+    statementText: '',
   },
 
   onLoad(options) {
@@ -299,6 +305,8 @@ Page({
       government_unit: "机关单位",
       private_residence: "私人住宅",
       commercial_space: "商业空间",
+      flower_supply: "鲜花供应",
+      plant_supply: "绿植供应",
     };
 
     return records.map((rec, idx) => {
@@ -331,6 +339,7 @@ Page({
         receivableText: money(rec.receivableAmount),
         receivedText: money(rec.receivedAmount),
         unreceivedText: money(rec.unreceivedAmount),
+        profitRateText: `${Number(rec.profitRate || 0).toFixed(1)}%`,
       };
     });
   },
@@ -381,8 +390,77 @@ Page({
             wx.hideLoading();
           }
         }
+      }
+    });
+  },
+
+  openClientStatementForRecord(e) {
+    const clientId = e.currentTarget.dataset.clientId;
+    if (!clientId) {
+      wx.showToast({ title: '暂无关联客户信息', icon: 'none' });
+      return;
+    }
+    this.generateClientStatement(clientId);
+  },
+
+  async generateClientStatement(clientId) {
+    if (!clientId) return;
+    wx.showLoading({ title: '正在生成对账单...', mask: true });
+    try {
+      const res = await api.callFunction('projectService', 'getClientStatement', {
+        projectId: this.data.projectId,
+        clientId,
+      });
+      // api.callFunction 已返回云函数的 data 字段，不能再次取 .data。
+      const data = res || {};
+      const statementText = this.buildStatementText(data);
+      this.setData({
+        statementData: data,
+        statementText,
+        statementModalVisible: true,
+      });
+    } catch (err) {
+      wx.showToast({ title: err.message || '对账单生成失败', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+    }
+  },
+
+  buildStatementText(data) {
+    const today = new Date().toISOString().slice(0, 10);
+    let text = `【杭州亿辉文化 - 鲜花绿植供应对账单】\n`;
+    text += `客户姓名：${data.clientName || '客户'}\n`;
+    if (data.clientCompany) text += `单位公司：${data.clientCompany}\n`;
+    if (data.clientPhone) text += `联系电话：${data.clientPhone}\n`;
+    text += `对账日期：${today}\n`;
+    text += `-----------------------------\n`;
+    text += `服务笔数：${data.totalCount || 0} 笔\n`;
+    text += `订单总金额：¥${money(data.totalReceivable)}\n`;
+    text += `已付款金额：¥${money(data.totalReceived)}\n`;
+    text += `待收尾款：¥${money(data.totalUnreceived)}\n`;
+    text += `-----------------------------\n`;
+    text += `【服务消费明细】\n`;
+    (data.records || []).forEach((r, idx) => {
+      text += `${idx + 1}. ${r.serviceDate} ${r.content} - 应收:¥${money(r.receivableAmount)} | ${r.isSettled ? '已结清' : '未结清(待付:¥' + money(r.unreceivedAmount) + ')'}\n`;
+    });
+    text += `-----------------------------\n`;
+    text += `收款账号：杭州亿辉文化创意有限公司\n`;
+    text += `感谢您的支持与配合！`;
+    return text;
+  },
+
+  copyStatementText() {
+    if (!this.data.statementText) return;
+    wx.setClipboardData({
+      data: this.data.statementText,
+      success: () => {
+        wx.showToast({ title: '对账单已复制', icon: 'success' });
       },
     });
+  },
+
+  closeStatementModal() {
+    this.setData({ statementModalVisible: false });
   },
 
   previewVoucherUrls(e) {

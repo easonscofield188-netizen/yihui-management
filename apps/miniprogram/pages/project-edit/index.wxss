@@ -265,12 +265,18 @@ page { background: #f9f9ff; }
   font-weight: 700;
 }
 .cost-item.pending .cost-amount { color: #5b5f61; }
-.cost-remove {
-  display: block;
+.cost-actions {
+  display: flex;
   margin-top: 8rpx;
+  justify-content: flex-end;
+  gap: 16rpx;
+}
+.cost-edit, .cost-remove {
+  display: block;
   color: #ba1a1a;
   font-size: 22rpx;
 }
+.cost-edit { color: #1a5ea8; }
 .empty-cost {
   display: flex;
   padding: 48rpx 0;

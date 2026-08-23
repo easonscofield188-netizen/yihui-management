@@ -5,9 +5,7 @@ const { CREATION_CHANNEL } = require("../../utils/dictionary");
 
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const IMAGE_COMPRESS_THRESHOLD = 800 * 1024;
-const IMAGE_COMPRESS_QUALITY = 82;
-const IMAGE_MAX_LONG_EDGE = 2400;
+const MAX_VOUCHER_COUNT = 80;
 const UPLOAD_TIMEOUT_MS = 45000;
 const SAVE_VOUCHER_TIMEOUT_MS = 20000;
 const UPLOAD_MAX_RETRY = 3;
@@ -85,53 +83,11 @@ function getLocalFileSize(filePath, fallbackSize = 0) {
   });
 }
 
-function getImageInfo(src) {
-  return new Promise((resolve) => {
-    wx.getImageInfo({ src, success: resolve, fail: () => resolve(null) });
-  });
-}
-
-function compressImage(src, resizeOptions = {}) {
-  return new Promise((resolve, reject) => {
-    wx.compressImage({
-      src,
-      quality: IMAGE_COMPRESS_QUALITY,
-      ...resizeOptions,
-      success: resolve,
-      fail: reject,
-    });
-  });
-}
-
 async function prepareFile(file) {
   const sourcePath = file.tempFilePath || file.path;
   const sourceSize = await getLocalFileSize(sourcePath, file.size);
-  if (!isImageFile(file) || sourceSize < IMAGE_COMPRESS_THRESHOLD) {
-    return { ...file, tempFilePath: sourcePath, size: sourceSize, compressed: false };
-  }
-
-  try {
-    const imageInfo = await getImageInfo(sourcePath);
-    const resizeOptions = {};
-    if (imageInfo && Math.max(imageInfo.width, imageInfo.height) > IMAGE_MAX_LONG_EDGE) {
-      if (imageInfo.width >= imageInfo.height) resizeOptions.compressedWidth = IMAGE_MAX_LONG_EDGE;
-      else resizeOptions.compressedHeight = IMAGE_MAX_LONG_EDGE;
-    }
-    const result = await compressImage(sourcePath, resizeOptions);
-    const compressedPath = result.tempFilePath || sourcePath;
-    const compressedSize = await getLocalFileSize(compressedPath, sourceSize);
-    if (compressedPath !== sourcePath && compressedSize > 0 && compressedSize < sourceSize) {
-      return {
-        ...file,
-        tempFilePath: compressedPath,
-        size: compressedSize,
-        originalSize: sourceSize,
-        compressed: true,
-      };
-    }
-  } catch (error) {
-    // 个别图片格式或旧版客户端不支持压缩时，回退原文件，避免阻断凭证上传。
-  }
+  // 不在客户端使用 wx.compressImage，避免 JPEG 再编码造成有损。
+  // 图片会在云端转为无损 WebP 后才作为最终凭证保存。
   return { ...file, tempFilePath: sourcePath, size: sourceSize, compressed: false };
 }
 
@@ -286,9 +242,9 @@ Page({
 
   chooseFile() {
     if (this.data.submitting || !this.data.invoiceEnabled) return;
-    const remaining = 9 - this.data.files.length;
+    const remaining = MAX_VOUCHER_COUNT - this.data.files.length;
     if (remaining <= 0) {
-      wx.showToast({ title: "最多上传 9 个附件", icon: "none" });
+      wx.showToast({ title: `最多上传 ${MAX_VOUCHER_COUNT} 个附件`, icon: "none" });
       return;
     }
     wx.showActionSheet({
@@ -302,7 +258,7 @@ Page({
 
   chooseImages(count) {
     wx.chooseMedia({
-      count,
+      count: Math.min(9, count),
       mediaType: ["image"],
       sourceType: ["album", "camera"],
       // 统一在 appendFiles 中控制压缩质量，避免系统预压缩后再次损伤画质。
@@ -313,7 +269,7 @@ Page({
 
   choosePdf(count) {
     wx.chooseMessageFile({
-      count,
+      count: Math.min(9, count),
       type: "file",
       extension: ["pdf"],
       success: ({ tempFiles }) => this.appendFiles(tempFiles || []),
@@ -353,7 +309,7 @@ Page({
     wx.hideLoading();
     if (oversizedCount) wx.showToast({ title: "已忽略压缩后仍超过 10MB 的文件", icon: "none" });
     if (!accepted.length) return;
-    this.setData({ files: [...this.data.files, ...accepted].slice(0, 9) }, () => this.persistUploadQueue());
+    this.setData({ files: [...this.data.files, ...accepted].slice(0, MAX_VOUCHER_COUNT) }, () => this.persistUploadQueue());
   },
 
   async removeFile(event) {
@@ -437,13 +393,13 @@ Page({
   },
 
   async uploadVoucherOnce(projectId, file) {
-    const extension = fileExtension(file.tempFilePath);
+    let extension = fileExtension(file.tempFilePath);
     const existingCount = (this.data.files || []).filter((item) => item.isExisting).length;
     const pendingIndex = (this.data.files || []).findIndex((item) => item.id === file.id);
     const seqIndex = existingCount + (pendingIndex >= 0 ? pendingIndex : 0) + 1;
     const seqStr = String(seqIndex).padStart(2, "0");
     const extDot = extension.startsWith(".") ? extension : `.${extension}`;
-    const formattedFileName = `成本凭证_${seqStr}${extDot}`;
+    let formattedFileName = `成本凭证_${seqStr}${extDot}`;
     const pathInfo = buildVoucherCloudPath(this.data.projectName, extension, file.cloudFileName);
     file.cloudFileName = pathInfo.fileName;
     if (!this.data.files.find((item) => item.id === file.id && item.cloudFileName === pathInfo.fileName)) {
@@ -456,13 +412,27 @@ Page({
         UPLOAD_TIMEOUT_MS,
         `${formattedFileName} 上传超时`
       );
-      const fileId = uploadResult.fileID;
-      const urlResult = await withTimeout(
-        wx.cloud.getTempFileURL({ fileList: [fileId] }),
-        SAVE_VOUCHER_TIMEOUT_MS,
-        `${formattedFileName} 获取地址超时`
-      );
-      const fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
+      let fileId = uploadResult.fileID;
+      let fileUrl = "";
+      if (file.isImage) {
+        const optimized = await withTimeout(
+          api.optimizeVoucherImageLossless(fileId),
+          SAVE_VOUCHER_TIMEOUT_MS,
+          `${formattedFileName} 无损处理超时`
+        );
+        fileId = optimized.fileId;
+        fileUrl = optimized.fileUrl || "";
+        extension = "webp";
+        formattedFileName = `成本凭证_${seqStr}.webp`;
+      }
+      if (!fileUrl) {
+        const urlResult = await withTimeout(
+          wx.cloud.getTempFileURL({ fileList: [fileId] }),
+          SAVE_VOUCHER_TIMEOUT_MS,
+          `${formattedFileName} 获取地址超时`
+        );
+        fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
+      }
       if (!fileUrl) throw new Error(`${formattedFileName} 获取访问地址失败`);
       const voucher = await withTimeout(
         api.addVoucher({
@@ -638,6 +608,30 @@ Page({
       wx.showToast({ title: error.message || "重试失败", icon: "none" });
     } finally {
       this.setData({ submitting: false });
+    }
+  },
+
+  async retrySingleVoucher(event) {
+    if (this.data.submitting) return;
+    const id = String(event.currentTarget.dataset.id || "");
+    const projectId = this.data.createdProjectId || this.data.projectId;
+    const file = this.data.files.find((item) => item.id === id);
+    if (!projectId || !file || file.uploadStatus !== "failed") return;
+    this.markFileUploadState(id, { uploadStatus: "uploading", uploadError: "" });
+    try {
+      const result = await this.uploadVoucher(projectId, file);
+      this.markFileUploadState(id, {
+        uploadStatus: "success",
+        uploadError: "",
+        isExisting: true,
+        fileId: result.fileId,
+        voucherId: result.voucherId,
+      });
+      await this.syncVoucherFlag(projectId, true);
+      wx.showToast({ title: "该凭证已上传", icon: "success" });
+    } catch (error) {
+      this.markFileUploadState(id, { uploadStatus: "failed", uploadError: error.message || "上传失败" });
+      wx.showToast({ title: "该凭证重试失败", icon: "none" });
     }
   },
 

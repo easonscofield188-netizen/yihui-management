@@ -22,6 +22,8 @@
 .action-icon { width: 84rpx; height: 84rpx; border-radius: 22rpx; display: flex; align-items: center; justify-content: center; margin-right: 22rpx; flex-shrink: 0; }
 .project-icon { background: linear-gradient(135deg, #1e3a8a, #3b82f6); box-shadow: 0 8rpx 18rpx rgba(30, 58, 138, 0.25); }
 .expense-icon { background: linear-gradient(135deg, #b45309, #f59e0b); box-shadow: 0 8rpx 18rpx rgba(180, 83, 9, 0.25); }
+.flower-ledger-card { border-color: #d9f2df; background: linear-gradient(135deg, #f6fff7, #eefcf3); }
+.flower-ledger-icon { background: linear-gradient(135deg, #15803d, #4ade80); box-shadow: 0 8rpx 18rpx rgba(21, 128, 61, 0.22); }
 .action-info { flex: 1; min-width: 0; }
 .action-item-title { font-size: 30rpx; font-weight: 700; color: #0f172a; margin-bottom: 6rpx; }
 .action-item-desc { font-size: 22rpx; color: #64748b; line-height: 1.3; }

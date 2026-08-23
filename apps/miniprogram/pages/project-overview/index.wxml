@@ -8,6 +8,19 @@
   <view class="overview-nav-placeholder" style="height: {{navHeight}}px;"></view>
 
   <view class="overview-content">
+    <!-- 业务分类筛选栏（全部 / 常规项目 / 长期项目 / 鲜花绿植） -->
+    <view class="type-filter-row">
+      <view class="type-list">
+        <view
+          wx:for="{{typeOptions}}"
+          wx:key="value"
+          class="type-tab {{typeValue === item.value ? 'active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onTypeTap"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
     <view class="filter-row">
       <scroll-view class="range-scroll" scroll-x show-scrollbar="{{false}}">
         <view class="range-list">
@@ -103,7 +116,7 @@
     </view>
 
     <!-- 运营支出与净利润（区分纯项目利润与扣除运营成本后的净利润） -->
-    <view class="net-profit-card">
+    <view class="net-profit-card" wx:if="{{typeValue === 'all'}}">
       <view class="net-profit-header">
         <view class="net-profit-title">
           <t-icon name="money" size="36rpx" color="#002045" />

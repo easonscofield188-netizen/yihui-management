@@ -88,6 +88,10 @@
               <t-icon name="repeat" size="22rpx" color="#c2410c" />
               <text>长期</text>
             </view>
+            <view wx:elif="{{item.type === 'flower_plant'}}" class="type-badge longterm-badge">
+              <t-icon name="tree-square-dot" size="22rpx" color="#c2410c" />
+              <text>鲜花绿植</text>
+            </view>
             <view wx:else class="type-badge normal-badge">
               <text>常规</text>
             </view>
@@ -109,7 +113,7 @@
         </block>
         <block wx:else>
           <view class="project-name">{{item.name}}</view>
-          <view class="client-row"><t-icon name="building-1" size="30rpx" color="#43474e" /><text>{{item.client || '未填写客户'}}</text></view>
+          <view class="client-row" wx:if="{{item.type !== 'flower_plant'}}"><t-icon name="building-1" size="30rpx" color="#43474e" /><text>{{item.client || '未填写客户'}}</text></view>
         </block>
 
         <!-- 交付日期展示：长期项目展示最新单子交付日期，常规项目展示交付日期 -->
@@ -143,16 +147,22 @@
             <text class="amount-value">￥{{item.costText}}</text>
           </view>
           <view class="amount-cell profit">
-            <view class="amount-label"><t-icon name="chart-line" size="28rpx" color="{{item.profitPositive ? '#137047' : '#ba1a1a'}}" /><text>{{item.isLongTerm ? '累计利润' : '项目利润'}}</text></view>
-            <text class="amount-value {{item.profitPositive ? 'profit-positive' : 'profit-negative'}}">￥{{item.profitText}}</text>
+            <view class="profit-summary-item">
+              <view class="amount-label"><t-icon name="chart-line" size="28rpx" color="{{item.profitPositive ? '#137047' : '#ba1a1a'}}" /><text>{{item.isLongTerm ? '累计利润' : '项目利润'}}</text></view>
+              <text class="amount-value {{item.profitPositive ? 'profit-positive' : 'profit-negative'}}">￥{{item.profitText}}</text>
+            </view>
+            <view class="profit-rate-summary {{item.profitPositive ? '' : 'negative'}}">
+              <text>利润率</text>
+              <text>{{item.profitRateText}}</text>
+            </view>
           </view>
         </view>
 
-        <!-- 长期项目快捷记一笔按钮 -->
-        <view class="longterm-card-footer" wx:if="{{item.type === 'long_term' && !selectionMode}}">
-          <view class="quick-record-pill-btn" data-id="{{item._id}}" data-name="{{item.name}}" catchtap="openServiceRecordModal">
+        <!-- 长期项目与鲜花绿植账本的快捷记账入口 -->
+        <view class="longterm-card-footer" wx:if="{{item.isLongTerm && !selectionMode}}">
+          <view class="quick-record-pill-btn" data-id="{{item._id}}" data-name="{{item.name}}" data-type="{{item.type}}" catchtap="openServiceRecordModal">
             <t-icon name="add-circle" size="30rpx" color="#002045" />
-            <text>点击添加一条新的服务内容/收支</text>
+            <text>{{item.type === 'flower_plant' ? '新增业务记录 / 记账' : '点击添加一条新的服务内容 / 收支'}}</text>
           </view>
         </view>
       </view>
@@ -200,11 +210,12 @@
     <t-picker-item options="{{yearOptions}}" />
   </t-picker>
 
-  <!-- 长期项目服务记账快捷弹窗 -->
+  <!-- 长期项目 / 鲜花绿植账本服务记账快捷弹窗 -->
   <service-record-modal
     visible="{{serviceModalVisible}}"
     projectId="{{activeProjectId}}"
     projectName="{{activeProjectName}}"
+    projectType="{{activeProjectType}}"
     bindsuccess="onServiceRecordSuccess"
     bindclose="onServiceRecordClose"
   />

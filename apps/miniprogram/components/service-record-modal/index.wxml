@@ -10,8 +10,8 @@
   <view class="service-dialog">
     <view class="dialog-header">
       <view class="dialog-title-wrap">
-        <view class="dialog-badge">长期合作</view>
-        <text class="dialog-title">{{isEdit ? '编辑服务记录' : '新增服务履约与记账'}}</text>
+        <view class="dialog-badge">{{projectType === 'flower_plant' ? '鲜花绿植' : '长期合作'}}</view>
+        <text class="dialog-title">{{isEdit ? (projectType === 'flower_plant' ? '编辑业务记录' : '编辑服务记录') : (projectType === 'flower_plant' ? '新增业务记录/记账' : '新增服务履约与记账')}}</text>
       </view>
       <view class="close-btn" bindtap="closeModal">
         <t-icon name="close" size="40rpx" color="#43474e" />
@@ -25,9 +25,25 @@
         <text class="project-pill-name">{{projectName}}</text>
       </view>
 
+      <!-- 关联客户选择（鲜花绿植等多客户业务需独立选择客户） -->
+      <view class="form-section" wx:if="{{projectType === 'flower_plant'}}">
+        <view class="section-label required">服务客户</view>
+        <view class="input-shell select-shell" bindtap="openClientPicker">
+          <t-input
+            t-class="form-input"
+            borderless
+            readonly
+            value="{{selectedClientName ? (selectedClientCompany ? selectedClientName + ' (' + selectedClientCompany + ')' : selectedClientName) : ''}}"
+            placeholder="请点击选择关联客户"
+            prefix-icon="user"
+            suffix-icon="chevron-down"
+          />
+        </view>
+      </view>
+
       <!-- 服务日期 -->
       <view class="form-section">
-        <view class="section-label required">服务日期</view>
+        <view class="section-label required">{{projectType === 'flower_plant' ? '业务日期' : '服务日期'}}</view>
         <view class="input-shell select-shell" bindtap="openDatePicker">
           <t-input
             t-class="form-input"
@@ -43,7 +59,7 @@
 
       <!-- 服务内容 -->
       <view class="form-section">
-        <view class="section-label required">服务内容</view>
+        <view class="section-label required">{{projectType === 'flower_plant' ? '业务内容' : '服务内容'}}</view>
         <view class="input-shell select-shell" bindtap="openScenePicker">
           <t-input
             t-class="form-input"
@@ -124,7 +140,7 @@
         <view class="card-box-header">
           <view class="card-box-title">
             <t-icon name="wallet" size="34rpx" color="#002045" />
-            <text>本次应收客户金额（元）</text>
+            <text>订单金额（元）</text>
           </view>
         </view>
 
@@ -141,17 +157,16 @@
           </view>
         </view>
 
-        <block wx:if="{{receivableAmount && receivableAmount > 0}}">
-          <view class="settlement-toggle-row">
-            <view class="toggle-info">
-              <view class="toggle-title">客户是否已结清</view>
-              <view class="toggle-desc">{{isSettled ? '已全额收回本次款项' : '存在未收尾款/挂账'}}</view>
-            </view>
-            <t-switch value="{{isSettled}}" bindchange="onSettledChange" />
+        <view class="settlement-toggle-row">
+          <view class="toggle-info">
+            <view class="toggle-title">本次订单是否已结清</view>
+            <view class="toggle-desc">{{isSettled ? '订单金额将全部计为本次已收金额' : '可填写本次实际已收金额'}}</view>
           </view>
+          <t-switch value="{{isSettled}}" bindchange="onSettledChange" />
+        </view>
 
-          <view class="settlement-row" wx:if="{{!isSettled}}">
-            <view class="section-label">本次实收金额 (元)</view>
+        <view class="settlement-row" wx:if="{{!isSettled}}">
+            <view class="section-label">本次已收金额（元）</view>
             <view class="input-shell">
               <t-input
                 t-class="form-input"
@@ -165,8 +180,7 @@
             <view class="unreceived-badge" wx:if="{{calculatedUnreceived > 0}}">
               待收尾款：¥{{calculatedUnreceivedText}}
             </view>
-          </view>
-        </block>
+        </view>
       </view>
 
       <!-- 发票凭证卡片 -->
@@ -185,7 +199,7 @@
               <t-icon name="close" size="24rpx" color="#ffffff" />
             </view>
           </view>
-          <view class="unified-upload-btn" bindtap="uploadUnifiedVoucher" wx:if="{{vouchers.length < 9}}">
+          <view class="unified-upload-btn" bindtap="uploadUnifiedVoucher" wx:if="{{vouchers.length < 80}}">
             <t-icon name="add" size="44rpx" color="#74777f" />
             <text>上传凭据</text>
           </view>
@@ -201,7 +215,7 @@
         t-class="submit-btn"
         theme="primary"
         block
-        content="保存服务记录"
+        content="{{projectType === 'flower_plant' ? '保存业务记录' : '保存服务记录'}}"
         loading="{{submitting}}"
         disabled="{{submitting}}"
         bindtap="submitRecord"
@@ -253,3 +267,114 @@
 >
   <t-picker-item options="{{projectScenes}}" />
 </t-picker>
+
+<!-- 客户选择弹窗 -->
+<t-popup
+  visible="{{clientPickerVisible}}"
+  placement="bottom"
+  close-on-overlay-click
+  t-class-content="service-popup"
+  z-index="{{12000}}"
+  overlay-props="{{ { zIndex: 11800 } }}"
+  bindvisible-change="onClientPickerVisibleChange"
+>
+  <view class="client-picker-dialog">
+    <view class="dialog-header">
+      <view class="dialog-title-wrap">
+        <t-icon name="user" size="36rpx" color="#002045" />
+        <text class="dialog-title">选择关联客户</text>
+      </view>
+      <view class="close-btn" bindtap="closeClientPicker">
+        <t-icon name="close" size="40rpx" color="#43474e" />
+      </view>
+    </view>
+    
+    <view class="client-search-bar">
+      <t-search
+        value="{{clientSearchKeyword}}"
+        placeholder="搜索客户姓名/公司/手机号"
+        bindchange="onClientSearchChange"
+        bindclear="onClientSearchClear"
+      />
+    </view>
+
+    <view class="client-loading-state" wx:if="{{loadingClients}}">
+      <t-loading size="44rpx" theme="circular" />
+      <text>正在加载客户列表…</text>
+      <text class="client-loading-tip">请稍候，加载完成后可搜索或选择客户</text>
+    </view>
+
+    <scroll-view class="client-list-scroll" wx:else scroll-y show-scrollbar="{{false}}">
+      <view class="empty-client-tip" wx:if="{{!filteredClientList.length}}">
+        <text>未找到匹配客户</text>
+      </view>
+      <view
+        class="client-item-card {{selectedClientId === (item._id || item.id) ? 'selected' : ''}}"
+        wx:for="{{filteredClientList}}"
+        wx:key="_id"
+        data-id="{{item._id || item.id}}"
+        data-name="{{item.name}}"
+        data-phone="{{item.phone || ''}}"
+        data-company="{{item.companyName || item.company || ''}}"
+        bindtap="selectClientItem"
+      >
+        <view class="client-item-main">
+          <view class="client-item-name">{{item.name}}</view>
+          <view class="client-item-sub" wx:if="{{item.companyName || item.company || item.phone}}">
+            <text wx:if="{{item.companyName || item.company}}">{{item.companyName || item.company}}</text>
+            <text wx:if="{{item.phone}}"> · {{item.phone}}</text>
+          </view>
+        </view>
+        <t-icon wx:if="{{selectedClientId === (item._id || item.id)}}" name="check" size="36rpx" color="#002045" />
+      </view>
+    </scroll-view>
+
+    <view class="client-picker-footer">
+      <t-button
+        theme="outline"
+        block
+        icon="add"
+        content="快捷新建客户"
+        bindtap="openCreateClientModal"
+      />
+    </view>
+  </view>
+</t-popup>
+
+<!-- 快捷新建客户弹窗 -->
+<t-dialog
+  wx:if="{{createClientVisible}}"
+  visible="{{createClientVisible}}"
+  title="快捷新建客户"
+  confirm-btn="保存并选中"
+  cancel-btn="取消"
+  bindconfirm="submitQuickClient"
+  bindcancel="closeCreateClientModal"
+>
+  <view class="quick-client-form" slot="content">
+    <view class="quick-field">
+      <text class="quick-label">客户姓名 *</text>
+      <t-input
+        value="{{newClientName}}"
+        placeholder="请输入客户姓名"
+        bindchange="onNewClientNameChange"
+      />
+    </view>
+    <view class="quick-field">
+      <text class="quick-label">联系电话</text>
+      <t-input
+        value="{{newClientPhone}}"
+        placeholder="请输入手机号"
+        bindchange="onNewClientPhoneChange"
+      />
+    </view>
+    <view class="quick-field">
+      <text class="quick-label">公司名称</text>
+      <t-input
+        value="{{newClientCompany}}"
+        placeholder="请输入公司/单位名称"
+        bindchange="onNewClientCompanyChange"
+      />
+    </view>
+  </view>
+</t-dialog>

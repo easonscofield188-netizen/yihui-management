@@ -113,10 +113,19 @@ function decorateOverview(result) {
   };
 }
 
+const TYPE_OPTIONS = [
+  { label: "全部业务", value: "all" },
+  { label: "常规项目", value: "normal" },
+  { label: "长期项目", value: "long_term" },
+  { label: "鲜花绿植", value: "flower_plant" },
+];
+
 Page({
   data: {
     statusBarHeight: 0,
     navHeight: 88,
+    typeOptions: TYPE_OPTIONS,
+    typeValue: "all",
     rangeOptions: RANGE_OPTIONS,
     rangeIndex: 0,
     rangeValue: "all",
@@ -192,6 +201,12 @@ Page({
     const pages = getCurrentPages();
     if (pages.length > 1) wx.navigateBack();
     else wx.switchTab({ url: "/pages/profile/index" });
+  },
+
+  onTypeTap(event) {
+    const value = String(event.currentTarget.dataset.value || "all");
+    if (value === this.data.typeValue) return;
+    this.setData({ typeValue: value }, () => this.loadOverview());
   },
 
   onRangeTap(event) {
@@ -274,6 +289,7 @@ Page({
         rangeType: isCustom ? "custom" : this.data.rangeValue,
         startDate: isCustom ? this.data.customRange[0] : "",
         endDate: isCustom ? this.data.customRange[1] : "",
+        projectType: this.data.typeValue || "all",
       });
       if (requestId !== this.overviewRequestId) return;
       const decorated = decorateOverview(result);

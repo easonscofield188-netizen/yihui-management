@@ -269,6 +269,11 @@ page { background: #f9f9ff; }
 .amount-value { display: block; margin-top: 14rpx; color: #43474e; font-size: 31rpx; font-weight: 700; }
 .receivable .amount-value { color: #ba1a1a; }
 .profit .amount-value { margin-top: 0; }
+.profit-summary-item, .profit-rate-summary { box-sizing: border-box; flex: 1; min-width: 0; }
+.profit-summary-item { padding-right: 20rpx; }
+.profit-rate-summary { display: flex; min-height: 58rpx; padding-left: 24rpx; flex-direction: column; justify-content: center; border-left: 2rpx solid #b9e4c9; color: #137047; font-size: 22rpx; line-height: 1.35; }
+.profit-rate-summary text:last-child { margin-top: 2rpx; font-size: 29rpx; font-weight: 800; }
+.profit-rate-summary.negative { border-color: #ffdad6; color: #ba1a1a; }
 .profit-positive { color: #137047 !important; }
 .profit-negative { color: #ba1a1a !important; }
 

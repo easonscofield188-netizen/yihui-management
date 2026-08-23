@@ -56,6 +56,20 @@ function isSettled(value, defaultValue = true) {
   return typeof value === 'boolean' ? value : defaultValue;
 }
 
+const PROJECT_TYPE = Object.freeze({
+  NORMAL: 'normal',
+  LONG_TERM: 'long_term',
+  FLOWER_PLANT: 'flower_plant',
+  HISTORICAL: 'historical'
+});
+
+const PROJECT_TYPE_DICTIONARY = Object.freeze({
+  [PROJECT_TYPE.NORMAL]: { value: PROJECT_TYPE.NORMAL, label: '常规项目' },
+  [PROJECT_TYPE.LONG_TERM]: { value: PROJECT_TYPE.LONG_TERM, label: '长期项目' },
+  [PROJECT_TYPE.FLOWER_PLANT]: { value: PROJECT_TYPE.FLOWER_PLANT, label: '鲜花绿植供应' },
+  [PROJECT_TYPE.HISTORICAL]: { value: PROJECT_TYPE.HISTORICAL, label: '历史归档项目' }
+});
+
 module.exports = {
   YES_NO,
   YES_NO_DICTIONARY,
@@ -66,6 +80,8 @@ module.exports = {
   EXPENSE_TYPE_DICTIONARY,
   RECURRING_STATUS,
   RECURRING_STATUS_DICTIONARY,
+  PROJECT_TYPE,
+  PROJECT_TYPE_DICTIONARY,
   normalizeYesNo,
   isSettled
 };

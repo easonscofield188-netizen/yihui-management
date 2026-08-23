@@ -550,6 +550,10 @@ function addVoucher(data) {
   return callFunction("voucherService", "add", data);
 }
 
+function optimizeVoucherImageLossless(fileId) {
+  return callFunction("voucherService", "optimizeImageLossless", { fileId });
+}
+
 function deleteVoucher(data) {
   return callFunction("voucherService", "delete", data);
 }
@@ -604,6 +608,7 @@ function deleteExpense(id) {
 
 module.exports = {
   addVoucher,
+  optimizeVoucherImageLossless,
   cacheUserInfo,
   callFunction,
   clearSession,

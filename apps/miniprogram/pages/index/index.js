@@ -28,9 +28,9 @@ const STATUS_LABELS = {
 
 function money(value) {
   const amount = Number(value);
-  return Number.isFinite(amount)
-    ? amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : "0.00";
+  // 部分真机基础库不完整支持 Intl.NumberFormat，可能忽略小数位选项。
+  // 这里只负责显示格式；金额计算始终由后端完成。
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
 }
 
 function dateText(value) {
@@ -92,15 +92,19 @@ function decorateProject(project) {
       if (!matched) return text;
       return `${matched[1]}年${matched[2]}月${matched[3]}日`;
     })(),
-    statusLabel: STATUS_LABELS[project.status] || project.status || "未设置",
+    statusLabel: project.type === "flower_plant" && project.status === "in_cooperation"
+      ? "进行中"
+      : (STATUS_LABELS[project.status] || project.status || "未设置"),
     isClosed,
     usesCheckIcon,
     statusIconColor: statusIconColors[project.status] || "#002045",
-    amountLabel: project.type === "long_term" ? "累计订单金额" : "订单金额",
+    isLongTerm: ["long_term", "flower_plant"].includes(project.type),
+    amountLabel: ["long_term", "flower_plant"].includes(project.type) ? "累计订单金额" : "订单金额",
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount),
     costText: money(project.payableAmount),
     profitText: money(project.profitAmount),
+    profitRateText: `${Number(project.profitRate || 0).toFixed(1)}%`,
     profitPositive: Number.isFinite(profitAmount) ? profitAmount >= 0 : true,
     deliveryDateText: dateText(
       project.latestServiceDate
@@ -147,6 +151,7 @@ Page({
     serviceModalVisible: false,
     activeProjectId: "",
     activeProjectName: "",
+    activeProjectType: "",
   },
 
   onLoad() {
@@ -475,20 +480,21 @@ Page({
   },
 
   openServiceRecordModal(event) {
-    const { id, name } = event.currentTarget.dataset;
+    const { id, name, type } = event.currentTarget.dataset;
     this.setData({
       activeProjectId: id,
       activeProjectName: name || "长期合作项目",
+      activeProjectType: type || "long_term",
       serviceModalVisible: true,
     });
   },
 
   onServiceRecordClose() {
-    this.setData({ serviceModalVisible: false });
+    this.setData({ serviceModalVisible: false, activeProjectType: "" });
   },
 
   onServiceRecordSuccess(event) {
-    this.setData({ serviceModalVisible: false });
+    this.setData({ serviceModalVisible: false, activeProjectType: "" });
     this.loadProjects(true, "已同步最新履约与财务...");
   },
 

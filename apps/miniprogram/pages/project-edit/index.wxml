@@ -72,7 +72,10 @@
           </view>
           <view class="cost-side">
             <text class="cost-amount">¥ {{item.amountText}}</text>
-            <text class="cost-remove" data-id="{{item.id}}" bindtap="removeCost">移除</text>
+            <view class="cost-actions">
+              <text class="cost-edit" data-id="{{item.id}}" bindtap="openEditCost">编辑</text>
+              <text class="cost-remove" data-id="{{item.id}}" bindtap="removeCost">移除</text>
+            </view>
           </view>
         </view>
       </view>
@@ -185,7 +188,7 @@
             <t-icon name="close" size="24rpx" color="#ffffff" />
           </view>
         </view>
-        <view wx:if="{{vouchers.length < 9}}" class="voucher-add" bindtap="chooseVoucher">
+        <view wx:if="{{vouchers.length < 80}}" class="voucher-add" bindtap="chooseVoucher">
           <view class="voucher-add-inner">
             <t-icon name="camera" size="48rpx" color="#74777f" />
             <text>上传凭证</text>
@@ -235,7 +238,7 @@
       catchtap="stopPropagation"
     >
       <view class="popup-title">
-        <text>添加明细</text>
+        <text>{{editingCostId ? '编辑成本明细' : '添加明细'}}</text>
         <t-icon name="close" size="40rpx" color="#43474e" bindtap="closeAddCost" />
       </view>
       <scroll-view
@@ -276,7 +279,7 @@
           <t-switch value="{{costForm.isSettled}}" bindchange="onSettledChange" />
         </view>
         <view class="save-cost-action">
-          <t-button t-class="save-cost-button" theme="primary" block content="确认添加" bindtap="saveCost" />
+          <t-button t-class="save-cost-button" theme="primary" block content="{{editingCostId ? '保存修改' : '确认添加'}}" bindtap="saveCost" />
         </view>
       </scroll-view>
     </view>

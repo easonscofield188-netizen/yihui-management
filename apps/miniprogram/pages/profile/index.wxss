@@ -192,6 +192,7 @@ page {
 
 .function-card {
   margin-top: 64rpx;
+  padding: 0 32rpx;
 }
 
 .function-row {

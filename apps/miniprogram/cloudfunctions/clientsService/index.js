@@ -121,6 +121,8 @@ function clientView(client) {
   return {
     id: client._id,
     name: safeText(client.name, 120),
+    phone: safeText(client.phone, 40),
+    companyName: safeText(client.companyName || client.company, 160),
     role: safeText(client.roleCode || client.role, 80),
     roleCode: safeText(client.roleCode || client.role, 80),
     source: safeText(client.source, 80),
@@ -153,6 +155,8 @@ async function findActiveDuplicate(normalizedName, excludedId = '') {
 
 function validateClientInput(data = {}) {
   const name = safeText(data.name, 120);
+  const phone = safeText(data.phone, 40);
+  const companyName = safeText(data.companyName || data.company, 160);
   const roleCode = safeText(data.roleCode || data.role, 80);
   const source = safeText(data.source, 80);
   const paymentCycle = safeText(data.paymentCycle, 80);
@@ -160,10 +164,10 @@ function validateClientInput(data = {}) {
   if (!name) return { error: { code: 400, message: '请输入客户名称' } };
   if (!roleCode) return { error: { code: 400, message: '请选择客户角色' } };
   if (!source) return { error: { code: 400, message: '请选择来源渠道' } };
-  if (![name, roleCode, source, paymentCycle, description].every(isSafeInput)) {
+  if (![name, phone, companyName, roleCode, source, paymentCycle, description].every(isSafeInput)) {
     return { error: { code: 400, message: '输入包含非法字符，请检查后重试' } };
   }
-  return { name, normalizedName: normalizeClientName(name), roleCode, source, paymentCycle, description };
+  return { name, phone, companyName, normalizedName: normalizeClientName(name), roleCode, source, paymentCycle, description };
 }
 
 async function createClient(data, currentUser) {
@@ -176,6 +180,8 @@ async function createClient(data, currentUser) {
   const result = await db.collection(CLIENT_COLLECTION).add({
     data: {
       name: validated.name,
+      phone: validated.phone,
+      companyName: validated.companyName,
       normalizedName: validated.normalizedName,
       role: validated.roleCode,
       roleCode: validated.roleCode,
@@ -321,6 +327,8 @@ async function updateClient(data = {}, currentUser) {
   const nextVersion = beforeData.version + 1;
   const clientUpdate = {
     name: validated.name,
+    phone: validated.phone,
+    companyName: validated.companyName,
     normalizedName: validated.normalizedName,
     role: validated.roleCode,
     roleCode: validated.roleCode,

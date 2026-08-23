@@ -597,11 +597,8 @@ async function recalculateLongTermProjectFinancials(projectId) {
   const projectDoc = (await db.collection('projects').doc(projectId).get()).data;
   if (!projectDoc) return null;
   
-  const recordsRes = await db.collection(SERVICE_RECORDS_COLLECTION)
-    .where({ projectId })
-    .limit(1000)
-    .get();
-  const records = recordsRes.data || [];
+  const recordScope = projectDoc.dataScope || DATA_SCOPE.REAL;
+  const records = await fetchAllRecords({ projectId, dataScope: recordScope });
   
   let totalRecordsCostCents = 0;
   let totalRecordsReceivableCents = 0;
@@ -619,6 +616,9 @@ async function recalculateLongTermProjectFinancials(projectId) {
   const unreceivedAmountCents = Math.max(0, totalAmountCents - receivedAmountCents);
   const costAmountCents = totalRecordsCostCents;
   const profitAmountCents = totalAmountCents - costAmountCents;
+  const profitRate = totalAmountCents > 0
+    ? Number(((profitAmountCents / totalAmountCents) * 100).toFixed(2))
+    : 0;
   
   const updateData = {
     amount: centsToMoney(totalAmountCents),
@@ -628,6 +628,7 @@ async function recalculateLongTermProjectFinancials(projectId) {
     paidAmount: centsToMoney(costAmountCents),
     costAmount: centsToMoney(costAmountCents),
     profitAmount: centsToMoney(profitAmountCents),
+    profitRate,
     serviceRecordsCount: records.length,
     updateTime: db.serverDate()
   };
@@ -636,11 +637,72 @@ async function recalculateLongTermProjectFinancials(projectId) {
   return { ...projectDoc, ...updateData };
 }
 
-async function addServiceRecord(params, currentUser) {
+async function fetchAllRecords(where) {
+  const result = [];
+  let skip = 0;
+  const pageSize = 100;
+  while (true) {
+    const page = await db.collection(SERVICE_RECORDS_COLLECTION).where(where).skip(skip).limit(pageSize).get();
+    const list = page.data || [];
+    result.push(...list);
+    if (list.length < pageSize) return result;
+    skip += pageSize;
+  }
+}
+
+async function getScopedProject(projectId, access) {
+  const result = await db.collection('projects')
+    .where({ _id: projectId, dataScope: access.dataScope })
+    .limit(1)
+    .get();
+  return (result.data || [])[0] || null;
+}
+
+async function resolveRecordClient(params, project, access) {
+  if (project.type !== 'flower_plant') return {
+    clientId: String(params.clientId || '').trim(),
+    clientName: String(params.clientName || '').trim(),
+    clientPhone: String(params.clientPhone || '').trim(),
+    clientCompany: String(params.clientCompany || '').trim()
+  };
+  const clientId = String(params.clientId || '').trim();
+  if (!clientId) throw new Error('鲜花绿植流水必须选择服务客户');
+  const result = await db.collection('clients')
+    .where({ _id: clientId, dataScope: access.dataScope, status: 'active' })
+    .limit(1)
+    .get();
+  const client = (result.data || [])[0];
+  if (!client) throw new Error('服务客户不存在、已停用或无权访问');
+  return {
+    clientId: client._id,
+    clientName: String(client.name || '').trim(),
+    clientPhone: String(client.phone || '').trim(),
+    clientCompany: String(client.companyName || client.company || '').trim()
+  };
+}
+
+function validateRecordAmounts(receivableAmount, receivedAmount, isSettled) {
+  const receivableCents = moneyToCents(receivableAmount);
+  const receivedCents = isSettled ? receivableCents : moneyToCents(receivedAmount);
+  if (receivableCents < 0 || receivedCents < 0 || receivedCents > receivableCents) {
+    throw new Error('本次已收金额必须介于 0 和订单金额之间');
+  }
+  return { receivableCents, receivedCents, unreceivedCents: receivableCents - receivedCents };
+}
+
+async function addServiceRecord(params, currentUser, access) {
   const { projectId, serviceDate, content, costs = [], receivableAmount = 0, receivedAmount = 0, isSettled = false } = params || {};
   if (!projectId || !serviceDate || !content) {
     return { code: 400, message: '请填写服务日期与服务内容' };
   }
+  const project = await getScopedProject(projectId, access);
+  if (!project) return { code: 404, message: '项目不存在或无权访问' };
+  if (!['long_term', 'flower_plant'].includes(project.type)) return { code: 400, message: '当前项目不支持服务流水' };
+  if (project.type === 'flower_plant' && !['flower_supply', 'plant_supply'].includes(String(params.scene || ''))) {
+    return { code: 400, message: '鲜花绿植账本仅支持鲜花供应或绿植供应' };
+  }
+  let clientSnapshot;
+  try { clientSnapshot = await resolveRecordClient(params, project, access); } catch (error) { return { code: 400, message: error.message }; }
   
   const normalizedCosts = Array.isArray(costs) ? costs.map((c, i) => {
     const cat = normalizeCostCategory(c);
@@ -656,10 +718,9 @@ async function addServiceRecord(params, currentUser) {
     };
   }) : [];
   
-  const recordCostAmount = normalizedCosts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const numReceivable = Number(receivableAmount) || 0;
-  const numReceived = isSettled ? numReceivable : (Number(receivedAmount) || 0);
-  const numUnreceived = Math.max(0, numReceivable - numReceived);
+  const recordCostCents = normalizedCosts.reduce((sum, item) => sum + moneyToCents(item.amount), 0);
+  let amounts;
+  try { amounts = validateRecordAmounts(receivableAmount, receivedAmount, isSettled); } catch (error) { return { code: 400, message: error.message }; }
   
   const unifiedVoucherFileIds = Array.isArray(params.voucherFileIds) && params.voucherFileIds.length
     ? params.voucherFileIds
@@ -671,13 +732,14 @@ async function addServiceRecord(params, currentUser) {
     serviceDate: String(serviceDate).slice(0, 10),
     scene: params.scene || '',
     content: String(content).trim(),
+    ...clientSnapshot,
     costs: normalizedCosts,
-    costAmount: recordCostAmount,
+    costAmount: centsToMoney(recordCostCents),
     voucherFileIds: unifiedVoucherFileIds,
-    receivableAmount: numReceivable,
-    receivedAmount: numReceived,
-    unreceivedAmount: numUnreceived,
-    isSettled: Boolean(isSettled),
+    receivableAmount: centsToMoney(amounts.receivableCents),
+    receivedAmount: centsToMoney(amounts.receivedCents),
+    unreceivedAmount: centsToMoney(amounts.unreceivedCents),
+    isSettled: amounts.unreceivedCents === 0,
     createdAt: db.serverDate(),
     createdTimestamp: Date.now(),
     createdBy: currentUser.id || currentUser.userId || '',
@@ -795,11 +857,17 @@ async function listServiceRecords(params, access) {
         if (f && !unifiedVouchers.includes(f)) unifiedVouchers.push(f);
       });
     });
+    const receivableCents = moneyToCents(item.receivableAmount);
+    const costCents = moneyToCents(item.costAmount);
+    const recordProfitRate = receivableCents > 0
+      ? Number((((receivableCents - costCents) / receivableCents) * 100).toFixed(2))
+      : 0;
     return {
       ...item,
       scene: cleanScene,
       content: cleanContent,
-      voucherFileIds: unifiedVouchers
+      voucherFileIds: unifiedVouchers,
+      profitRate: recordProfitRate
     };
   });
     
@@ -816,19 +884,31 @@ async function listServiceRecords(params, access) {
   };
 }
 
-async function deleteServiceRecord(params) {
+async function deleteServiceRecord(params, access) {
   const { recordId, projectId } = params || {};
   if (!recordId || !projectId) return { code: 400, message: '参数不完整' };
-  
+  const recordResult = await db.collection(SERVICE_RECORDS_COLLECTION)
+    .where({ _id: recordId, projectId, dataScope: access.dataScope }).limit(1).get();
+  if (!(recordResult.data || []).length) return { code: 404, message: '服务记录不存在或无权访问' };
   await db.collection(SERVICE_RECORDS_COLLECTION).doc(recordId).remove();
   const updatedProject = await recalculateLongTermProjectFinancials(projectId);
   
   return { code: 0, message: '服务记录删除成功', data: { project: updatedProject } };
 }
 
-async function updateServiceRecord(params) {
+async function updateServiceRecord(params, access) {
   const { recordId, projectId, serviceDate, content, scene, costs = [], receivableAmount = 0, receivedAmount = 0, isSettled = false, voucherFileIds = [], vouchers = [] } = params || {};
   if (!recordId || !projectId) return { code: 400, message: '参数不完整' };
+  const project = await getScopedProject(projectId, access);
+  if (!project || !['long_term', 'flower_plant'].includes(project.type)) return { code: 404, message: '项目不存在或无权访问' };
+  const recordResult = await db.collection(SERVICE_RECORDS_COLLECTION)
+    .where({ _id: recordId, projectId, dataScope: access.dataScope }).limit(1).get();
+  if (!(recordResult.data || []).length) return { code: 404, message: '服务记录不存在或无权访问' };
+  if (project.type === 'flower_plant' && !['flower_supply', 'plant_supply'].includes(String(scene || ''))) {
+    return { code: 400, message: '鲜花绿植账本仅支持鲜花供应或绿植供应' };
+  }
+  let clientSnapshot;
+  try { clientSnapshot = await resolveRecordClient(params, project, access); } catch (error) { return { code: 400, message: error.message }; }
   
   const normalizedCosts = Array.isArray(costs) ? costs.map((c, i) => {
     const cat = normalizeCostCategory(c);
@@ -848,29 +928,82 @@ async function updateServiceRecord(params) {
     ? voucherFileIds
     : (Array.isArray(vouchers) ? vouchers : []);
 
-  const recordCostAmount = normalizedCosts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const numReceivable = Number(receivableAmount) || 0;
-  const numReceived = isSettled ? numReceivable : (Number(receivedAmount) || 0);
-  const numUnreceived = Math.max(0, numReceivable - numReceived);
+  const recordCostCents = normalizedCosts.reduce((sum, item) => sum + moneyToCents(item.amount), 0);
+  let amounts;
+  try { amounts = validateRecordAmounts(receivableAmount, receivedAmount, isSettled); } catch (error) { return { code: 400, message: error.message }; }
   
   await db.collection(SERVICE_RECORDS_COLLECTION).doc(recordId).update({
     data: {
       serviceDate: String(serviceDate).slice(0, 10),
       content: String(content).trim(),
       scene: scene || '',
+      ...clientSnapshot,
       costs: normalizedCosts,
-      costAmount: recordCostAmount,
+      costAmount: centsToMoney(recordCostCents),
       voucherFileIds: unifiedVoucherFileIds,
-      receivableAmount: numReceivable,
-      receivedAmount: numReceived,
-      unreceivedAmount: numUnreceived,
-      isSettled: Boolean(isSettled),
+      receivableAmount: centsToMoney(amounts.receivableCents),
+      receivedAmount: centsToMoney(amounts.receivedCents),
+      unreceivedAmount: centsToMoney(amounts.unreceivedCents),
+      isSettled: amounts.unreceivedCents === 0,
       updatedAt: db.serverDate()
     }
   });
   
   const updatedProject = await recalculateLongTermProjectFinancials(projectId);
   return { code: 0, message: '服务记录更新成功', data: { project: updatedProject } };
+}
+
+async function getClientStatement(params, access) {
+  const { projectId, clientId } = params || {};
+  if (!projectId || !clientId) return { code: 400, message: '缺少必需的项目 ID 或客户 ID' };
+
+  const scopedProject = await db.collection('projects').where({ _id: projectId, dataScope: access.dataScope }).limit(1).get();
+  if (!scopedProject.data || !scopedProject.data.length) return { code: 404, message: '项目不存在或无权访问' };
+  if (scopedProject.data[0].type !== 'flower_plant') return { code: 400, message: '仅鲜花绿植账本支持客户对账单' };
+
+  const records = (await fetchAllRecords({ projectId, clientId, dataScope: access.dataScope }))
+    .sort((left, right) => String(right.serviceDate || '').localeCompare(String(left.serviceDate || '')));
+  let totalReceivableCents = 0;
+  let totalReceivedCents = 0;
+  let totalCostCents = 0;
+  let clientName = '';
+  let clientPhone = '';
+  let clientCompany = '';
+
+  records.forEach(r => {
+    totalReceivableCents += moneyToCents(r.receivableAmount || 0);
+    totalReceivedCents += moneyToCents(r.receivedAmount || 0);
+    totalCostCents += moneyToCents(r.costAmount || 0);
+    if (!clientName && r.clientName) clientName = r.clientName;
+    if (!clientPhone && r.clientPhone) clientPhone = r.clientPhone;
+    if (!clientCompany && r.clientCompany) clientCompany = r.clientCompany;
+  });
+
+  const totalUnreceivedCents = Math.max(0, totalReceivableCents - totalReceivedCents);
+
+  return {
+    code: 0,
+    message: '查询成功',
+    data: {
+      clientName: clientName || '客户',
+      clientPhone: clientPhone || '',
+      clientCompany: clientCompany || '',
+      totalCount: records.length,
+      totalReceivable: centsToMoney(totalReceivableCents),
+      totalReceived: centsToMoney(totalReceivedCents),
+      totalUnreceived: centsToMoney(totalUnreceivedCents),
+      totalCost: centsToMoney(totalCostCents),
+      records: records.map(r => ({
+        id: r._id,
+        serviceDate: r.serviceDate,
+        content: r.content,
+        receivableAmount: Number(r.receivableAmount) || 0,
+        receivedAmount: Number(r.receivedAmount) || 0,
+        unreceivedAmount: Number(r.unreceivedAmount) || 0,
+        isSettled: Boolean(r.isSettled)
+      }))
+    }
+  };
 }
 
 exports.main = async (event, context) => {
@@ -929,15 +1062,17 @@ exports.main = async (event, context) => {
         return await quickRecord(data, auth.user);
       case 'listServiceRecords':
         return await listServiceRecords(data, access);
+      case 'getClientStatement':
+        return await getClientStatement(data, access);
       case 'addServiceRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
-        return await addServiceRecord(data, auth.user);
+        return await addServiceRecord(data, auth.user, access);
       case 'updateServiceRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
-        return await updateServiceRecord(data);
+        return await updateServiceRecord(data, access);
       case 'deleteServiceRecord':
         if (!WRITE_ROLES.has(auth.user.role)) return forbidden();
-        return await deleteServiceRecord(data);
+        return await deleteServiceRecord(data, access);
       case 'delete':
       case 'deleteBatch':
         if (auth.user.role !== ADMIN_SUPER_ROLE) return forbidden();
@@ -1045,17 +1180,32 @@ function calculateFinancials(amount, receivedAmount, costs, subProjects) {
   }
 
   const profitCents = totalCents - payableCents;
+  const profitRate = totalCents > 0
+    ? Number(((profitCents / totalCents) * 100).toFixed(2))
+    : 0;
 
   return {
     unreceivedAmount: centsToMoney(unreceivedCents),
     payableAmount: centsToMoney(payableCents),
     paidAmount: centsToMoney(paidCents),
     profitAmount: centsToMoney(profitCents),
+    profitRate,
   };
 }
 
 function enrichProjectFinancials(project) {
   if (!project) return project;
+  // 长期合作和鲜花绿植账本的金额由服务流水聚合，不能再用项目初始化成本覆盖。
+  if (['long_term', 'flower_plant'].includes(project.type)) {
+    const amountCents = moneyToCents(project.amount);
+    const costCents = moneyToCents(project.payableAmount ?? project.costAmount);
+    const profitCents = amountCents - costCents;
+    return {
+      ...project,
+      profitAmount: centsToMoney(profitCents),
+      profitRate: amountCents > 0 ? Number(((profitCents / amountCents) * 100).toFixed(2)) : 0
+    };
+  }
   const financials = calculateFinancials(
     project.amount,
     project.receivedAmount,
@@ -1083,7 +1233,7 @@ function isFutureDateValue(dateValue) {
 }
 
 function getAllowedStatusesByType(type, isHistorical) {
-  if (type === 'long_term') {
+  if (type === 'long_term' || type === 'flower_plant') {
     return ['in_cooperation', 'terminated'];
   }
   if (type === 'historical' || isHistorical) {
@@ -1758,7 +1908,62 @@ async function updateProject(params) {
   }
 }
 
+async function createFlowerPlantLedger(params = {}) {
+  const existing = await db.collection('projects')
+    .where({ type: 'flower_plant', dataScope: DATA_SCOPE.REAL })
+    .limit(1)
+    .get();
+  if ((existing.data || []).length) {
+    const project = existing.data[0];
+    return { code: 0, message: '鲜花绿植主账本已存在，已为您打开', data: { id: project._id, _id: project._id, existed: true } };
+  }
+  const currentUser = params.currentUser || {};
+  const startDate = String(params.startDate || getServerDateOnly()).slice(0, 10);
+  const name = String(params.name || '鲜花绿植供应主账本').trim().slice(0, 80) || '鲜花绿植供应主账本';
+  const creationChannel = normalizeCreationChannel(params.creationChannel);
+  const data = {
+    name,
+    type: 'flower_plant',
+    typeLabel: '鲜花绿植供应',
+    status: 'in_cooperation',
+    statusLabel: '合作中',
+    dataScope: DATA_SCOPE.REAL,
+    isMasterLedger: true,
+    clientId: '',
+    client: '',
+    role: '',
+    scene: '',
+    startDate,
+    period: [startDate, startDate],
+    amount: 0,
+    receivedAmount: 0,
+    unreceivedAmount: 0,
+    payableAmount: 0,
+    paidAmount: 0,
+    costAmount: 0,
+    profitAmount: 0,
+    profitRate: 0,
+    serviceRecordsCount: 0,
+    costs: [],
+    subProjects: [],
+    desc: '鲜花供应与绿植供应客户流水总账本',
+    staffCount: 0,
+    creationChannel,
+    creationChannelLabel: getCreationChannelLabel(creationChannel),
+    creatorId: currentUser.id || currentUser.userId || '',
+    creatorName: currentUser.nickname || currentUser.username || '',
+    createdAt: new Date().toISOString(),
+    createTime: db.serverDate(),
+    updateTime: db.serverDate()
+  };
+  const result = await db.collection('projects').add({ data });
+  return { code: 0, message: '鲜花绿植主账本创建成功', data: { id: result._id, _id: result._id, existed: false } };
+}
+
 async function createProject(params) {
+  if (String(params.type || '').trim() === 'flower_plant') {
+    return createFlowerPlantLedger(params);
+  }
   if (!String(params.clientId || '').trim()) {
     return { code: 400, message: '请选择已有客户，或先新增客户后再创建项目' };
   }
@@ -2179,7 +2384,13 @@ async function listProjects(params, access) {
     const conditions = [{ dataScope: access.dataScope }];
 
     if (normalizedProjectType === "long_term") {
-      conditions.push({ type: "long_term" });
+      // 鲜花绿植供应账本按长期业务归类，在项目列表“长期合作”中展示。
+      conditions.push(_.or([
+        { type: "long_term" },
+        { type: "flower_plant" }
+      ]));
+    } else if (normalizedProjectType === "flower_plant") {
+      conditions.push({ type: "flower_plant" });
     } else if (normalizedProjectType === "normal") {
       conditions.push(_.or([
         { type: "normal" },
@@ -2323,7 +2534,7 @@ async function listFinancialProjects(params = {}, access) {
 
     const projectType = String(params.projectType || params.type || '').trim();
     let allProjects = await fetchAllProjectsForOverview(access.dataScope);
-    if (projectType === 'normal' || projectType === 'long_term') {
+    if (['normal', 'long_term', 'flower_plant'].includes(projectType)) {
       allProjects = allProjects.filter(p => (p.type || 'normal') === projectType);
     }
     const rangeProjects = bounds
@@ -2616,7 +2827,14 @@ async function getOverview(params = {}, access) {
       : getOverviewRangeBounds(rangeType, startDate, endDate);
     if (rangeType !== 'all' && !bounds) return { code: 400, message: '时间范围无效' };
 
-    const allProjects = await fetchAllProjectsForOverview(access.dataScope);
+    const projectType = String(params.projectType || params.type || 'all').trim();
+    if (!['all', 'normal', 'long_term', 'flower_plant'].includes(projectType)) {
+      return { code: 400, message: '项目类型筛选值无效' };
+    }
+    let allProjects = await fetchAllProjectsForOverview(access.dataScope);
+    if (projectType !== 'all') {
+      allProjects = allProjects.filter((project) => (project.type || 'normal') === projectType);
+    }
     const currentProjects = rangeType === 'all'
       ? allProjects.slice()
       : filterOverviewProjects(allProjects, bounds);
@@ -2658,7 +2876,9 @@ async function getOverview(params = {}, access) {
 
     // 统计期间公司运营支出与净利润
     let operatingExpense = 0;
-    try {
+    // 公司运营支出没有项目类型归属，只在“全部业务”口径中扣减，避免重复摊入每个业务分类。
+    if (projectType === 'all') {
+      try {
       const expStartDate = rangeType === 'all' ? '' : (startDate || bounds.start.toISOString().slice(0, 10));
       const expEndDate = rangeType === 'all' ? '' : (endDate || bounds.end.toISOString().slice(0, 10));
       const today = getBeijingToday();
@@ -2672,9 +2892,10 @@ async function getOverview(params = {}, access) {
         expQuery = { dataScope: access.dataScope, expenseDate: db.command.gte(expStartDate) };
       }
       operatingExpense = await sumOperatingExpenses(expQuery);
-    } catch (e) {
-      // 集合未创建或查询失败时按 0 处理
-      operatingExpense = 0;
+      } catch (e) {
+        // 集合未创建或查询失败时按 0 处理
+        operatingExpense = 0;
+      }
     }
 
     const netProfit = currentMetrics.profit - operatingExpense;
@@ -2686,6 +2907,7 @@ async function getOverview(params = {}, access) {
       code: 0,
       message: '查询成功',
       data: {
+        projectType,
         rangeType,
         startDate: rangeType === 'all' ? '' : (startDate || bounds.start.toISOString().slice(0, 10)),
         endDate: rangeType === 'all' ? '' : (endDate || bounds.end.toISOString().slice(0, 10)),

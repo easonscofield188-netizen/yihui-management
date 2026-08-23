@@ -2,7 +2,7 @@
   <view class="nav-back" bindtap="goBack">
     <t-icon name="chevron-left" size="48rpx" color="#002045" />
   </view>
-  <view class="nav-title">{{project.type === 'long_term' ? '长期合作详情' : '项目详情'}}</view>
+  <view class="nav-title">{{project.type === 'flower_plant' ? '鲜花绿植供应账本' : (project.type === 'long_term' ? '长期合作详情' : '项目详情')}}</view>
 </view>
 <view class="detail-nav-placeholder" style="height: {{navHeight}}px;"></view>
 
@@ -24,9 +24,9 @@
           <view wx:else class="status-dot"></view>
           <text>{{project.statusLabel}}</text>
         </view>
-        <view wx:if="{{project.type === 'long_term'}}" class="type-badge longterm-badge">
-          <t-icon name="repeat" size="22rpx" color="#c2410c" />
-          <text>长期</text>
+        <view wx:if="{{project.type === 'long_term' || project.type === 'flower_plant'}}" class="type-badge longterm-badge">
+          <t-icon name="{{project.type === 'flower_plant' ? 'tree-square-dot' : 'repeat'}}" size="22rpx" color="#c2410c" />
+          <text>{{project.type === 'flower_plant' ? '鲜花绿植' : '长期'}}</text>
         </view>
         <view wx:else class="type-badge normal-badge">
           <text>常规</text>
@@ -39,7 +39,7 @@
   <view class="finance-card">
     <view class="finance-glow finance-glow-top"></view>
     <view class="finance-glow finance-glow-bottom"></view>
-    <view class="finance-label">{{project.type === 'long_term' ? '累计总应收' : '订单总金额'}}</view>
+    <view class="finance-label">{{project.type === 'long_term' || project.type === 'flower_plant' ? '累计总应收' : '订单总金额'}}</view>
     <view class="order-amount">¥{{project.amountText}}</view>
 
     <view class="finance-columns">
@@ -55,18 +55,22 @@
 
     <view class="finance-columns finance-columns-bottom">
       <view class="finance-column cost-column">
-        <view class="finance-sub-label"><t-icon name="bill" size="26rpx" color="#ff8e8e" />{{project.type === 'long_term' ? '总支出' : '项目总成本'}}</view>
+        <view class="finance-sub-label"><t-icon name="bill" size="26rpx" color="#ff8e8e" />{{project.type === 'long_term' || project.type === 'flower_plant' ? '总支出' : '项目总成本'}}</view>
         <view class="finance-sub-value cost-sub-value">¥{{project.payableText}}</view>
       </view>
       <view class="finance-column profit-column">
-        <view class="finance-sub-label"><t-icon name="chart-line" size="26rpx" color="#55e391" />{{project.type === 'long_term' ? '累计利润' : '项目利润'}}</view>
+        <view class="finance-sub-label"><t-icon name="chart-line" size="26rpx" color="#55e391" />{{project.type === 'long_term' || project.type === 'flower_plant' ? '累计利润' : '项目利润'}}</view>
         <view class="finance-sub-value profit-sub-value {{project.profitPositive ? '' : 'profit-negative'}}">¥{{project.profitText}}</view>
       </view>
+    </view>
+    <view class="profit-rate-panel {{project.profitPositive ? '' : 'profit-negative'}}">
+      <view class="profit-rate-panel-label"><t-icon name="chart-line" size="28rpx" color="{{project.profitPositive ? '#55e391' : '#ffb4ab'}}" />利润率</view>
+      <view class="profit-rate-panel-value">{{project.profitRateText}}</view>
     </view>
   </view>
 
   <!-- 基础客户信息卡片 -->
-  <view class="detail-card customer-card">
+  <view class="detail-card customer-card" wx:if="{{project.type !== 'flower_plant'}}">
     <view class="card-header">
       <view class="card-heading">
         <view class="heading-icon customer-icon"><t-icon name="user" size="34rpx" color="#002045" /></view>
@@ -74,27 +78,27 @@
       </view>
     </view>
     <view class="info-list">
-      <view class="info-row"><text>客户名称</text><text class="info-value strong">{{project.client || '未填写'}}</text></view>
+      <view class="info-row"><text>客户名称</text><text class="info-value strong">{{project.client || '多客户共享业务账本'}}</text></view>
       <view class="info-row"><text>客户角色</text><text class="role-badge">{{project.roleText}}</text></view>
       <view class="info-row"><text>客户来源</text><text class="info-value">{{project.sourceText}}</text></view>
-      <block wx:if="{{project.type !== 'long_term'}}">
+      <block wx:if="{{project.type !== 'long_term' && project.type !== 'flower_plant'}}">
         <view class="info-row"><text>项目场景</text><text class="info-value">{{project.sceneText}}</text></view>
         <view class="info-row"><text>人员数量</text><text class="info-value">{{project.staffCountText}} 人</text></view>
         <view class="info-row"><text>交付时间</text><text class="info-value">{{project.deliveryDateText}}</text></view>
       </block>
       <block wx:else>
-        <view class="info-row"><text>合作开始</text><text class="info-value">{{project.startDate || project.deliveryDateText}}</text></view>
+        <view class="info-row"><text>业务模式</text><text class="info-value">{{project.type === 'flower_plant' ? '按单结算/独立客户流水' : '长期合作定期履约'}}</text></view>
       </block>
     </view>
   </view>
 
-  <!-- 长期合作专属：服务履约流水与新增操作 -->
-  <block wx:if="{{project.type === 'long_term'}}">
+  <!-- 长期合作 / 鲜花绿植供应专属：服务履约流水与新增操作 -->
+  <block wx:if="{{project.type === 'long_term' || project.type === 'flower_plant'}}">
     <!-- 常驻新增服务记录按钮 -->
     <view class="longterm-action-bar" wx:if="{{canWrite}}">
       <view class="add-service-btn" bindtap="openAddServiceRecord">
         <t-icon name="add-circle" size="38rpx" color="#ffffff" />
-        <text>新增服务履约与记账</text>
+        <text>{{project.type === 'flower_plant' ? '新增业务记录/记账' : '新增服务履约与记账'}}</text>
       </view>
     </view>
 
@@ -103,7 +107,7 @@
       <view class="card-header">
         <view class="card-heading">
           <view class="heading-icon service-icon"><t-icon name="assignment" size="34rpx" color="#002045" /></view>
-          <view class="card-title">服务履约与收支流水</view>
+          <view class="card-title">{{project.type === 'flower_plant' ? '业务记录与收支流水' : '服务履约与收支流水'}}</view>
         </view>
         <view class="records-count">共 {{serviceRecords.length}} 次</view>
       </view>
@@ -127,9 +131,24 @@
               </view>
             </view>
 
+            <!-- 独立客户标签展示（适用于鲜花绿植多客户流水） -->
+            <view class="service-client-tag-row" wx:if="{{item.clientName || item.clientCompany}}" data-client-id="{{item.clientId}}" catchtap="openClientStatementForRecord">
+              <t-icon name="user" size="26rpx" color="#002045" />
+              <text class="service-client-tag-name">{{item.clientName || '客户'}}</text>
+              <text class="service-client-tag-company" wx:if="{{item.clientCompany}}">({{item.clientCompany}})</text>
+              <text class="service-client-tag-phone" wx:if="{{item.clientPhone}}"> · {{item.clientPhone}}</text>
+              <view class="statement-link-btn" wx:if="{{item.clientId}}">
+                <text>对账单</text>
+                <t-icon name="chevron-right" size="24rpx" color="#002045" />
+              </view>
+            </view>
+
             <view class="service-content-title-row">
-              <text class="service-content-label">服务内容：</text>
+              <text class="service-content-label">{{project.type === 'flower_plant' ? '业务内容：' : '服务内容：'}}</text>
               <text class="service-content-value">{{item.displayContent || item.content}}</text>
+              <view class="service-settlement-status {{item.isSettled ? 'settled-yes' : 'settled-no'}}">
+                {{item.isSettled ? '已结清' : '未结清'}}
+              </view>
             </view>
 
             <!-- 本次收支小看板 -->
@@ -139,15 +158,23 @@
                 <text class="fin-val cost-val">¥{{item.costAmountText}}</text>
               </view>
               <view class="fin-col">
-                <text class="fin-label">本次应收</text>
+                <text class="fin-label">订单金额</text>
                 <text class="fin-val receive-val">¥{{item.receivableText}}</text>
               </view>
+              <block wx:if="{{!item.isSettled}}">
               <view class="fin-col">
-                <text class="fin-label">实收结算</text>
-                <view class="settled-tag {{item.isSettled ? 'settled-yes' : 'settled-no'}}">
-                  {{item.isSettled ? '已结清' : (item.receivedAmount > 0 ? '已收¥' + item.receivedText : '未结清')}}
-                </view>
+                <text class="fin-label">本次已收</text>
+                <text class="fin-val received-val">¥{{item.receivedText}}</text>
               </view>
+              <view class="fin-col">
+                <text class="fin-label">未收金额</text>
+                <text class="fin-val unreceived-val">¥{{item.unreceivedText}}</text>
+              </view>
+              </block>
+            </view>
+            <view class="record-profit-rate-panel">
+              <text>本次业务利润率</text>
+              <text class="record-profit-rate-value">{{item.profitRateText}}</text>
             </view>
 
             <!-- 支出明细标签 -->
@@ -171,8 +198,8 @@
 
       <view class="empty-timeline" wx:else>
         <t-icon name="time" size="64rpx" color="#a0aec0" />
-        <view class="empty-text">暂无服务履约记录</view>
-        <view class="empty-sub">点击上方“+新增服务履约与记账”开始记录日常养护与收支</view>
+        <view class="empty-text">{{project.type === 'flower_plant' ? '暂无业务记录' : '暂无服务履约记录'}}</view>
+        <view class="empty-sub">{{project.type === 'flower_plant' ? '点击上方“新增业务记录/记账”开始记录鲜花绿植业务与收支' : '点击上方“+新增服务履约与记账”开始记录日常养护与收支'}}</view>
       </view>
     </view>
   </block>
@@ -299,12 +326,45 @@
   </view>
 </view>
 
-<!-- 长期项目服务记录弹窗 -->
+<!-- 长期项目 / 鲜花绿植服务记录弹窗 -->
 <service-record-modal
   visible="{{serviceModalVisible}}"
   projectId="{{projectId}}"
   projectName="{{project.name}}"
+  projectType="{{project.type}}"
   record="{{activeRecord}}"
   bindsuccess="onServiceRecordSuccess"
   bindclose="onServiceRecordClose"
 />
+
+<!-- 客户对账单与催款明细弹窗 -->
+<t-dialog
+  visible="{{statementModalVisible}}"
+  title="客户对账单与催款明细"
+  confirm-btn="一键复制微信文本"
+  cancel-btn="关闭"
+  bindconfirm="copyStatementText"
+  bindcancel="closeStatementModal"
+>
+  <view class="statement-modal-body" slot="content" wx:if="{{statementData}}">
+    <view class="statement-summary-box">
+      <view class="statement-sum-col">
+        <text class="statement-sum-label">累计订单金额</text>
+        <text class="statement-sum-val">¥{{statementData.totalReceivable}}</text>
+      </view>
+      <view class="statement-sum-col">
+        <text class="statement-sum-label">已付金额</text>
+        <text class="statement-sum-val">¥{{statementData.totalReceived}}</text>
+      </view>
+      <view class="statement-sum-col highlight">
+        <text class="statement-sum-label">待收尾款</text>
+        <text class="statement-sum-val unpaid">¥{{statementData.totalUnreceived}}</text>
+      </view>
+    </view>
+
+    <view class="statement-text-preview-title">微信对账预览文本：</view>
+    <scroll-view class="statement-text-scroll" scroll-y show-scrollbar="{{false}}">
+      <text class="statement-preview-text" selectable>{{statementText}}</text>
+    </scroll-view>
+  </view>
+</t-dialog>

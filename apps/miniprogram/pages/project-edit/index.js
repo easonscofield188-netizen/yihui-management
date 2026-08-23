@@ -10,6 +10,7 @@ const FALLBACK_SCENES = [
 const FALLBACK_CATEGORIES = [{ label: "物流", value: "logistics" }];
 const FIXED_SUPPLIER = "第三方商户";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_VOUCHER_COUNT = 80;
 const UPLOAD_TIMEOUT_MS = 45000;
 const SAVE_VOUCHER_TIMEOUT_MS = 20000;
 
@@ -152,6 +153,7 @@ Page({
     pendingUploads: [],
     deletedVoucherIds: [],
     addCostVisible: false,
+    editingCostId: "",
     costCategories: FALLBACK_CATEGORIES,
     categoryIndex: 0,
     categoryPickerVisible: false,
@@ -594,6 +596,7 @@ Page({
     const categories = this.data.costCategories;
     this.setData({
       addCostVisible: true,
+      editingCostId: "",
       categoryIndex: 0,
       categoryPickerValue: [categories[0].value],
       costForm: {
@@ -608,6 +611,7 @@ Page({
   closeAddCost() {
     this.setData({
       addCostVisible: false,
+      editingCostId: "",
       categoryPickerVisible: false,
       keyboardHeight: 0,
       costScrollTarget: "",
@@ -661,6 +665,26 @@ Page({
     this.setData({ "costForm.isSettled": Boolean(event.detail.value) });
   },
 
+  openEditCost(event) {
+    const id = String(event.currentTarget.dataset.id || "");
+    const item = this.data.costs.find((cost) => String(cost.id) === id);
+    if (!item || this.data.saving) return;
+    const categoryIndex = Math.max(0, this.data.costCategories.findIndex((category) => category.value === item.categoryCode));
+    const category = this.data.costCategories[categoryIndex] || this.data.costCategories[0];
+    this.setData({
+      addCostVisible: true,
+      editingCostId: id,
+      categoryIndex,
+      categoryPickerValue: [category.value],
+      costForm: {
+        categoryCode: category.value,
+        supplier: item.supplier || FIXED_SUPPLIER,
+        amount: String(item.amount == null ? "" : item.amount),
+        isSettled: Boolean(item.isSettled),
+      },
+    });
+  },
+
   saveCost() {
     const amount = Number(this.data.costForm.amount);
     if (!amount || amount <= 0) {
@@ -674,14 +698,21 @@ Page({
       category: category.label,
       categoryCode: category.value,
       categoryLabel: category.label,
-      supplier: FIXED_SUPPLIER,
+      supplier: this.data.costForm.supplier || FIXED_SUPPLIER,
       amount,
       amountText: money(amount),
       isSettled: Boolean(this.data.costForm.isSettled),
     };
+    const editingCostId = this.data.editingCostId;
+    const costs = editingCostId
+      ? this.data.costs.map((cost) => (String(cost.id) === String(editingCostId)
+        ? { ...item, id: cost.id, persistedId: cost.persistedId || "" }
+        : cost))
+      : this.data.costs.concat(item);
     this.setData({
-      costs: this.data.costs.concat(item),
+      costs,
       addCostVisible: false,
+      editingCostId: "",
     }, () => this.refreshProfit());
   },
 
@@ -701,9 +732,9 @@ Page({
 
   chooseVoucher() {
     if (this.data.saving) return;
-    const remaining = 9 - this.data.vouchers.length;
+    const remaining = MAX_VOUCHER_COUNT - this.data.vouchers.length;
     if (remaining <= 0) {
-      wx.showToast({ title: "最多上传 9 个附件", icon: "none" });
+      wx.showToast({ title: `最多上传 ${MAX_VOUCHER_COUNT} 个附件`, icon: "none" });
       return;
     }
     wx.showActionSheet({
@@ -711,15 +742,15 @@ Page({
       success: ({ tapIndex }) => {
         if (tapIndex === 0) {
           wx.chooseMedia({
-            count: remaining,
+            count: Math.min(9, remaining),
             mediaType: ["image"],
             sourceType: ["album", "camera"],
-            sizeType: ["compressed"],
+            sizeType: ["original"],
             success: ({ tempFiles }) => this.appendVouchers(tempFiles || []),
           });
         } else {
           wx.chooseMessageFile({
-            count: remaining,
+            count: Math.min(9, remaining),
             type: "file",
             extension: ["pdf"],
             success: ({ tempFiles }) => this.appendVouchers(tempFiles || []),
@@ -748,8 +779,8 @@ Page({
     if (accepted.length < files.length) wx.showToast({ title: "已忽略超过 10MB 的文件", icon: "none" });
     if (!accepted.length) return;
     this.setData({
-      vouchers: this.data.vouchers.concat(accepted).slice(0, 9),
-      pendingUploads: this.data.pendingUploads.concat(accepted),
+      vouchers: this.data.vouchers.concat(accepted).slice(0, MAX_VOUCHER_COUNT),
+      pendingUploads: this.data.pendingUploads.concat(accepted).slice(0, MAX_VOUCHER_COUNT),
     });
   },
 
@@ -817,13 +848,13 @@ Page({
   },
 
   async uploadOneVoucher(projectId, file) {
-    const extension = fileExtension(file.tempFilePath);
+    let extension = fileExtension(file.tempFilePath);
     const existingCount = (this.data.vouchers || []).filter((item) => item.isExisting).length;
     const pendingIndex = (this.data.pendingUploads || []).findIndex((item) => item.id === file.id);
     const seqIndex = existingCount + (pendingIndex >= 0 ? pendingIndex : 0) + 1;
     const seqStr = String(seqIndex).padStart(2, "0");
     const extDot = extension.startsWith(".") ? extension : `.${extension}`;
-    const formattedFileName = `成本凭证_${seqStr}${extDot}`;
+    let formattedFileName = `成本凭证_${seqStr}${extDot}`;
     const cloudPath = buildVoucherCloudPath(this.data.form.name, extension).cloudPath;
     let fileId = "";
     const uploadResult = await withTimeout(
@@ -832,12 +863,26 @@ Page({
       `${formattedFileName} 上传超时`
     );
     fileId = uploadResult.fileID;
-    const urlResult = await withTimeout(
-      wx.cloud.getTempFileURL({ fileList: [fileId] }),
-      SAVE_VOUCHER_TIMEOUT_MS,
-      `${formattedFileName} 获取地址超时`
-    );
-    const fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
+    let fileUrl = "";
+    if (file.isImage) {
+      const optimized = await withTimeout(
+        api.optimizeVoucherImageLossless(fileId),
+        SAVE_VOUCHER_TIMEOUT_MS,
+        `${formattedFileName} 无损处理超时`
+      );
+      fileId = optimized.fileId;
+      fileUrl = optimized.fileUrl || "";
+      extension = "webp";
+      formattedFileName = `成本凭证_${seqStr}.webp`;
+    }
+    if (!fileUrl) {
+      const urlResult = await withTimeout(
+        wx.cloud.getTempFileURL({ fileList: [fileId] }),
+        SAVE_VOUCHER_TIMEOUT_MS,
+        `${formattedFileName} 获取地址超时`
+      );
+      fileUrl = urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
+    }
     if (!fileUrl) throw new Error(`${formattedFileName} 获取访问地址失败`);
     await withTimeout(
       api.addVoucher({

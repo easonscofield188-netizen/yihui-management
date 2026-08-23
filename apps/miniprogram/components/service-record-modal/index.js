@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const MAX_VOUCHER_COUNT = 80;
 
 const SCENE_DEFAULT_DESCS = {
   daily_maintenance: '提供长效绿植巡检、浇水、修剪施肥与定期日常养护服务',
@@ -76,6 +77,10 @@ Component({
       type: String,
       value: '',
     },
+    projectType: {
+      type: String,
+      value: '',
+    },
     record: {
       type: Object,
       value: null,
@@ -95,10 +100,23 @@ Component({
     projectScenes: FALLBACK_PROJECT_SCENES,
     selectedScene: '',
     selectedSceneDescription: '',
+    selectedClientId: '',
+    selectedClientName: '',
+    selectedClientPhone: '',
+    selectedClientCompany: '',
+    clientPickerVisible: false,
+    clientList: [],
+    filteredClientList: [],
+    clientSearchKeyword: '',
+    loadingClients: false,
+    createClientVisible: false,
+    newClientName: '',
+    newClientPhone: '',
+    newClientCompany: '',
     costs: [],
     receivableAmount: '',
     receivedAmount: '',
-    isSettled: true,
+    isSettled: false,
     calculatedUnreceived: 0,
     calculatedUnreceivedText: '0.00',
     datePickerVisible: false,
@@ -158,19 +176,26 @@ Component({
     initFormData() {
       const rec = this.data.record;
       const today = getTodayString();
-      const defaultScene = (this.data.projectScenes && this.data.projectScenes[0]) || FALLBACK_PROJECT_SCENES[0];
+      const isFlowerPlant = this.data.projectType === 'flower_plant';
+      const flowerScenes = [
+        { label: '鲜花供应', value: 'flower_supply', description: '鲜花零售、花艺布景及插花定制供应' },
+        { label: '绿植供应', value: 'plant_supply', description: '绿植销售、租赁摆放及养护更换供应' },
+      ];
+      const availableScenes = isFlowerPlant ? flowerScenes : (this.data.projectScenes || FALLBACK_PROJECT_SCENES);
+      const defaultScene = availableScenes[0];
+
       if (rec) {
         const receivable = Number(rec.receivableAmount) || 0;
         const received = Number(rec.receivedAmount) || 0;
         const unreceived = Math.max(0, receivable - received);
-        let matchedScene = (this.data.projectScenes || []).find((s) => s.value === rec.scene || s.label === rec.content);
+        let matchedScene = availableScenes.find((s) => s.value === rec.scene || s.label === rec.content);
         if (!matchedScene && rec.content) {
-          matchedScene = (this.data.projectScenes || []).find((s) => rec.content.includes(s.label) || s.label.includes(rec.content));
+          matchedScene = availableScenes.find((s) => rec.content.includes(s.label) || s.label.includes(rec.content));
         }
         if (!matchedScene) {
-          matchedScene = (this.data.projectScenes || []).find((s) => s.value === 'daily_maintenance' || s.label === '日常维护') || defaultScene;
+          matchedScene = defaultScene;
         }
-        const finalContent = matchedScene ? matchedScene.label : '日常维护';
+        const finalContent = matchedScene ? matchedScene.label : (isFlowerPlant ? '鲜花供应' : '日常维护');
         const desc = matchedScene ? getSceneDescription(matchedScene) : getSceneDescription(defaultScene);
         const existingVouchers = Array.isArray(rec.voucherFileIds)
           ? [...rec.voucherFileIds]
@@ -184,9 +209,13 @@ Component({
           isEdit: true,
           serviceDate: String(rec.serviceDate || today).slice(0, 10),
           content: finalContent,
-          selectedScene: matchedScene ? matchedScene.value : 'daily_maintenance',
-          scenePickerValue: [matchedScene ? matchedScene.value : 'daily_maintenance'],
+          selectedScene: matchedScene ? matchedScene.value : (isFlowerPlant ? 'flower_supply' : 'daily_maintenance'),
+          scenePickerValue: [matchedScene ? matchedScene.value : (isFlowerPlant ? 'flower_supply' : 'daily_maintenance')],
           selectedSceneDescription: desc,
+          selectedClientId: rec.clientId || '',
+          selectedClientName: rec.clientName || '',
+          selectedClientPhone: rec.clientPhone || '',
+          selectedClientCompany: rec.clientCompany || '',
           costs: Array.isArray(rec.costs) ? JSON.parse(JSON.stringify(rec.costs)) : [],
           vouchers: existingVouchers,
           receivableAmount: receivable > 0 ? String(receivable) : '',
@@ -194,25 +223,157 @@ Component({
           isSettled: rec.isSettled !== undefined ? Boolean(rec.isSettled) : true,
           calculatedUnreceived: unreceived,
           calculatedUnreceivedText: unreceived.toFixed(2),
+          projectScenes: availableScenes,
         });
       } else {
-        const initScene = (this.data.projectScenes || []).find((s) => s.label.includes('日常维护') || s.value === 'daily_maintenance') || defaultScene;
+        const initScene = defaultScene;
         const desc = initScene ? getSceneDescription(initScene) : '';
         this.setData({
           isEdit: false,
           serviceDate: today,
-          content: initScene ? initScene.label : '日常维护',
-          selectedScene: initScene ? initScene.value : 'daily_maintenance',
-          scenePickerValue: [initScene ? initScene.value : 'daily_maintenance'],
+          content: initScene ? initScene.label : (isFlowerPlant ? '鲜花供应' : '日常维护'),
+          selectedScene: initScene ? initScene.value : (isFlowerPlant ? 'flower_supply' : 'daily_maintenance'),
+          scenePickerValue: [initScene ? initScene.value : (isFlowerPlant ? 'flower_supply' : 'daily_maintenance')],
           selectedSceneDescription: desc,
+          selectedClientId: '',
+          selectedClientName: '',
+          selectedClientPhone: '',
+          selectedClientCompany: '',
           costs: [],
           vouchers: [],
           receivableAmount: '',
           receivedAmount: '',
-          isSettled: true,
+          isSettled: false,
           calculatedUnreceived: 0,
           calculatedUnreceivedText: '0.00',
+          projectScenes: availableScenes,
         });
+      }
+    },
+
+    async openClientPicker() {
+      this.setData({ clientPickerVisible: true, clientSearchKeyword: '' });
+      await this.fetchClients();
+    },
+
+    onClientPickerVisibleChange(e) {
+      if (!e.detail.visible) {
+        this.closeClientPicker();
+      }
+    },
+
+    closeClientPicker() {
+      this.setData({ clientPickerVisible: false });
+    },
+
+    async fetchClients(keyword = '') {
+      this.setData({ loadingClients: true });
+      try {
+        const res = await api.queryClients(keyword);
+        const list = Array.isArray(res) ? res : ((res && res.data) || []);
+        this.setData({
+          clientList: list,
+          filteredClientList: list,
+          loadingClients: false,
+        });
+      } catch (err) {
+        this.setData({ loadingClients: false });
+      }
+    },
+
+    onClientSearchChange(e) {
+      const kw = (e.detail.value || '').trim();
+      this.setData({ clientSearchKeyword: kw });
+      this.filterClientList(kw);
+    },
+
+    onClientSearchClear() {
+      this.setData({ clientSearchKeyword: '' });
+      this.filterClientList('');
+    },
+
+    filterClientList(kw) {
+      if (!kw) {
+        this.setData({ filteredClientList: this.data.clientList });
+        return;
+      }
+      const lower = kw.toLowerCase();
+      const filtered = (this.data.clientList || []).filter((item) => {
+        const name = (item.name || '').toLowerCase();
+        const phone = (item.phone || '').toLowerCase();
+        const company = (item.companyName || item.company || '').toLowerCase();
+        return name.includes(lower) || phone.includes(lower) || company.includes(lower);
+      });
+      this.setData({ filteredClientList: filtered });
+    },
+
+    selectClientItem(e) {
+      const { id, name, phone, company } = e.currentTarget.dataset;
+      this.setData({
+        selectedClientId: id,
+        selectedClientName: name,
+        selectedClientPhone: phone || '',
+        selectedClientCompany: company || '',
+        clientPickerVisible: false,
+      });
+    },
+
+    openCreateClientModal() {
+      this.setData({
+        createClientVisible: true,
+        newClientName: this.data.clientSearchKeyword || '',
+        newClientPhone: '',
+        newClientCompany: '',
+      });
+    },
+
+    closeCreateClientModal() {
+      this.setData({ createClientVisible: false });
+    },
+
+    onNewClientNameChange(e) {
+      this.setData({ newClientName: (e.detail.value || '').trim() });
+    },
+
+    onNewClientPhoneChange(e) {
+      this.setData({ newClientPhone: (e.detail.value || '').trim() });
+    },
+
+    onNewClientCompanyChange(e) {
+      this.setData({ newClientCompany: (e.detail.value || '').trim() });
+    },
+
+    async submitQuickClient() {
+      const { newClientName, newClientPhone, newClientCompany } = this.data;
+      if (!newClientName) {
+        wx.showToast({ title: '请输入客户姓名', icon: 'none' });
+        return;
+      }
+      wx.showLoading({ title: '正在创建客户...', mask: true });
+      try {
+        const res = await api.callFunction('clientsService', 'createClient', {
+          name: newClientName,
+          phone: newClientPhone,
+          companyName: newClientCompany,
+          // 快捷建档仍需满足客户库的基础必填规则。
+          roleCode: 'customer',
+          source: 'quick_create',
+        });
+        const createdClient = (res && res.data) || res;
+        const clientId = createdClient._id || createdClient.id;
+        wx.showToast({ title: '客户创建成功', icon: 'success' });
+        this.setData({
+          selectedClientId: clientId,
+          selectedClientName: newClientName,
+          selectedClientPhone: newClientPhone,
+          selectedClientCompany: newClientCompany,
+          createClientVisible: false,
+          clientPickerVisible: false,
+        });
+      } catch (err) {
+        wx.showToast({ title: err.message || '新建客户失败', icon: 'none' });
+      } finally {
+        wx.hideLoading();
       }
     },
 
@@ -362,9 +523,9 @@ Component({
 
     async uploadUnifiedVoucher() {
       const currentCount = this.data.vouchers ? this.data.vouchers.length : 0;
-      const maxCount = Math.max(1, 9 - currentCount);
+      const maxCount = MAX_VOUCHER_COUNT - currentCount;
       if (maxCount <= 0) {
-        wx.showToast({ title: '最多上传9张发票凭证', icon: 'none' });
+        wx.showToast({ title: `最多上传${MAX_VOUCHER_COUNT}张发票凭证`, icon: 'none' });
         return;
       }
       try {
@@ -377,12 +538,14 @@ Component({
         if (!tempFiles.length) return;
 
         wx.showLoading({ title: '上传凭证中...', mask: true });
-        const uploadPromises = tempFiles.map((file) => {
+        const uploadPromises = tempFiles.map(async (file) => {
           const cloudPath = `vouchers/service_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-          return wx.cloud.uploadFile({
+          const uploadResult = await wx.cloud.uploadFile({
             cloudPath,
             filePath: file.tempFilePath,
-          }).then((res) => res.fileID);
+          });
+          const optimized = await api.optimizeVoucherImageLossless(uploadResult.fileID);
+          return optimized.fileId;
         });
 
         const uploadedFileIds = await Promise.all(uploadPromises);
@@ -482,11 +645,20 @@ Component({
         settled: c.settled !== undefined ? Boolean(c.settled) : true,
       }));
 
+      if (this.data.projectType === 'flower_plant' && !this.data.selectedClientId) {
+        wx.showToast({ title: '请选择关联服务客户', icon: 'none' });
+        return;
+      }
+
       const payload = {
         projectId,
         serviceDate,
         content: content.trim(),
         scene: this.data.selectedScene || '',
+        clientId: this.data.selectedClientId || '',
+        clientName: this.data.selectedClientName || '',
+        clientPhone: this.data.selectedClientPhone || '',
+        clientCompany: this.data.selectedClientCompany || '',
         costs: normalizedCosts,
         voucherFileIds: this.data.vouchers || [],
         vouchers: this.data.vouchers || [],
