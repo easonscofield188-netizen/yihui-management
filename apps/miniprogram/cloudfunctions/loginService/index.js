@@ -1457,7 +1457,7 @@ function buildChangePasswordCodeHtml(code, username) {
     <div style="margin:0;padding:28px 16px;background:#f4f6fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a273a;">
       <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px 28px;border:1px solid #e2e8f2;box-shadow:0 8px 24px rgba(0,32,69,0.06);">
         <div style="display:flex;align-items:center;margin-bottom:20px;">
-          <h2 style="margin:0;font-size:20px;color:#002045;font-weight:700;">亿辉艺术 · 密码修改安全验证</h2>
+          <h2 style="margin:0;font-size:20px;color:#2E9F8B;font-weight:700;">亿辉文化 · 密码修改安全验证</h2>
         </div>
         <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4a5568;">尊敬的 <strong>${escapeHtml(username)}</strong>，您好：</p>
         <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4a5568;">您正在通过微信小程序进行登录密码修改操作，本次身份验证码为：</p>
@@ -1659,7 +1659,7 @@ function buildBindEmailCodeHtml(code, username) {
     <div style="margin:0;padding:28px 16px;background:#f4f6fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a273a;">
       <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px 28px;border:1px solid #e2e8f2;box-shadow:0 8px 24px rgba(0,32,69,0.06);">
         <div style="display:flex;align-items:center;margin-bottom:20px;">
-          <h2 style="margin:0;font-size:20px;color:#002045;font-weight:700;">亿辉艺术 · 安全邮箱绑定验证</h2>
+          <h2 style="margin:0;font-size:20px;color:#2E9F8B;font-weight:700;">亿辉文化 · 安全邮箱绑定验证</h2>
         </div>
         <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4a5568;">尊敬的 <strong>${escapeHtml(username)}</strong>，您好：</p>
         <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4a5568;">您正在通过微信小程序进行安全邮箱绑定操作，本次身份验证码为：</p>

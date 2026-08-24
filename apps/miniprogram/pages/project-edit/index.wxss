@@ -1,7 +1,7 @@
 page { background: #f9f9ff; }
 .edit-page {
-  --td-brand-color: #1a365d;
-  --td-picker-confirm-color: #1a365d;
+  --td-brand-color: #2E9F8B;
+  --td-picker-confirm-color: #2E9F8B;
   display: flex;
   height: 100vh;
   overflow: hidden;
@@ -16,6 +16,7 @@ page { background: #f9f9ff; }
   flex: none;
   align-items: center;
   justify-content: center;
+  padding-left: 0;
   border-bottom: 2rpx solid rgba(196, 198, 207, 0.3);
   background: #f9f9ff;
   box-shadow: 0 2rpx 8rpx rgba(0, 32, 69, 0.04);
@@ -30,7 +31,7 @@ page { background: #f9f9ff; }
   align-items: center;
 }
 .nav-title {
-  color: #121c2c;
+  color: #182220;
   font-size: 36rpx;
   font-weight: 700;
 }
@@ -471,4 +472,4 @@ page { background: #f9f9ff; }
   border-radius: 18rpx !important;
   background: #1a365d !important;
 }
-.picker-confirm { color: #1a365d !important; font-weight: 700; }
+.picker-confirm { color: #2E9F8B !important; font-weight: 700; }

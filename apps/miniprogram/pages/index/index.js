@@ -110,6 +110,9 @@ function decorateProject(project) {
     usesCheckIcon,
     statusIconColor: statusIconColors[project.status] || "#002045",
     isLongTerm: ["long_term", "flower_plant"].includes(project.type),
+    serviceRecordsLabel: project.type === "flower_plant"
+      ? `已记录 ${Number(project.serviceRecordsCount) || 0} 笔`
+      : `已履约 ${Number(project.serviceRecordsCount) || 0} 次`,
     amountLabel: ["long_term", "flower_plant"].includes(project.type) ? "累计订单金额" : "订单金额",
     amountText: money(project.amount),
     unreceivedText: money(project.unreceivedAmount),
@@ -242,7 +245,7 @@ Page({
       content: "当前账号使用的是系统初始/重置密码（yh8888），为了您的账号与项目数据安全，建议尽快修改为您的专属密码。",
       cancelText: "暂不修改",
       confirmText: "立即修改",
-      confirmColor: "#002045",
+      confirmColor: "#2E9F8B",
       success: (res) => {
         if (res.confirm) {
           wx.navigateTo({ url: "/pages/password-change/index" });

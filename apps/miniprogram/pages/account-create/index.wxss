@@ -2,8 +2,8 @@ page {
   background: #f9f9ff;
 }
 .account-page {
-  --td-brand-color: #1a365d;
-  --td-picker-confirm-color: #1a365d;
+  --td-brand-color: #2E9F8B;
+  --td-picker-confirm-color: #2E9F8B;
   min-height: 100vh;
   box-sizing: border-box;
   padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
@@ -190,6 +190,6 @@ page {
   box-shadow: 0 5rpx 12rpx rgba(26, 54, 93, 0.18);
 }
 .picker-confirm {
-  color: #1a365d !important;
+  color: #2E9F8B !important;
   font-weight: 700;
 }

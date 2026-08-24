@@ -119,7 +119,7 @@ function redirectToLogin(reasonMessage) {
     content: message,
     showCancel: false,
     confirmText: "去登录",
-    confirmColor: "#002045",
+    confirmColor: "#2E9F8B",
     complete: () => {
       isRedirectingToLogin = false;
       wx.reLaunch({

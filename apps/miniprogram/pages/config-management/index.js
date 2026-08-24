@@ -323,7 +323,7 @@ Page({
       content: `“${config.label}”被以下数据使用：${referenceText || `${usage.referenceCount || 1} 条数据`}。${guidance}`,
       cancelText: "暂不处理",
       confirmText: actionText,
-      confirmColor: "#173d6b",
+      confirmColor: "#2E9F8B",
       success: result => {
         if (!result.confirm) return;
         if (canDisableNow) this.disableAndCreateReplacement(config);

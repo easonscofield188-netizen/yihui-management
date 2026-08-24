@@ -3,7 +3,7 @@ page { background: #f9f9ff; }
 .page-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #f0f3ff; background: rgba(255,255,255,.96); }
 .nav-placeholder { width: 100%; }
 .nav-back { position: absolute; bottom: 0; left: 24rpx; display: flex; width: 70rpx; height: 88rpx; align-items: center; }
-.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #182220; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 .toolbar { display: flex; padding: 24rpx 32rpx 18rpx; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 2rpx solid #e7eeff; background: #fff; }
 .status-tabs { display: flex; gap: 12rpx; }
 .status-tab { padding: 10rpx 26rpx; border: 2rpx solid #d9e3f9; border-radius: 999rpx; background: #fff; color: #43474e; font-size: 24rpx; }

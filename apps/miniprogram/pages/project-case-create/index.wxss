@@ -3,8 +3,8 @@ page {
 }
 
 .create-page {
-  --td-brand-color: #173d6b;
-  --td-picker-confirm-color: #173d6b;
+  --td-brand-color: #2E9F8B;
+  --td-picker-confirm-color: #2E9F8B;
   min-height: 100vh;
   background: #f4f6fb;
   color: #172033;
@@ -90,8 +90,8 @@ page {
   align-items: center;
   justify-content: center;
   border-radius: 20rpx;
-  background: #173d6b;
-  box-shadow: 0 8rpx 18rpx rgba(23, 61, 107, .18);
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
+  box-shadow: 0 8rpx 18rpx rgba(42, 154, 135, .22);
 }
 
 .link-main {
@@ -489,6 +489,6 @@ page {
 }
 
 .picker-confirm {
-  color: #173d6b !important;
+  color: #2E9F8B !important;
   font-weight: 700;
 }

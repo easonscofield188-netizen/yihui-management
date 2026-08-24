@@ -309,7 +309,7 @@ Page({
         ? `保存后将同步修改引用该客户的 ${referenceCount} 个项目，是否确认？`
         : "确认保存当前客户信息吗？",
       confirmText: "确认修改",
-      confirmColor: "#1a365d",
+      confirmColor: "#2E9F8B",
       success: result => {
         if (result.confirm) this.performUpdate();
       },

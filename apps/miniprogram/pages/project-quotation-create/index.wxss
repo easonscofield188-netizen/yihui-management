@@ -49,12 +49,12 @@ page { background: #f9f9ff; }
 .footer-button-host { display: block; min-width: 0; width: 100%; height: 88rpx; }
 .cancel-button,.submit-button { width: 100% !important; min-width: 0 !important; height: 88rpx !important; margin: 0 !important; padding: 0 22rpx !important; border-radius: 999rpx !important; font-size: 27rpx !important; font-weight: 700 !important; }
 .cancel-button { border: 2rpx solid #c4c6cf !important; background: #ffffff !important; color: #5b5f61 !important; box-shadow: none !important; }
-.submit-button { border: 2rpx solid #002045 !important; background: #002045 !important; color: #ffffff !important; box-shadow: 0 10rpx 22rpx rgba(0,32,69,.22) !important; }
+.submit-button { border: none !important; background: linear-gradient(135deg, #36AD97, #2A9A87) !important; color: #ffffff !important; box-shadow: 0 10rpx 22rpx rgba(42,154,135,.28) !important; }
 .submit-loading-mask { position: fixed; z-index: 1000; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15,25,39,.38); backdrop-filter: blur(5rpx); }
 .submit-loading-card { display: flex; width: 390rpx; min-height: 240rpx; padding: 34rpx 30rpx; box-sizing: border-box; flex-direction: column; align-items: center; justify-content: center; border: 2rpx solid rgba(255,255,255,.85); border-radius: 28rpx; background: rgba(255,255,255,.97); box-shadow: 0 24rpx 60rpx rgba(0,32,69,.2); }
 .submit-loading-title { margin-top: 24rpx; color: #002045; font-size: 29rpx; font-weight: 700; text-align: center; }
 .submit-loading-tip { margin-top: 12rpx; color: #7b8493; font-size: 21rpx; line-height: 32rpx; text-align: center; }
-.picker-confirm { color: #173d6b !important; }
+.picker-confirm { color: #2E9F8B !important; font-weight: 700; }
 .file-source-popup { overflow: hidden !important; border-radius: 30rpx 30rpx 0 0 !important; background: #f9f9ff !important; }
 .file-source-panel { padding: 36rpx 30rpx calc(32rpx + env(safe-area-inset-bottom)); }
 .file-source-head { display: flex; padding: 0 8rpx 26rpx; align-items: flex-start; justify-content: space-between; }

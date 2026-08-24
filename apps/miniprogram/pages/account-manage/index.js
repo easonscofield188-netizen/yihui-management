@@ -291,7 +291,7 @@ Page({
         content: `账号“${username}”已创建\n分配工号：${createdAccount.employeeNo || "-"}\n初始密码：yh8888`,
         showCancel: false,
         confirmText: "知道了",
-        confirmColor: "#002045",
+        confirmColor: "#2E9F8B",
       });
     } catch (error) {
       wx.showToast({ title: error.message || "账号创建失败", icon: "none" });
@@ -448,7 +448,7 @@ Page({
       title: "恢复启用确认",
       content: `确定恢复启用账号【${username}】吗？启用后该账号可正常登录系统。`,
       confirmText: "确认启用",
-      confirmColor: "#176c4b",
+      confirmColor: "#2E9F8B",
       cancelText: "取消",
       success: async (res) => {
         if (res.confirm) {

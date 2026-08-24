@@ -1,7 +1,12 @@
 page {
+  --td-brand-color: #2E9F8B;
+  --td-brand-color-active: #248473;
+  --td-brand-color-disabled: #A3D8CE;
+  --td-picker-confirm-color: #2E9F8B;
+  --td-dialog-confirm-color: #2E9F8B;
   min-height: 100%;
-  background: #f5f7f6;
-  color: #1f2937;
+  background: #F4F7F6;
+  color: #182220;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   font-size: 28rpx;
 }
@@ -25,13 +30,15 @@ button::after {
 .card {
   background: #fff;
   border-radius: 20rpx;
-  box-shadow: 0 8rpx 28rpx rgba(31, 41, 55, 0.06);
+  box-shadow: 0 8rpx 28rpx rgba(24, 34, 32, 0.05);
+  border: 2rpx solid #E2ECE9;
 }
 
 .primary-button {
   height: 88rpx;
   border-radius: 16rpx;
-  background: #146c43;
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
+  box-shadow: 0 8rpx 20rpx rgba(42, 154, 135, 0.25);
   color: #fff;
   font-size: 30rpx;
   font-weight: 600;
@@ -39,10 +46,16 @@ button::after {
 }
 
 .primary-button[disabled] {
-  background: #9bbdad;
+  background: #A3D8CE;
+  box-shadow: none;
   color: #fff;
 }
 
 .muted {
   color: #6b7280;
+}
+
+.picker-confirm {
+  color: #2E9F8B !important;
+  font-weight: 700;
 }

@@ -38,16 +38,16 @@
     "pages/system-settings/index"
   ],
   "window": {
-    "backgroundColor": "#f7f9fd",
+    "backgroundColor": "#F4F7F6",
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#f9f9ff",
-    "navigationBarTitleText": "亿辉艺术",
+    "navigationBarBackgroundColor": "#F4F7F6",
+    "navigationBarTitleText": "亿辉文化",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
     "custom": true,
     "color": "#6B7280",
-    "selectedColor": "#146C43",
+    "selectedColor": "#2E9F8B",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "black",
     "list": [

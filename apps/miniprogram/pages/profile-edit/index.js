@@ -273,7 +273,7 @@ Page({
           content: "您的个人资料已更新完成！",
           showCancel: false,
           confirmText: "确定",
-          confirmColor: "#002045",
+          confirmColor: "#2E9F8B",
           success: resolve,
         });
       });

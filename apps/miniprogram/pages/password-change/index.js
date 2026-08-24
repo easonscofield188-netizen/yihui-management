@@ -213,7 +213,7 @@ Page({
         content: `安全邮箱【${maskEmail(email)}】已成功绑定！现在可直接进行修改密码。`,
         showCancel: false,
         confirmText: "去修改密码",
-        confirmColor: "#002045",
+        confirmColor: "#2E9F8B",
       });
     } catch (err) {
       wx.hideLoading();
@@ -368,7 +368,7 @@ Page({
           content: "您的登录密码已成功更新，下次请使用新密码登录。",
           showCancel: false,
           confirmText: "完成",
-          confirmColor: "#002045",
+          confirmColor: "#2E9F8B",
           success: resolve,
         });
       });

@@ -20,7 +20,7 @@ page { background: #f9f9ff; }
 
 .page-nav-placeholder { width: 100%; }
 .nav-back { position: absolute; bottom: 0; left: 24rpx; display: flex; width: 70rpx; height: 88rpx; align-items: center; }
-.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #182220; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 
 .summary-card {
   display: flex;

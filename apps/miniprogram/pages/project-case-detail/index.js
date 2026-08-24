@@ -169,7 +169,7 @@ Page({
       content: "该案例已失效，请联系重新发送。",
       showCancel: false,
       confirmText: "确认",
-      confirmColor: "#173d6b",
+      confirmColor: "#2E9F8B",
       success: result => {
         if (!result.confirm) return;
         this.closeSharedPage();
@@ -241,7 +241,7 @@ Page({
       title: "设置案例封面",
       content: "设置后，案例列表和微信分享将使用这张图片作为封面。",
       confirmText: "设为封面",
-      confirmColor: "#173d6b",
+      confirmColor: "#2E9F8B",
       success: async result => {
         if (!result.confirm) return;
         this.setData({ settingCoverIndex: index });

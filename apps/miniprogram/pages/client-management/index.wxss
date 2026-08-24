@@ -3,7 +3,7 @@ page { background: #f9f9ff; }
 .page-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #edf0f5; background: rgba(249,249,255,.97); }
 .nav-placeholder { width: 100%; }
 .nav-back { position: absolute; bottom: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
-.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #002045; font-size: 38rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #182220; font-size: 38rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 .filter-panel { padding: 24rpx 32rpx 26rpx; border-bottom: 2rpx solid #e7eeff; background: #fff; }
 .search-box { display: flex; height: 82rpx; padding: 0 24rpx; align-items: center; gap: 14rpx; border-radius: 18rpx; background: #edf2fb; }
 .search-input { min-width: 0; height: 82rpx; flex: 1; color: #121c2c; font-size: 27rpx; }

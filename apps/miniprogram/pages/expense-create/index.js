@@ -429,7 +429,7 @@ Page({
         title: '发现今日重复支出',
         content: `今天已添加【${displayLabel}】¥${formatMoney(existingAmount)}，本次为 ¥${formatMoney(numAmount)}。确认后将合并为 ¥${formatMoney(existingAmount + numAmount)}。`,
         confirmText: '合并添加',
-        confirmColor: '#002045',
+        confirmColor: '#2E9F8B',
         success: result => {
           if (!result.confirm) return;
           if (hasRemoteDuplicate) queuedExpense.mergeExpenseId = duplicate.expenseId;

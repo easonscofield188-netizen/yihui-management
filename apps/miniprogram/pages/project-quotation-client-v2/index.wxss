@@ -568,10 +568,10 @@ page {
 }
 
 .btn-fullscreen {
-  border: 2rpx solid #00091b;
-  background: #00091b;
+  border: none;
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
   color: #ffffff;
-  box-shadow: 0 8rpx 24rpx rgba(0, 9, 27, .24);
+  box-shadow: 0 8rpx 24rpx rgba(42, 154, 135, .28);
 }
 
 /* 横屏全屏大表查看弹层 */

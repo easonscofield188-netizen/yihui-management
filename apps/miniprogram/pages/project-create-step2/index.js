@@ -207,7 +207,7 @@ Page({
         content: "本次长期合作首次服务是否有成本支出？",
         cancelText: "无成本",
         confirmText: "有成本",
-        confirmColor: "#002045",
+        confirmColor: "#2E9F8B",
         success: (res) => {
           if (res.confirm) {
             wx.navigateTo({ url: "/pages/project-create-step3/index" });

@@ -1,31 +1,31 @@
 .analysis-page { min-height: 100vh; background: #f8fafc; box-sizing: border-box; padding-bottom: 60rpx; }
 .page-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: #ffffff; border-bottom: 1rpx solid #eef2f6; }
 .nav-back { position: absolute; left: 24rpx; display: flex; align-items: center; justify-content: center; width: 68rpx; height: 68rpx; border-radius: 50%; }
-.nav-title { font-size: 32rpx; font-weight: 700; color: #002045; }
+.nav-title { font-size: 32rpx; font-weight: 700; color: #182220; }
 .nav-placeholder { width: 100%; }
 .canvas-nav-cover { position: fixed; top: 0; right: 0; left: 0; z-index: 1000; box-sizing: border-box; background: #ffffff; border-bottom: 1rpx solid #eef2f6; }
-.canvas-nav-title { height: 88rpx; margin: 0 150rpx; color: #002045; font-size: 32rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
-.canvas-nav-back { position: absolute; bottom: 0; left: 24rpx; width: 68rpx; height: 88rpx; color: #002045; font-size: 64rpx; line-height: 78rpx; text-align: center; }
+.canvas-nav-title { height: 88rpx; margin: 0 150rpx; color: #182220; font-size: 32rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.canvas-nav-back { position: absolute; bottom: 0; left: 24rpx; width: 68rpx; height: 88rpx; color: #182220; font-size: 64rpx; line-height: 78rpx; text-align: center; }
 
 /* 时间维度 Tabs */
 .range-tabs-wrap { display: flex; background: #ffffff; padding: 16rpx 28rpx; gap: 12rpx; border-bottom: 1rpx solid #f1f5f9; overflow-x: auto; }
 .range-tab-item { flex: 1; min-width: 120rpx; text-align: center; height: 64rpx; line-height: 64rpx; font-size: 26rpx; font-weight: 600; color: #64748b; border-radius: 16rpx; background: #f1f5f9; transition: all .2s ease; }
-.range-tab-item.active { background: #002045; color: #ffffff; font-weight: 700; }
+.range-tab-item.active { background: linear-gradient(135deg, #36AD97, #2A9A87); color: #ffffff; font-weight: 700; }
 
 /* 周期横幅 */
 .period-banner { margin: 24rpx 28rpx 0; background: #ffffff; border-radius: 24rpx; padding: 22rpx 28rpx; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 8rpx 20rpx rgba(15, 23, 42, 0.06); border: 2rpx solid #dfe8f3; }
-.period-left { display: flex; align-items: center; gap: 10rpx; font-size: 28rpx; font-weight: 700; color: #002045; }
+.period-left { display: flex; align-items: center; gap: 10rpx; font-size: 28rpx; font-weight: 700; color: #182220; }
 .period-total { display: flex; align-items: baseline; gap: 8rpx; }
 .period-total-label { font-size: 22rpx; color: #64748b; }
 .period-total-val { font-size: 32rpx; font-weight: 800; color: #ba1a1a; }
 
 /* 最高支出卡片 */
-.max-card { margin: 20rpx 28rpx 0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: 24rpx; padding: 24rpx 28rpx; color: #ffffff; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 8rpx 24rpx rgba(30, 58, 138, 0.2); }
+.max-card { margin: 20rpx 28rpx 0; background: linear-gradient(135deg, #182220, #2A9A87); border-radius: 24rpx; padding: 24rpx 28rpx; color: #ffffff; display: flex; align-items: center; gap: 20rpx; box-shadow: 0 8rpx 24rpx rgba(24, 34, 32, 0.2); }
 .max-icon-box { width: 76rpx; height: 76rpx; border-radius: 20rpx; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .max-info { flex: 1; min-width: 0; }
 .max-title-row { margin-bottom: 6rpx; }
 .max-title { font-size: 28rpx; font-weight: 700; }
-.max-desc { font-size: 22rpx; color: #e0edff; line-height: 1.4; }
+.max-desc { font-size: 22rpx; color: #E8F6F4; line-height: 1.4; }
 .max-desc .highlight { font-weight: 800; color: #fef08a; }
 
 /* 图表通用卡片 */
@@ -36,7 +36,7 @@
 .trend-card { border-color: #bcd5ef; border-top-color: #8fc0ee; box-shadow: 0 12rpx 28rpx rgba(32, 91, 153, 0.11); }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin: -2rpx -2rpx 22rpx; padding: 0 2rpx 18rpx; border-bottom: 2rpx solid #edf2f7; }
 .chart-title-wrap { display: flex; align-items: center; gap: 10rpx; }
-.chart-title { font-size: 30rpx; font-weight: 700; color: #002045; }
+.chart-title { font-size: 30rpx; font-weight: 700; color: #182220; }
 
 /* Canvas 容器 */
 .canvas-wrap { width: 100%; height: 380rpx; display: flex; align-items: center; justify-content: center; }

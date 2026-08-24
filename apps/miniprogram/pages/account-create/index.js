@@ -158,7 +158,7 @@ Page({
           content: `账号【${username}】已创建！\n分配工号：${createdAccount.employeeNo}\n初始默认密码：yh8888\n\n使用人首次登录时系统将主动提醒修改密码。`,
           showCancel: false,
           confirmText: "知道了",
-          confirmColor: "#002045",
+          confirmColor: "#2E9F8B",
           success: resolve,
         });
       });

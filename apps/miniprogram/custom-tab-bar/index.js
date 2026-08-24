@@ -3,8 +3,8 @@ const api = require("../utils/api");
 Component({
   data: {
     selected: 0,
-    color: "#5b5f61",
-    selectedColor: "#adc7f7",
+    color: "#748582",
+    selectedColor: "#2E9F8B",
     menuVisible: false,
     flowerLedgerExists: false,
     flowerLedgerLoading: false,
@@ -59,7 +59,7 @@ Component({
         title: "生成鲜花绿植供应账本",
         content: "将创建唯一的“鲜花绿植供应账本”，客户信息在每条业务记录中单独绑定。",
         confirmText: "立即生成",
-        confirmColor: "#002045",
+        confirmColor: "#2E9F8B",
         success: async (result) => {
           if (!result.confirm) return;
           this.setData({ flowerLedgerLoading: true });

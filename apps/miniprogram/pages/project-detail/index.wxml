@@ -24,8 +24,8 @@
           <view wx:else class="status-dot"></view>
           <text>{{project.statusLabel}}</text>
         </view>
-        <view wx:if="{{project.type === 'long_term' || project.type === 'flower_plant'}}" class="type-badge longterm-badge">
-          <t-icon name="{{project.type === 'flower_plant' ? 'tree-square-dot' : 'repeat'}}" size="22rpx" color="#c2410c" />
+        <view wx:if="{{project.type === 'long_term' || project.type === 'flower_plant'}}" class="type-badge {{project.type === 'flower_plant' ? 'flower-badge' : 'longterm-badge'}}">
+          <t-icon name="{{project.type === 'flower_plant' ? 'tree-square-dot' : 'repeat'}}" size="22rpx" color="{{project.type === 'flower_plant' ? '#0d9488' : '#c2410c'}}" />
           <text>{{project.type === 'flower_plant' ? '鲜花绿植' : '长期'}}</text>
         </view>
         <view wx:else class="type-badge normal-badge">
@@ -275,10 +275,10 @@
 
 </view>
 
-<view class="detail-loading-mask" wx:if="{{loading}}" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+<view class="detail-loading-mask" wx:if="{{loading}}" style="top: {{navHeight}}px;" catchtap="stopPropagation" catchtouchmove="stopPropagation">
   <view class="detail-loading-content">
-    <t-loading size="44rpx" theme="circular" />
-    <text>正在加载项目详情...</text>
+    <view class="detail-loading-spinner"><t-loading size="64rpx" theme="circular" /></view>
+    <text class="detail-loading-text">正在加载项目详情...</text>
   </view>
 </view>
 

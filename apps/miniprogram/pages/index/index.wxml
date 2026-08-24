@@ -3,7 +3,10 @@
   <!-- 顶部主导航与大分类 Tab -->
   <view class="top-nav-bar" style="padding-top: {{statusBarHeight}}px;">
     <view class="nav-brand-row">
-      <view class="brand"><t-icon name="wallet" size="44rpx" color="#002045" /><text>亿辉艺术</text></view>
+      <view class="brand">
+        <image class="brand-logo-icon" src="/images/company-logo.png" mode="aspectFit" />
+        <text>亿辉文化</text>
+      </view>
     </view>
 
     <!-- 顶部项目类型分段选择器 -->
@@ -84,8 +87,8 @@
   </view>
 
   <view class="project-list">
-    <view wx:for="{{projects}}" wx:key="_id" class="project-card {{item.type === 'long_term' ? 'longterm-card' : ''}} {{item.isClosed ? 'closed-card' : ''}} {{selectionMode ? 'selecting' : ''}} {{item.selected ? 'selected' : ''}}" data-id="{{item._id}}" bindtap="openProject" bindlongpress="enterProjectSelection">
-      <view class="card-accent {{item.type === 'long_term' ? 'longterm-accent' : ''}}"></view>
+    <view wx:for="{{projects}}" wx:key="_id" class="project-card {{item.isLongTerm ? 'longterm-card' : ''}} {{item.isClosed ? 'closed-card' : ''}} {{selectionMode ? 'selecting' : ''}} {{item.selected ? 'selected' : ''}}" data-id="{{item._id}}" bindtap="openProject" bindlongpress="enterProjectSelection">
+      <view class="card-accent {{item.isLongTerm ? 'longterm-accent' : ''}}"></view>
       <view class="card-body">
         <view class="project-meta">
           <view class="project-meta-left">
@@ -124,15 +127,15 @@
           <view class="client-row" wx:if="{{item.type !== 'flower_plant'}}"><t-icon name="building-1" size="30rpx" color="#43474e" /><text>{{item.client || '未填写客户'}}</text></view>
         </block>
 
-        <!-- 交付日期展示：长期项目展示最新单子交付日期，常规项目展示交付日期 -->
-        <view class="delivery-row" wx:if="{{item.type === 'long_term'}}">
+        <!-- 长期项目与鲜花绿植账本均展示最新交付日期及累计单据数。 -->
+        <view class="delivery-row" wx:if="{{item.isLongTerm}}">
           <view class="delivery-left">
             <t-icon name="calendar" size="29rpx" color="#74777f" />
             <text>交付日期</text>
             <text class="delivery-date">{{item.deliveryDateText}}</text>
           </view>
           <view class="service-records-pill">
-            已履约 {{item.serviceRecordsCount || 0}} 次
+            {{item.serviceRecordsLabel}}
           </view>
         </view>
         <view class="delivery-row" wx:else>

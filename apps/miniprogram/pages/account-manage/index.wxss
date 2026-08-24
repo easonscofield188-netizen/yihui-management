@@ -554,6 +554,6 @@ page {
 }
 
 .picker-confirm {
-  color: #1a365d !important;
+  color: #2E9F8B !important;
   font-weight: 700;
 }

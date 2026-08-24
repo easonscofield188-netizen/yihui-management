@@ -126,7 +126,7 @@ Page({
       content: message || "该报价单已失效，请联系客服重新发送。",
       showCancel: false,
       confirmText: "确认",
-      confirmColor: "#002045",
+      confirmColor: "#2E9F8B",
       success: () => this.closePage(),
     });
   },

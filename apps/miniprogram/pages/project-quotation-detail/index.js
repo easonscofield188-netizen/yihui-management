@@ -227,7 +227,7 @@ Page({
           content: "该报价单已失效，请联系重新发送。",
           showCancel: false,
           confirmText: "确认",
-          confirmColor: "#173d6b",
+          confirmColor: "#2E9F8B",
           success: () => this.goBack(),
         });
         return;

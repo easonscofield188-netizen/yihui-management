@@ -1,10 +1,9 @@
-page { background: #f9f9ff; }
 .quotation-page { min-height: 100vh; padding-bottom: calc(150rpx + env(safe-area-inset-bottom)); background: #f9f9ff; color: #121c2c; }
 .quotation-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 20; box-sizing: border-box; border-bottom: 2rpx solid #edf0f5; background: rgba(249,249,255,.97); }
 .nav-placeholder { width: 100%; }
 .nav-header { position: relative; height: 88rpx; }
 .nav-back { position: absolute; top: 0; left: 28rpx; display: flex; width: 74rpx; height: 88rpx; align-items: center; }
-.nav-title { position: absolute; top: 0; right: 150rpx; left: 150rpx; height: 88rpx; color: #002045; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+.nav-title { position: absolute; top: 0; right: 150rpx; left: 150rpx; height: 88rpx; color: #182220; font-size: 40rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 .selection-toolbar { display: flex; min-height: 88rpx; padding: 0 32rpx; align-items: center; gap: 24rpx; border-bottom: 2rpx solid #dce5f6; background: #fff; }
 .selection-cancel, .selection-action { color: #1a365d; font-size: 25rpx; font-weight: 600; }
 .selection-count { min-width: 0; flex: 1; color: #43474e; font-size: 25rpx; text-align: center; }
@@ -15,8 +14,8 @@ page { background: #f9f9ff; }
 .quotation-search { min-height: 94rpx !important; padding: 0 26rpx !important; background: transparent !important; color: #121c2c !important; font-size: 28rpx !important; }
 .year-scroll { width: 100%; margin-top: 22rpx; white-space: nowrap; }
 .year-list { display: inline-flex; padding: 2rpx 0 10rpx; gap: 14rpx; }
-.year-chip { display: flex; min-width: 116rpx; height: 62rpx; padding: 0 24rpx; align-items: center; justify-content: center; box-sizing: border-box; border: 2rpx solid transparent; border-radius: 999rpx; background: #e7eeff; color: #44474e; font-size: 24rpx; font-weight: 600; }
-.year-chip.active { border-color: #173d6b; background: #173d6b; color: #ffffff; box-shadow: 0 6rpx 14rpx rgba(23,61,107,.18); }
+.year-chip { display: flex; min-width: 116rpx; height: 62rpx; padding: 0 24rpx; align-items: center; justify-content: center; box-sizing: border-box; border: 2rpx solid transparent; border-radius: 999rpx; background: #E8F6F4; color: #5C6B68; font-size: 24rpx; font-weight: 600; }
+.year-chip.active { border-color: #2E9F8B; background: linear-gradient(135deg, #36AD97, #2A9A87); color: #ffffff; box-shadow: 0 6rpx 14rpx rgba(42,154,135,.22); }
 .quotation-list { padding: 18rpx 32rpx 30rpx; }
 .quotation-card { margin-bottom: 26rpx; padding: 30rpx 32rpx 28rpx; border: 2rpx solid rgba(196,198,207,.28); border-radius: 24rpx; background: #ffffff; box-shadow: 0 10rpx 26rpx rgba(26,54,93,.06); }
 .quotation-card.selecting { transition: border-color .15s ease, background .15s ease; }
@@ -47,4 +46,4 @@ page { background: #f9f9ff; }
 .state-description { margin-top: 10rpx; color: #8a92a0; font-size: 24rpx; line-height: 36rpx; }
 .list-loading { display: flex; padding: 30rpx 0 42rpx; align-items: center; justify-content: center; gap: 12rpx; color: #9299a6; font-size: 23rpx; }
 .create-bar { position: fixed; right: 0; bottom: 0; left: 0; z-index: 15; display: flex; padding: 18rpx 32rpx calc(22rpx + env(safe-area-inset-bottom)); justify-content: center; pointer-events: none; }
-.create-button { min-width: 286rpx !important; height: 92rpx !important; padding: 0 38rpx !important; border: none !important; border-radius: 999rpx !important; background: #002045 !important; color: #ffffff !important; font-size: 27rpx !important; font-weight: 700 !important; box-shadow: 0 14rpx 30rpx rgba(0,32,69,.25); pointer-events: auto; }
+.create-button { min-width: 286rpx !important; height: 92rpx !important; padding: 0 38rpx !important; border: none !important; border-radius: 999rpx !important; background: linear-gradient(135deg, #36AD97, #2A9A87) !important; color: #ffffff !important; font-size: 27rpx !important; font-weight: 700 !important; box-shadow: 0 14rpx 30rpx rgba(42, 154, 135, 0.28); pointer-events: auto; }

@@ -1,21 +1,21 @@
 page {
-  --td-brand-color: #002045;
-  --td-brand-color-active: #001b3c;
-  --td-brand-color-disabled: #86a0cd;
-  background: #fff;
+  --td-brand-color: #2E9F8B;
+  --td-brand-color-active: #248473;
+  --td-brand-color-disabled: #A3D8CE;
+  background: #F4F7F6;
 }
 .login-page {
   min-height: 100vh;
   padding: 0 30rpx 40rpx;
   box-sizing: border-box;
-  background: #fff;
-  color: #121c2c;
+  background: #F4F7F6;
+  color: #182220;
 }
 .login-content {
   width: 100%;
   max-width: 720rpx;
   margin: 0 auto;
-  padding-top: calc(env(safe-area-inset-top) + 200rpx);
+  padding-top: calc(env(safe-area-inset-top) + 140rpx);
 }
 .brand {
   text-align: center;
@@ -24,28 +24,41 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 116rpx;
-  height: 116rpx;
-  margin: 0 auto 42rpx;
-  border-radius: 28rpx;
-  background: #1a365d;
-  box-shadow: 0 8rpx 24rpx rgba(26, 54, 93, 0.08);
+  width: 140rpx;
+  height: 140rpx;
+  margin: 0 auto 28rpx;
+  border-radius: 36rpx;
+  background: #ffffff;
+  border: 2rpx solid #E2ECE9;
+  box-shadow: 0 12rpx 32rpx rgba(46, 159, 139, 0.15);
+}
+.brand-logo-image {
+  width: 100rpx;
+  height: 100rpx;
 }
 .brand-name {
-  color: #002045;
-  font-size: 44rpx;
-  font-weight: 700;
+  color: #182220;
+  font-size: 48rpx;
+  font-weight: 800;
   line-height: 60rpx;
-  letter-spacing: -1rpx;
+  letter-spacing: 2rpx;
+}
+.brand-sub {
+  margin-top: 6rpx;
+  color: #2E9F8B;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+  text-transform: uppercase;
 }
 .brand-tip {
-  margin-top: 24rpx;
-  color: #43474e;
-  font-size: 28rpx;
-  line-height: 48rpx;
+  margin-top: 18rpx;
+  color: #5C6B68;
+  font-size: 26rpx;
+  line-height: 40rpx;
 }
 .login-form {
-  margin-top: 80rpx;
+  margin-top: 60rpx;
 }
 .logout-notice {
   display: flex;
@@ -67,7 +80,7 @@ page {
 }
 .field-label {
   margin: 0 0 14rpx 14rpx;
-  color: #43474e;
+  color: #5C6B68;
   font-size: 24rpx;
   font-weight: 500;
   line-height: 32rpx;
@@ -80,31 +93,31 @@ page {
   align-items: center;
   height: 88rpx;
   overflow: hidden;
-  border: 2rpx solid #c4c6cf;
+  border: 2rpx solid #D1E0DD;
   border-radius: 16rpx;
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .field-box:focus-within {
-  border-color: #002045;
-  box-shadow: 0 0 0 1rpx #002045;
+  border-color: #2E9F8B;
+  box-shadow: 0 0 0 2rpx rgba(46, 159, 139, 0.2);
 }
 .login-input {
   width: 100%;
   padding: 0 28rpx;
   background: transparent !important;
-  color: #121c2c;
+  color: #182220;
   font-size: 28rpx;
 }
 .login-placeholder {
-  color: #c4c6cf;
+  color: #94A3A0;
 }
 .agreement-row {
   display: flex;
   align-items: center;
   justify-content: center;
   margin-top: 34rpx;
-  color: #74777f;
+  color: #5C6B68;
   font-size: 22rpx;
   line-height: 34rpx;
 }
@@ -121,15 +134,15 @@ page {
   height: 88rpx !important;
   margin-top: 34rpx;
   border-radius: 16rpx !important;
-  background: #002045 !important;
-  box-shadow: 0 8rpx 24rpx rgba(26, 54, 93, 0.12);
-  font-size: 36rpx !important;
+  background: linear-gradient(135deg, #36AD97, #2A9A87) !important;
+  box-shadow: 0 10rpx 28rpx rgba(42, 154, 135, 0.3) !important;
+  font-size: 34rpx !important;
   font-weight: 600;
   line-height: 88rpx !important;
 }
 .help {
-  margin-top: 100rpx;
-  color: #43474e;
+  margin-top: 80rpx;
+  color: #5C6B68;
   font-size: 24rpx;
   font-weight: 500;
   line-height: 36rpx;
@@ -137,7 +150,7 @@ page {
 }
 .privacy-link {
   margin-left: 2rpx;
-  color: #002045;
+  color: #2E9F8B;
   font-weight: 600;
 }
 @media (max-height: 700px) {

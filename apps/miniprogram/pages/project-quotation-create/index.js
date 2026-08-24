@@ -600,7 +600,7 @@ Page({
       title: this.data.editMode ? "取消编辑报价单" : "取消新增报价单",
       content: this.data.editMode ? "当前修改不会保存，确定返回吗？" : "当前内容已经保存为草稿，确定返回吗？",
       confirmText: "确定返回",
-      confirmColor: "#173d6b",
+      confirmColor: "#2E9F8B",
       success: result => result.confirm && this.leavePage(),
     });
   },
