@@ -6,6 +6,7 @@ const { CREATION_CHANNEL } = require("../../utils/dictionary");
 const DRAFT_KEY = "projectCreateDraft";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_VOUCHER_COUNT = 80;
+const IMAGE_COMPRESS_QUALITY = 85;
 const UPLOAD_TIMEOUT_MS = 45000;
 const SAVE_VOUCHER_TIMEOUT_MS = 20000;
 const UPLOAD_MAX_RETRY = 3;
@@ -86,8 +87,18 @@ function getLocalFileSize(filePath, fallbackSize = 0) {
 async function prepareFile(file) {
   const sourcePath = file.tempFilePath || file.path;
   const sourceSize = await getLocalFileSize(sourcePath, file.size);
-  // 不在客户端使用 wx.compressImage，避免 JPEG 再编码造成有损。
-  // 图片会在云端转为无损 WebP 后才作为最终凭证保存。
+  if (isImageFile(file)) {
+    try {
+      const result = await new Promise((resolve, reject) => wx.compressImage({
+        src: sourcePath, quality: IMAGE_COMPRESS_QUALITY, success: resolve, fail: reject,
+      }));
+      const compressedPath = result.tempFilePath || sourcePath;
+      const compressedSize = await getLocalFileSize(compressedPath, sourceSize);
+      if (compressedSize > 0) return { ...file, tempFilePath: compressedPath, size: compressedSize, compressed: true };
+    } catch (error) {
+      // 少数格式不支持压缩时仍上传原文件，不能阻断项目创建。
+    }
+  }
   return { ...file, tempFilePath: sourcePath, size: sourceSize, compressed: false };
 }
 
@@ -123,9 +134,12 @@ Page({
     projectName: "",
     invoiceEnabled: true,
     files: [],
+    completionImagesEnabled: false,
+    completionFiles: [],
     submitting: false,
     createdProjectId: "",
     uploadProgressText: "",
+    completionUploadProgressText: "",
     isLongTerm: false,
   },
 
@@ -146,6 +160,8 @@ Page({
       projectName: String(draft.name || "").trim(),
       createdProjectId,
       invoiceEnabled: draft.invoiceEnabled !== false,
+      completionImagesEnabled: draft.type === "normal" && Boolean(draft.completionImagesEnabled),
+      completionFiles: Array.isArray(draft.completionFiles) ? draft.completionFiles : [],
       files: Array.isArray(savedQueue) ? savedQueue.map((item) => ({
         ...item,
         pdfDisplayName: item.pdfDisplayName || getPdfDisplayName(item.name),
@@ -195,6 +211,67 @@ Page({
       return;
     }
     this.setData({ invoiceEnabled: event.detail.value });
+  },
+
+  onCompletionImagesChange(event) {
+    const enabled = Boolean(event.detail.value);
+    this.setData({
+      completionImagesEnabled: enabled,
+      // 项目尚未创建时关闭开关，已选择的完工图不应继续保留或触发上传。
+      completionFiles: enabled ? this.data.completionFiles : [],
+    });
+  },
+
+  chooseCompletionImages() {
+    const remaining = 80 - this.data.completionFiles.length;
+    if (remaining <= 0) return wx.showToast({ title: "最多上传 80 张完工图", icon: "none" });
+    wx.chooseMedia({
+      count: Math.min(9, remaining), mediaType: ["image"], sourceType: ["album", "camera"], sizeType: ["original"],
+      success: ({ tempFiles }) => this.setData({
+        completionFiles: this.data.completionFiles.concat((tempFiles || []).map((file, index) => ({
+          id: `completion-${Date.now()}-${index}`, tempFilePath: file.tempFilePath, size: Number(file.size) || 0,
+          uploadStatus: "pending",
+        }))).slice(0, 80),
+      }),
+    });
+  },
+
+  removeCompletionImage(event) {
+    const id = event.currentTarget.dataset.id;
+    this.setData({ completionFiles: this.data.completionFiles.filter((file) => file.id !== id) });
+  },
+
+  async uploadCompletionImages(projectId, projectName) {
+    const safeName = String(projectName || "未命名项目").replace(/[\\/:*?"<>|]/g, "_").trim().slice(0, 40) || "未命名项目";
+    const folder = `project_completion/${safeName}_${projectId}`;
+    const total = this.data.completionFiles.length;
+    let successCount = 0;
+    this.setData({ completionUploadProgressText: `完工图上传：共需上传 ${total} 张，已成功 0 张` });
+    const uploaded = await mapWithConcurrency(this.data.completionFiles, 2, async (file, index) => {
+      this.updateCompletionUploadState(file.id, "uploading");
+      try {
+        const cloudPath = `${folder}/${new Date().toISOString().slice(0, 7)}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${String(index + 1).padStart(2, "0")}.jpg`;
+        const prepared = await prepareFile({ ...file, isImage: true });
+        const result = await wx.cloud.uploadFile({ cloudPath, filePath: prepared.tempFilePath });
+        const optimized = await api.optimizeVoucherImageLossless(result.fileID);
+        successCount += 1;
+        this.updateCompletionUploadState(file.id, "success");
+        this.setData({ completionUploadProgressText: `完工图上传：共需上传 ${total} 张，已成功 ${successCount} 张` });
+        return optimized.fileId;
+      } catch (error) {
+        this.updateCompletionUploadState(file.id, "failed");
+        this.setData({ completionUploadProgressText: `完工图上传：共需上传 ${total} 张，已成功 ${successCount} 张` });
+        return "";
+      }
+    });
+    return uploaded.filter(Boolean);
+  },
+
+  updateCompletionUploadState(id, uploadStatus) {
+    const completionFiles = this.data.completionFiles.map((file) => (
+      file.id === id ? { ...file, uploadStatus } : file
+    ));
+    this.setData({ completionFiles });
   },
 
   async loadExistingVouchers(projectId) {
@@ -422,8 +499,6 @@ Page({
         );
         fileId = optimized.fileId;
         fileUrl = optimized.fileUrl || "";
-        extension = "webp";
-        formattedFileName = `成本凭证_${seqStr}.webp`;
       }
       if (!fileUrl) {
         const urlResult = await withTimeout(
@@ -502,16 +577,15 @@ Page({
     });
     if (!pendingFiles.length) return [];
 
-    let finished = 0;
+    let successCount = 0;
     const total = pendingFiles.length;
-    this.setData({ uploadProgressText: `正在上传凭证 0/${total}` });
+    this.setData({ uploadProgressText: `凭证上传：共需上传 ${total} 张，已成功 0 张` });
 
     const results = await mapWithConcurrency(pendingFiles, UPLOAD_CONCURRENCY, async (file) => {
       this.markFileUploadState(file.id, { uploadStatus: "uploading", uploadError: "" });
       const result = await this.uploadVoucher(projectId, file);
-      finished += 1;
-      this.setData({ uploadProgressText: `正在上传凭证 ${finished}/${total}` });
       if (result.success) {
+        successCount += 1;
         this.markFileUploadState(file.id, {
           uploadStatus: "success",
           uploadError: "",
@@ -525,6 +599,7 @@ Page({
           uploadError: (result.error && result.error.message) || "上传失败",
         });
       }
+      this.setData({ uploadProgressText: `凭证上传：共需上传 ${total} 张，已成功 ${successCount} 张` });
       return result;
     });
 
@@ -646,9 +721,14 @@ Page({
       wx.showToast({ title: "请选择已有客户，或先新增客户", icon: "none" });
       return;
     }
+    if (draft.type === "normal" && this.data.completionImagesEnabled && !this.data.completionFiles.length) {
+      wx.showToast({ title: "请上传至少一张项目完工图", icon: "none" });
+      return;
+    }
 
     // 新建且开启凭证时，必须先选文件，避免创建出无凭证项目
-    if (!this.data.isEditMode && this.data.invoiceEnabled && !this.data.files.length) {
+    const validVoucherFiles = this.data.files.filter((file) => file && (file.tempFilePath || file.fileId));
+    if (!this.data.isEditMode && this.data.invoiceEnabled && !validVoucherFiles.length) {
       wx.showToast({ title: "请先选择凭证图片，或关闭“是否有发票”", icon: "none" });
       return;
     }
@@ -675,6 +755,7 @@ Page({
         costs: draft.costs,
         // 创建时先标记为无凭证，至少一张凭证真正落库后再同步为“是”。
         isHasVoucher: this.countUploadedVouchers() > 0 ? "是" : "否",
+        hasCompletionImages: "否",
       };
 
       if (!projectId) {
@@ -724,6 +805,13 @@ Page({
           wx.removeStorageSync(queueKey(""));
         }
         this.persistUploadQueue(projectId);
+      }
+
+      if (!isEditMode && draft.type === "normal" && this.data.completionImagesEnabled) {
+        wx.showLoading({ title: "正在上传完工图", mask: true });
+        const completionImageFileIds = await this.uploadCompletionImages(projectId, draft.name);
+        if (!completionImageFileIds.length) throw new Error("项目完工图上传失败");
+        await api.updateProject({ id: projectId, hasCompletionImages: "是", completionImageFileIds });
       }
 
       let failedVouchers = [];
@@ -777,7 +865,7 @@ Page({
         });
         wx.showModal({
           title: isEditMode ? "修改已保存" : "项目已创建",
-          content: "凭证处理未完成，可点击提交继续补传凭证。",
+          content: `项目资料处理未完成：${error.message || "请点击提交继续处理"}`,
           showCancel: false,
           confirmText: "知道了",
         });

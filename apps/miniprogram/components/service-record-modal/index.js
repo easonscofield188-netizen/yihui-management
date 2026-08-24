@@ -540,9 +540,14 @@ Component({
         wx.showLoading({ title: '上传凭证中...', mask: true });
         const uploadPromises = tempFiles.map(async (file) => {
           const cloudPath = `vouchers/service_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+          let uploadPath = file.tempFilePath;
+          try {
+            const compressed = await new Promise((resolve, reject) => wx.compressImage({ src: uploadPath, quality: 85, success: resolve, fail: reject }));
+            uploadPath = compressed.tempFilePath || uploadPath;
+          } catch (error) {}
           const uploadResult = await wx.cloud.uploadFile({
             cloudPath,
-            filePath: file.tempFilePath,
+            filePath: uploadPath,
           });
           const optimized = await api.optimizeVoucherImageLossless(uploadResult.fileID);
           return optimized.fileId;

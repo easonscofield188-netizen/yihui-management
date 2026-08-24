@@ -1,4 +1,4 @@
-<page-meta page-style="{{yearPickerVisible ? 'overflow: hidden;' : ''}}" />
+<page-meta page-style="{{yearPickerVisible || sortPickerVisible ? 'overflow: hidden;' : ''}}" />
 <view class="projects-page">
   <!-- 顶部主导航与大分类 Tab -->
   <view class="top-nav-bar" style="padding-top: {{statusBarHeight}}px;">
@@ -33,7 +33,7 @@
     </view>
   </view>
   <view class="filter-panel" wx:if="{{!selectionMode}}">
-    <!-- 搜索与年份合并为单行紧凑布局 -->
+    <!-- 搜索框独占一行，避免与筛选项在窄屏上互相挤压。 -->
     <view class="search-filter-row">
       <view class="search-box">
         <t-icon name="search" size="36rpx" color="#74777f" bindclick="onSearch" />
@@ -48,11 +48,19 @@
         />
         <t-icon wx:if="{{keyword}}" name="close-circle" size="32rpx" color="#989fa6" bindclick="clearKeyword" />
       </view>
+    </view>
 
+    <view class="filter-control-row">
       <view class="year-chip" bindtap="openYearPicker">
         <t-icon name="calendar" size="28rpx" color="#002045" />
         <text class="year-text">{{filterYearText}}</text>
         <t-icon name="chevron-down" size="24rpx" color="#002045" />
+      </view>
+
+      <view class="sort-chip {{sortValue ? 'active' : ''}}" bindtap="openSortOptions">
+        <t-icon name="filter" size="28rpx" color="{{sortValue ? '#ffffff' : '#002045'}}" />
+        <text class="sort-text">{{sortText}}</text>
+        <t-icon name="chevron-down" size="24rpx" color="{{sortValue ? '#ffffff' : '#002045'}}" />
       </view>
     </view>
 
@@ -208,6 +216,20 @@
     bindclose="closeYearPicker"
   >
     <t-picker-item options="{{yearOptions}}" />
+  </t-picker>
+
+  <t-picker
+    t-class-confirm="picker-confirm"
+    visible="{{sortPickerVisible}}"
+    value="{{sortPickerValue}}"
+    title="排序方式"
+    confirm-btn="确定"
+    cancel-btn="取消"
+    bindconfirm="onSortConfirm"
+    bindcancel="closeSortPicker"
+    bindclose="closeSortPicker"
+  >
+    <t-picker-item options="{{sortOptions}}" />
   </t-picker>
 
   <!-- 长期项目 / 鲜花绿植账本服务记账快捷弹窗 -->

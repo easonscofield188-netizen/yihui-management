@@ -917,6 +917,20 @@ page {
   white-space: nowrap;
 }
 
+.attachment-toggle {
+  display: flex;
+  min-height: 64rpx;
+  margin-top: 20rpx;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #d7e4fb;
+  border-radius: 14rpx;
+  background: #f6f9ff;
+  color: #1a5ea8;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
 .profit-rate-panel {
   position: relative;
   z-index: 1;

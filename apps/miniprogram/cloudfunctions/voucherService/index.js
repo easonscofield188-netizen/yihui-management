@@ -319,51 +319,27 @@ async function authenticate(event, data) {
 }
 
 /**
- * 将已上传到云存储的图片重新编码为无损 WebP。
- * WebP 的 lossless 模式不会引入额外像素损失；最终业务记录只保存新文件 ID。
+ * 图片已在小程序端完成高质量压缩，此处仅返回最终上传文件信息。
+ * 避免云函数依赖原生图片模块，保证所有运行时均可稳定上传。
  */
 async function optimizeImageLossless(params = {}) {
   const sourceFileId = String(params.fileId || '').trim();
   if (!sourceFileId) return { code: 400, message: '缺少待处理图片' };
   try {
-    // 延迟加载：旧功能在未部署新版依赖前仍可正常运行。
-    const sharp = require('sharp');
-    const downloaded = await cloud.downloadFile({ fileID: sourceFileId });
-    const sourceBuffer = downloaded.fileContent;
-    if (!Buffer.isBuffer(sourceBuffer) || !sourceBuffer.length) {
-      return { code: 400, message: '图片文件为空' };
-    }
-    const image = sharp(sourceBuffer, { animated: false, failOn: 'none' });
-    const metadata = await image.metadata();
-    if (!metadata.format || metadata.format === 'gif' || metadata.pages > 1) {
-      return { code: 400, message: '暂不支持该图片格式的无损处理' };
-    }
-    const optimizedBuffer = await image
-      .rotate()
-      .webp({ lossless: true, effort: 6 })
-      .toBuffer();
-    const cloudPath = `vouchers/lossless/${Date.now()}_${crypto.randomBytes(8).toString('hex')}.webp`;
-    const uploaded = await cloud.uploadFile({ cloudPath, fileContent: optimizedBuffer });
-    const urlResult = await cloud.getTempFileURL({ fileList: [uploaded.fileID] });
+    const urlResult = await cloud.getTempFileURL({ fileList: [sourceFileId] });
     const fileUrl = urlResult.fileList && urlResult.fileList[0] && urlResult.fileList[0].tempFileURL;
-    // 临时原图不作为最终业务文件保留；删除失败不影响已生成的无损文件。
-    if (sourceFileId !== uploaded.fileID) {
-      cloud.deleteFile({ fileList: [sourceFileId] }).catch(() => {});
-    }
     return {
       code: 0,
-      message: '无损图片处理完成',
+      message: '图片压缩文件已确认',
       data: {
-        fileId: uploaded.fileID,
+        fileId: sourceFileId,
         fileUrl: fileUrl || '',
-        fileSize: optimizedBuffer.length,
-        mimeType: 'image/webp',
-        fileName: `凭证_${Date.now()}.webp`,
+        mimeType: 'image/jpeg',
       },
     };
   } catch (error) {
     console.error('凭证无损图片处理失败:', error);
-    return { code: 500, message: '图片无损处理失败', error: error.message };
+    return { code: 500, message: `图片无损处理失败：${error.message || '未知错误'}`, error: error.message };
   }
 }
 

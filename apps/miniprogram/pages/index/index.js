@@ -25,6 +25,17 @@ const STATUS_LABELS = {
   negotiating: "洽谈中", constructing: "施工中", completed: "已交付",
   settling: "结算中", closed: "已结清", archived: "已归档", in_cooperation: "合作中", terminated: "已终止",
 };
+const SORT_OPTIONS = [
+  { label: "默认排序", value: "" },
+  { label: "金额从低到高", value: "amount_asc", sortBy: "amount", sortOrder: "asc" },
+  { label: "金额从高到低", value: "amount_desc", sortBy: "amount", sortOrder: "desc" },
+  { label: "利润从低到高", value: "profitAmount_asc", sortBy: "profitAmount", sortOrder: "asc" },
+  { label: "利润从高到低", value: "profitAmount_desc", sortBy: "profitAmount", sortOrder: "desc" },
+  { label: "利润率从低到高", value: "profitRate_asc", sortBy: "profitRate", sortOrder: "asc" },
+  { label: "利润率从高到低", value: "profitRate_desc", sortBy: "profitRate", sortOrder: "desc" },
+  { label: "交付日期从早到晚", value: "deliveryDate_asc", sortBy: "deliveryDate", sortOrder: "asc" },
+  { label: "交付日期从晚到早", value: "deliveryDate_desc", sortBy: "deliveryDate", sortOrder: "desc" },
+];
 
 function money(value) {
   const amount = Number(value);
@@ -127,6 +138,11 @@ Page({
     yearOptions: buildYearOptions(getLocalYear()),
     yearPickerValue: [ALL_YEARS_VALUE],
     yearPickerVisible: false,
+    sortValue: "",
+    sortText: "排序",
+    sortPickerVisible: false,
+    sortPickerValue: [""],
+    sortOptions: SORT_OPTIONS,
     page: 1,
     loading: false,
     hasMore: true,
@@ -489,6 +505,35 @@ Page({
     });
   },
 
+  openSortOptions() {
+    this.setData({
+      sortPickerVisible: true,
+      sortPickerValue: [this.data.sortValue],
+    });
+  },
+
+  closeSortPicker() {
+    this.setData({ sortPickerVisible: false });
+  },
+
+  onSortConfirm(event) {
+    const raw = event.detail && event.detail.value;
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    const option = SORT_OPTIONS.find(item => item.value === value);
+    this.setData({ sortPickerVisible: false });
+    if (!option || option.value === this.data.sortValue) return;
+    this.setData({
+      sortValue: option.value,
+      sortText: option.value ? option.label : "排序",
+      sortPickerValue: [option.value],
+      selectionMode: false,
+      selectedIds: [],
+      allSelected: false,
+    }, () => {
+      this.loadProjects(true, option.value ? `正在按“${option.label}”排序...` : "正在加载项目...");
+    });
+  },
+
   onServiceRecordClose() {
     this.setData({ serviceModalVisible: false, activeProjectType: "" });
   },
@@ -647,6 +692,7 @@ Page({
       const yearParam = this.data.filterYear === ALL_YEARS_VALUE
         ? undefined
         : Number(this.data.filterYear);
+      const sortOption = SORT_OPTIONS.find(item => item.value === this.data.sortValue) || SORT_OPTIONS[0];
       const result = await api.listProjects({
         page,
         pageSize: 20,
@@ -654,6 +700,7 @@ Page({
         status,
         projectType: this.data.projectType,
         ...(yearParam ? { year: yearParam } : {}),
+        ...(sortOption.sortBy ? { sortBy: sortOption.sortBy, sortOrder: sortOption.sortOrder } : {}),
       });
       const selectedSet = new Set(this.data.selectedIds);
       const incoming = (result.list || []).map(item => ({

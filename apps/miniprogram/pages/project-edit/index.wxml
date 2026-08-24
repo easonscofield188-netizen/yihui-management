@@ -196,6 +196,28 @@
         </view>
       </view>
     </view>
+    <view class="section-card" wx:if="{{showCompletionImages}}">
+      <view class="section-head">
+        <t-icon name="image" size="36rpx" color="#15803d" />
+        <text class="section-title">项目完工图</text>
+        <text class="completion-count">{{completionImages.length}} 张</text>
+      </view>
+      <view class="completion-hint">历史项目也可在此补充上传；图片将高质量压缩后保存。</view>
+      <view class="voucher-grid">
+        <view class="voucher-item" wx:for="{{completionImages}}" wx:key="id">
+          <image class="voucher-image" src="{{item.tempFilePath}}" mode="aspectFill" data-id="{{item.id}}" bindtap="previewCompletionImage" />
+          <view class="voucher-remove" data-id="{{item.id}}" bindtap="removeCompletionImage">
+            <t-icon name="close" size="24rpx" color="#ffffff" />
+          </view>
+        </view>
+        <view wx:if="{{completionImages.length < 80}}" class="voucher-add" bindtap="chooseCompletionImages">
+          <view class="voucher-add-inner">
+            <t-icon name="camera" size="48rpx" color="#74777f" />
+            <text>补充完工图</text>
+          </view>
+        </view>
+      </view>
+    </view>
     <view class="scroll-spacer" style="padding-bottom: {{formKeyboardPadding}}px;"></view>
   </scroll-view>
 

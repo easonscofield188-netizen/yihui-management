@@ -152,6 +152,9 @@ Page({
     vouchers: [],
     pendingUploads: [],
     deletedVoucherIds: [],
+    showCompletionImages: false,
+    completionImages: [],
+    pendingCompletionUploads: [],
     addCostVisible: false,
     editingCostId: "",
     costCategories: FALLBACK_CATEGORIES,
@@ -350,6 +353,15 @@ Page({
         isExisting: true,
       };
     });
+    const completionImages = (Array.isArray(project.completionImageFileIds) ? project.completionImageFileIds : [])
+      .filter(Boolean)
+      .map((fileId, index) => ({
+        id: `completion-existing-${index}-${fileId}`,
+        fileId,
+        tempFilePath: "",
+        isExisting: true,
+        isImage: true,
+      }));
     const projectAmount = Number(project.amount) || 0;
     const projectReceivedAmount = Number(project.receivedAmount) || 0;
     const isFullySettled = projectAmount > 0 && toCents(projectAmount) === toCents(projectReceivedAmount);
@@ -386,9 +398,14 @@ Page({
       vouchers: voucherList,
       pendingUploads: [],
       deletedVoucherIds: [],
+      // 历史常规项目也允许从此处补充完工图。
+      showCompletionImages: project.type !== "long_term" && project.type !== "flower_plant",
+      completionImages,
+      pendingCompletionUploads: [],
     }, () => {
       this.refreshProfit();
       this.resolveVoucherUrls(voucherList);
+      this.resolveCompletionImageUrls(completionImages);
     });
   },
 
@@ -665,6 +682,24 @@ Page({
     this.setData({ "costForm.isSettled": Boolean(event.detail.value) });
   },
 
+  async resolveCompletionImageUrls(list) {
+    const fileIds = list.map((item) => item.fileId).filter(Boolean);
+    if (!fileIds.length) return;
+    try {
+      const result = await wx.cloud.getTempFileURL({ fileList: fileIds });
+      const urlMap = {};
+      (result.fileList || []).forEach((item) => { urlMap[item.fileID] = item.tempFileURL; });
+      this.setData({
+        completionImages: this.data.completionImages.map((item) => ({
+          ...item,
+          tempFilePath: urlMap[item.fileId] || item.tempFilePath,
+        })),
+      });
+    } catch (error) {
+      // 临时链接不可用时保留空白，用户仍可继续补传。
+    }
+  },
+
   openEditCost(event) {
     const id = String(event.currentTarget.dataset.id || "");
     const item = this.data.costs.find((cost) => String(cost.id) === id);
@@ -835,6 +870,73 @@ Page({
     });
   },
 
+  chooseCompletionImages() {
+    if (this.data.saving) return;
+    const remaining = MAX_VOUCHER_COUNT - this.data.completionImages.length;
+    if (remaining <= 0) {
+      wx.showToast({ title: `最多上传 ${MAX_VOUCHER_COUNT} 张完工图`, icon: "none" });
+      return;
+    }
+    wx.chooseMedia({
+      count: Math.min(9, remaining),
+      mediaType: ["image"],
+      sourceType: ["album", "camera"],
+      sizeType: ["original"],
+      success: ({ tempFiles }) => {
+        const accepted = (tempFiles || [])
+          .filter((file) => Number(file.size || 0) <= MAX_FILE_SIZE)
+          .map((file, index) => ({
+            id: `completion-local-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+            tempFilePath: file.tempFilePath,
+            size: Number(file.size) || 0,
+            isExisting: false,
+            isImage: true,
+          }));
+        if (accepted.length < (tempFiles || []).length) wx.showToast({ title: "已忽略超过 10MB 的图片", icon: "none" });
+        if (!accepted.length) return;
+        this.setData({
+          completionImages: this.data.completionImages.concat(accepted).slice(0, MAX_VOUCHER_COUNT),
+          pendingCompletionUploads: this.data.pendingCompletionUploads.concat(accepted).slice(0, MAX_VOUCHER_COUNT),
+        });
+      },
+    });
+  },
+
+  previewCompletionImage(event) {
+    const id = event.currentTarget.dataset.id;
+    const target = this.data.completionImages.find((item) => item.id === id);
+    const urls = this.data.completionImages.map((item) => item.tempFilePath).filter(Boolean);
+    if (target && target.tempFilePath && urls.length) wx.previewImage({ current: target.tempFilePath, urls });
+  },
+
+  removeCompletionImage(event) {
+    const id = event.currentTarget.dataset.id;
+    wx.showModal({
+      title: "移除完工图",
+      content: "确定移除这张项目完工图吗？保存后将不再展示。",
+      success: ({ confirm }) => {
+        if (!confirm) return;
+        this.setData({
+          completionImages: this.data.completionImages.filter((item) => item.id !== id),
+          pendingCompletionUploads: this.data.pendingCompletionUploads.filter((item) => item.id !== id),
+        });
+      },
+    });
+  },
+
+  async uploadOneCompletionImage(projectId, file, index) {
+    const safeName = String(this.data.form.name || "未命名项目").replace(/[\\/:*?\"<>|]/g, "_").trim().slice(0, 40) || "未命名项目";
+    let uploadPath = file.tempFilePath;
+    try {
+      const compressed = await new Promise((resolve, reject) => wx.compressImage({ src: uploadPath, quality: 85, success: resolve, fail: reject }));
+      uploadPath = compressed.tempFilePath || uploadPath;
+    } catch (error) {}
+    const cloudPath = `project_completion/${safeName}_${projectId}/${new Date().toISOString().slice(0, 7)}/${Date.now()}_${String(index + 1).padStart(2, "0")}.jpg`;
+    const uploadResult = await withTimeout(wx.cloud.uploadFile({ cloudPath, filePath: uploadPath }), UPLOAD_TIMEOUT_MS, "完工图上传超时");
+    const optimized = await withTimeout(api.optimizeVoucherImageLossless(uploadResult.fileID), SAVE_VOUCHER_TIMEOUT_MS, "完工图处理超时");
+    return optimized.fileId || uploadResult.fileID;
+  },
+
   discard() {
     if (this.data.saving) return;
     wx.showModal({
@@ -857,8 +959,15 @@ Page({
     let formattedFileName = `成本凭证_${seqStr}${extDot}`;
     const cloudPath = buildVoucherCloudPath(this.data.form.name, extension).cloudPath;
     let fileId = "";
+    let uploadPath = file.tempFilePath;
+    if (file.isImage) {
+      try {
+        const compressed = await new Promise((resolve, reject) => wx.compressImage({ src: uploadPath, quality: 85, success: resolve, fail: reject }));
+        uploadPath = compressed.tempFilePath || uploadPath;
+      } catch (error) {}
+    }
     const uploadResult = await withTimeout(
-      wx.cloud.uploadFile({ cloudPath, filePath: file.tempFilePath }),
+      wx.cloud.uploadFile({ cloudPath, filePath: uploadPath }),
       UPLOAD_TIMEOUT_MS,
       `${formattedFileName} 上传超时`
     );
@@ -872,8 +981,6 @@ Page({
       );
       fileId = optimized.fileId;
       fileUrl = optimized.fileUrl || "";
-      extension = "webp";
-      formattedFileName = `成本凭证_${seqStr}.webp`;
     }
     if (!fileUrl) {
       const urlResult = await withTimeout(
@@ -935,6 +1042,21 @@ Page({
         amount: Number(item.amount) || 0,
         isSettled: Boolean(item.isSettled),
       }));
+      // 完工图需要先上传成功，再把最终 fileId 一次性写入项目；历史项目同样适用。
+      const uploadedCompletionFileIds = [];
+      for (let index = 0; index < this.data.pendingCompletionUploads.length; index += 1) {
+        this.setData({ loadingMessage: `正在上传完工图 ${index + 1}/${this.data.pendingCompletionUploads.length}...` });
+        uploadedCompletionFileIds.push(await this.uploadOneCompletionImage(
+          this.data.projectId,
+          this.data.pendingCompletionUploads[index],
+          index
+        ));
+      }
+      const completionImageFileIds = this.data.completionImages
+        .filter((item) => item.isExisting && item.fileId)
+        .map((item) => item.fileId)
+        .concat(uploadedCompletionFileIds)
+        .filter(Boolean);
       const payload = {
         id: this.data.projectId,
         name,
@@ -944,6 +1066,10 @@ Page({
         costs,
         isHasVoucher: this.data.vouchers.length > 0 ? YES_NO.YES : YES_NO.NO,
       };
+      if (this.data.showCompletionImages) {
+        payload.hasCompletionImages = completionImageFileIds.length ? YES_NO.YES : YES_NO.NO;
+        payload.completionImageFileIds = completionImageFileIds;
+      }
       if (!this.data.isClosedEdit) {
         payload.scene = form.scene || "";
         payload.client = form.client || "";
@@ -955,6 +1081,13 @@ Page({
       }
 
       await api.updateProject(payload);
+
+      if (this.data.showCompletionImages) {
+        const oldFileIds = Array.isArray(this.originalProject && this.originalProject.completionImageFileIds)
+          ? this.originalProject.completionImageFileIds : [];
+        const removedFileIds = oldFileIds.filter((fileId) => !completionImageFileIds.includes(fileId));
+        if (removedFileIds.length) wx.cloud.deleteFile({ fileList: removedFileIds }).catch(() => {});
+      }
 
       for (const item of this.data.deletedVoucherIds) {
         try {

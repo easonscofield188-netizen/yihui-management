@@ -57,6 +57,7 @@ Page({
     totalCostText: "0.00",
     pendingCostText: "0.00",
     addCostVisible: false,
+    editingCostId: "",
     categoryPickerVisible: false,
     categoryPickerValue: [FALLBACK_CATEGORIES[0].value],
     costForm: { categoryCode: FALLBACK_CATEGORIES[0].value, supplier: FIXED_SUPPLIER, amount: "", isSettled: true },
@@ -135,6 +136,7 @@ Page({
     const firstCategory = this.data.costCategories[0] || FALLBACK_CATEGORIES[0];
     this.setData({
       addCostVisible: true,
+      editingCostId: "",
       categoryIndex: 0,
       categoryPickerValue: [firstCategory.value],
       costForm: { categoryCode: firstCategory.value, supplier: FIXED_SUPPLIER, amount: "", isSettled: true },
@@ -144,6 +146,7 @@ Page({
   closeAddCost() {
     this.setData({
       addCostVisible: false,
+      editingCostId: "",
       categoryPickerVisible: false,
       keyboardHeight: 0,
       costScrollTarget: "",
@@ -200,7 +203,7 @@ Page({
       return;
     }
     const category = this.data.costCategories.find((item) => item.value === categoryCode) || FALLBACK_CATEGORIES[0];
-    const costs = [...this.data.costs, {
+    const nextItem = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       category: category.label,
       categoryCode,
@@ -208,16 +211,27 @@ Page({
       supplier: FIXED_SUPPLIER,
       amount: numericAmount,
       isSettled: Boolean(isSettled),
-    }];
-    this.setData({ costs, addCostVisible: false, keyboardHeight: 0 }, () => this.updateSummary());
+    };
+    const costs = this.data.editingCostId
+      ? this.data.costs.map((item) => String(item.id) === String(this.data.editingCostId) ? { ...nextItem, id: item.id } : item)
+      : [...this.data.costs, nextItem];
+    this.setData({ costs, addCostVisible: false, editingCostId: "", keyboardHeight: 0 }, () => this.updateSummary());
   },
 
   manageCost(event) {
     const id = event.currentTarget.dataset.id;
     wx.showActionSheet({
-      itemList: ["删除成本"],
+      itemList: ["编辑成本", "删除成本"],
       success: ({ tapIndex }) => {
-        if (tapIndex !== 0) return;
+        if (tapIndex === 0) {
+          const item = this.data.costs.find((cost) => String(cost.id) === String(id));
+          if (!item) return;
+          const categoryIndex = Math.max(0, this.data.costCategories.findIndex((category) => category.value === item.categoryCode));
+          const category = this.data.costCategories[categoryIndex] || this.data.costCategories[0];
+          this.setData({ addCostVisible: true, editingCostId: id, categoryIndex, categoryPickerValue: [category.value], costForm: { categoryCode: category.value, supplier: item.supplier || FIXED_SUPPLIER, amount: String(item.amount), isSettled: Boolean(item.isSettled) } });
+          return;
+        }
+        if (tapIndex !== 1) return;
         const costs = this.data.costs.filter((item) => item.id !== id);
         this.setData({ costs }, () => this.updateSummary());
       },

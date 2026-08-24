@@ -291,6 +291,21 @@ page { background: #f9f9ff; }
   flex-wrap: wrap;
   gap: 16rpx;
 }
+.completion-count {
+  margin-left: auto;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background: #eaf8ef;
+  color: #15803d;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+.completion-hint {
+  margin: -6rpx 0 20rpx;
+  color: #7b8794;
+  font-size: 22rpx;
+  line-height: 32rpx;
+}
 .voucher-item,
 .voucher-add {
   position: relative;

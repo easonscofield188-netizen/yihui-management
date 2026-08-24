@@ -241,7 +241,7 @@
         </view>
       </view>
       <view class="voucher-grid">
-        <view class="voucher-item" wx:for="{{vouchers}}" wx:key="_id">
+        <view class="voucher-item" wx:for="{{visibleVouchers}}" wx:key="_id">
           <image
             wx:if="{{item.isImage !== false}}"
             class="voucher-image"
@@ -261,7 +261,15 @@
           </view>
         </view>
       </view>
+      <view class="attachment-toggle" wx:if="{{vouchers.length > 3}}" bindtap="toggleVoucherExpand">{{vouchersExpanded ? '收起' : '查看全部'}}（{{vouchers.length}} 张）</view>
       <view class="empty-row" wx:if="{{!vouchers.length}}">暂无凭证</view>
+    </view>
+
+    <view class="detail-card completion-card">
+      <view class="card-header"><view class="card-heading"><view class="heading-icon voucher-icon"><t-icon name="image" size="36rpx" color="#1a7f5a" /></view><view class="card-title">项目完工图</view></view><text class="card-count">{{completionImages.length}} 张</text></view>
+      <view class="voucher-grid"><view class="voucher-item" wx:for="{{visibleCompletionImages}}" wx:key="fileId"><image class="voucher-image" src="{{item.displayUrl}}" mode="aspectFill" data-url="{{item.displayUrl}}" bindtap="previewCompletionImage" /></view></view>
+      <view class="attachment-toggle" wx:if="{{completionImages.length > 3}}" bindtap="toggleCompletionImages">{{completionImagesExpanded ? '收起' : '查看全部'}}（{{completionImages.length}} 张）</view>
+      <view class="empty-row" wx:if="{{!completionImages.length}}">暂无完工图，可在编辑项目中补充上传</view>
     </view>
   </block>
 

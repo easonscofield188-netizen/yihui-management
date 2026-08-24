@@ -135,6 +135,11 @@ Page({
     projectId: "",
     project: null,
     vouchers: [],
+    completionImages: [],
+    visibleVouchers: [],
+    visibleCompletionImages: [],
+    vouchersExpanded: false,
+    completionImagesExpanded: false,
     loading: true,
     submitting: false,
     uploading: false,
@@ -208,6 +213,7 @@ Page({
       ]);
       const categories = this.extractCategories(config);
       const refreshedVouchers = await this.refreshVoucherUrls(vouchers || []);
+      const completionImages = await this.refreshCompletionImageUrls(project && project.completionImageFileIds);
       const rawRecords = Array.isArray(serviceRecordsRes)
         ? serviceRecordsRes
         : (serviceRecordsRes && Array.isArray(serviceRecordsRes.list) ? serviceRecordsRes.list : []);
@@ -215,6 +221,11 @@ Page({
       this.setData({
         project: decorateProject(project, config),
         vouchers: refreshedVouchers,
+        completionImages,
+        visibleVouchers: refreshedVouchers.slice(0, 3),
+        visibleCompletionImages: completionImages.slice(0, 3),
+        vouchersExpanded: false,
+        completionImagesExpanded: false,
         serviceRecords,
         categories: categories.length ? categories : this.data.categories,
         canEdit: this.data.canWrite && (project.type || "normal") === "normal",
@@ -392,6 +403,35 @@ Page({
         }
       }
     });
+  },
+
+  async refreshCompletionImageUrls(fileIds) {
+    const ids = (Array.isArray(fileIds) ? fileIds : []).filter((item) => typeof item === "string" && item);
+    if (!ids.length) return [];
+    try {
+      const result = await wx.cloud.getTempFileURL({ fileList: ids });
+      const urlMap = {};
+      (result.fileList || []).forEach((item) => { urlMap[item.fileID] = item.tempFileURL; });
+      return ids.map((fileId) => ({ fileId, displayUrl: urlMap[fileId] || fileId })).filter((item) => item.displayUrl);
+    } catch (error) {
+      return ids.map((fileId) => ({ fileId, displayUrl: fileId }));
+    }
+  },
+
+  previewCompletionImage(event) {
+    const current = event.currentTarget.dataset.url;
+    const urls = this.data.completionImages.map((item) => item.displayUrl).filter(Boolean);
+    if (current) wx.previewImage({ current, urls });
+  },
+
+  toggleVoucherExpand() {
+    const expanded = !this.data.vouchersExpanded;
+    this.setData({ vouchersExpanded: expanded, visibleVouchers: expanded ? this.data.vouchers : this.data.vouchers.slice(0, 3) });
+  },
+
+  toggleCompletionImages() {
+    const expanded = !this.data.completionImagesExpanded;
+    this.setData({ completionImagesExpanded: expanded, visibleCompletionImages: expanded ? this.data.completionImages : this.data.completionImages.slice(0, 3) });
   },
 
   openClientStatementForRecord(e) {

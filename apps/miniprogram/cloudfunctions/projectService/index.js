@@ -1470,6 +1470,7 @@ async function deleteProjects(params, currentUser) {
       'project_previews',
       'project_cases',
       'project_quotations',
+      SERVICE_RECORDS_COLLECTION,
       PROJECT_CHANGE_EVENT_COLLECTION,
       NOTIFICATION_COLLECTION
     ];
@@ -1543,7 +1544,7 @@ async function updateProject(params) {
   const canonical = await applyCanonicalClientSnapshot(params);
   if (canonical.error) return canonical.error;
   params = canonical.params;
-  const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, startDate, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, clientSource, subProjects } = params;
+  const { id, name, type, period, client, clientId, role, scene, staffCount, amount, receivedAmount, desc, costs, status, isHistorical, constructionPeriod, collectionPeriod, completionTime, startDate, negotiatingTime, constructingTime, completedTime, settlingTime, settledTime, isHasContract, isHasPreview, isHasVoucher, hasCompletionImages, completionImageFileIds, clientSource, subProjects } = params;
 
   if (!id) {
     return { code: 400, message: '缺少项目 ID' };
@@ -1623,6 +1624,8 @@ async function updateProject(params) {
         'costs',
         'vouchers',
         'isHasVoucher',
+        'hasCompletionImages',
+        'completionImageFileIds',
         'receivedAmount',
         'status',
         'startDate',
@@ -1658,7 +1661,7 @@ async function updateProject(params) {
       if (illegalChanges.length > 0) {
         return { 
           code: 403, 
-          message: '已结清或已归档项目仅可编辑：项目名称、项目描述、成本支出、凭证上传及已收账款',
+          message: '已结清或已归档项目仅可编辑：项目名称、项目描述、成本支出、凭证与完工图及已收账款',
           details: `非法修改了字段: ${illegalChanges.join(', ')}`
         };
       }
@@ -1749,6 +1752,8 @@ async function updateProject(params) {
     
     // 历史数据相关字段
     if (isHistorical !== undefined) updateDataFinal.isHistorical = isHistorical;
+    if (hasCompletionImages !== undefined) updateDataFinal.hasCompletionImages = normalizeYesNo(hasCompletionImages);
+    if (completionImageFileIds !== undefined) updateDataFinal.completionImageFileIds = Array.isArray(completionImageFileIds) ? completionImageFileIds.filter(Boolean) : [];
     if (type) updateDataFinal.type = type;
     if (constructionPeriod !== undefined) updateDataFinal.constructionPeriod = constructionPeriod;
     if (collectionPeriod !== undefined) updateDataFinal.collectionPeriod = collectionPeriod;
@@ -1970,7 +1975,7 @@ async function createProject(params) {
   const canonical = await applyCanonicalClientSnapshot(params);
   if (canonical.error) return canonical.error;
   params = canonical.params;
-  const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, subProjects, currentUser } = params;
+  const { name, type, startDate, period, client, role, staffCount, amount, receivedAmount, desc, costs, isHistorical, constructionPeriod, collectionPeriod, completionTime, isHasContract, isHasPreview, contractFileIds, previewFileIds, hasCompletionImages, completionImageFileIds, subProjects, currentUser } = params;
   // 创建渠道只在首次创建时写入，避免后续编辑篡改项目来源。
   // 未传该字段的旧管理端调用按“后台管理系统”处理，兼容既有入口。
   const creationChannel = normalizeCreationChannel(params.creationChannel);
@@ -1994,6 +1999,10 @@ async function createProject(params) {
     if (!previewFileIds || !Array.isArray(previewFileIds) || previewFileIds.length === 0) {
       return { code: 400, message: '请上传预览图后再创建项目' };
     }
+  }
+  if (type === 'normal' && normalizeYesNo(hasCompletionImages) === YES_NO.YES
+    && (!Array.isArray(completionImageFileIds) || completionImageFileIds.length === 0)) {
+    return { code: 400, message: '请上传项目完工图后再创建项目' };
   }
 
   // 2. 安全校验
@@ -2086,6 +2095,8 @@ async function createProject(params) {
       isHasPreviewLabel: getYesNoLabel(isHasPreview),
       isHasVoucher: normalizeYesNo(params.isHasVoucher),
       isHasVoucherLabel: getYesNoLabel(params.isHasVoucher),
+      hasCompletionImages: normalizeYesNo(hasCompletionImages),
+      completionImageFileIds: Array.isArray(completionImageFileIds) ? completionImageFileIds.filter(Boolean) : [],
       receivedAmount: received,
       costs: costsData,
       subProjects: subProjectsData,
@@ -2353,7 +2364,9 @@ async function listProjects(params, access) {
     status = "",
     projectType = "",
     type = "",
-    year
+    year,
+    sortBy = "",
+    sortOrder = ""
   } = params || {};
   const allowedStatuses = new Set([
     "negotiating",
@@ -2368,13 +2381,21 @@ async function listProjects(params, access) {
   const normalizedStatus = String(status || "").trim();
   const normalizedKeyword = String(keyword || "").trim().slice(0, 50);
   const normalizedProjectType = String(projectType || type || "").trim();
+  const normalizedSortBy = String(sortBy || "").trim();
+  const normalizedSortOrder = String(sortOrder || "").trim().toLowerCase();
   const normalizedYear = Number(year);
   const hasYear = Number.isInteger(normalizedYear) && normalizedYear >= 2000 && normalizedYear <= 2100;
   if (normalizedStatus && !allowedStatuses.has(normalizedStatus)) {
     return { code: 400, message: "项目状态筛选值无效" };
   }
+  if (normalizedSortBy && !["amount", "profitAmount", "profitRate", "deliveryDate"].includes(normalizedSortBy)) {
+    return { code: 400, message: "项目排序字段无效" };
+  }
+  if (normalizedSortOrder && !["asc", "desc"].includes(normalizedSortOrder)) {
+    return { code: 400, message: "项目排序方向无效" };
+  }
 
-  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus || normalizedProjectType || hasYear;
+  const usePagination = page !== undefined || pageSize !== undefined || normalizedKeyword || normalizedStatus || normalizedProjectType || hasYear || normalizedSortBy;
   const currentPage = Math.max(1, Number(page) || 1);
   const currentPageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   try {
@@ -2443,7 +2464,11 @@ async function listProjects(params, access) {
     const query = db.collection("projects").where(_.and(conditions));
 
     const countResult = usePagination ? await query.count() : null;
-    let orderedQuery = query.orderBy("createTime", "desc");
+    // 所有项目均会保存 startDate；它就是列表所展示的交付日期基础字段。
+    // 未选择排序时保留原有的创建时间倒序，确保既有列表顺序不变。
+    const orderField = normalizedSortBy === "deliveryDate" ? "startDate" : (normalizedSortBy || "createTime");
+    const orderDirection = normalizedSortBy ? (normalizedSortOrder || "desc") : "desc";
+    let orderedQuery = query.orderBy(orderField, orderDirection);
     if (usePagination) {
       orderedQuery = orderedQuery.skip((currentPage - 1) * currentPageSize).limit(currentPageSize);
     }
