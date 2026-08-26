@@ -499,3 +499,32 @@
   font-size: 25rpx;
   font-weight: 600;
 }
+
+/* 与项目首页保持一致的青绿色账务表单体系。 */
+.service-popup, .service-dialog, .dialog-footer, .client-picker-dialog { background: #f4f8f7; }
+.service-popup { border-radius: 40rpx 40rpx 0 0; box-shadow: 0 -14rpx 36rpx rgba(24, 34, 32, .14); }
+.dialog-header { padding: 30rpx 32rpx 22rpx; border-bottom-color: #dceee9; background: #ffffff; }
+.dialog-badge { border-color: #bfe8de; background: #e8f6f4; color: #187a68; }
+.dialog-title, .project-pill-name, .card-box-title, .toggle-title, .client-loading-state, .client-item-name { color: #182220; }
+.close-btn { border-radius: 50%; background: #f0f8f6; }
+.project-pill { border-color: #c7e8df; background: #eaf8f4; }
+.input-shell, .grid-input-shell { border-color: #d4e4df; border-radius: 18rpx; }
+.input-shell:focus-within { border-color: #2e9f8b; box-shadow: 0 0 0 4rpx rgba(46, 159, 139, .14); }
+.scene-desc-card { border-left-color: #2e9f8b; background: #effaf7; }
+.scene-desc-title { color: #187a68; }
+.scene-desc-text, .grid-label, .quick-label { color: #425a54; }
+.form-card-box { border-color: #cbe9e1; border-radius: 24rpx; box-shadow: 0 10rpx 24rpx rgba(46, 159, 139, .06); }
+.add-cost-btn { border-color: #bfe5db; background: #e8f6f4; color: #187a68; }
+.empty-cost-tip, .settlement-toggle-row { background: #f0f8f6; }
+.cost-item-card { border-color: #dbeee9; background: #f8fcfb; }
+.cost-index-tag { background: linear-gradient(135deg, #36ad97, #2a9a87); }
+.grid-picker-text { color: #182220; }
+.unified-voucher-thumb { border-color: #cbe9e1; background: #eef9f6; }
+.unified-upload-btn { border-color: #8fcfc0; background: #fbfefd; color: #4d6a62; }
+.dialog-footer, .client-picker-footer { border-top-color: #dceee9; }
+.submit-btn { --td-button-primary-bg-color: #2e9f8b; --td-button-primary-border-color: #2e9f8b; border: 0 !important; border-radius: 20rpx; background: linear-gradient(135deg, #36ad97, #2a9a87) !important; box-shadow: 0 12rpx 24rpx rgba(42, 154, 135, .24); }
+.settlement-switch { --td-switch-checked-color: #2e9f8b; }
+.client-search-bar, .client-picker-footer { background: #ffffff; }
+.client-item-card { border-color: #dceee9; border-radius: 20rpx; }
+.client-item-card.selected { border-color: #2e9f8b; background: #eef9f6; box-shadow: 0 8rpx 18rpx rgba(46, 159, 139, .1); }
+.quick-client-confirm { --td-button-primary-bg-color: #2e9f8b; --td-button-primary-border-color: #2e9f8b; background: linear-gradient(135deg, #36ad97, #2a9a87) !important; }

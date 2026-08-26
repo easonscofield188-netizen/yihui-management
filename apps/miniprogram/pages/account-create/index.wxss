@@ -17,9 +17,9 @@ page {
   background: #f9f9ff;
 }
 .account-navbar {
-  border-bottom: 2rpx solid #edf1fa;
-  background: #f9f9ff !important;
-  color: #002045 !important;
+  border-bottom: 2rpx solid #dceee9;
+  background: #ffffff !important;
+  color: #182220 !important;
 }
 .nav-back {
   display: flex;
@@ -27,7 +27,7 @@ page {
   height: 72rpx;
   align-items: center;
   justify-content: flex-start;
-  color: #002045;
+  color: #2A9A87;
   font-size: 58rpx;
   line-height: 1;
 }
@@ -43,7 +43,7 @@ page {
 }
 .intro-title {
   margin-bottom: 10rpx;
-  color: #002045;
+  color: #182220;
   font-size: 40rpx;
   font-weight: 700;
   line-height: 56rpx;
@@ -51,10 +51,10 @@ page {
 .form-card {
   margin-top: 34rpx;
   padding: 32rpx;
-  border: 2rpx solid #d6e3ff;
-  border-radius: 24rpx;
+  border: 2rpx solid #cbe9e1;
+  border-radius: 28rpx;
   background: #fff;
-  box-shadow: 0 10rpx 28rpx rgba(26, 54, 93, 0.06);
+  box-shadow: 0 10rpx 28rpx rgba(46, 159, 139, 0.08);
 }
 .default-pwd-tip {
   display: flex;
@@ -63,8 +63,8 @@ page {
   margin: 30rpx 0 10rpx;
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
-  background: #f0f4fd;
-  border: 2rpx solid #d2e1fa;
+  background: #e8f6f4;
+  border: 2rpx solid #c4e8de;
   box-sizing: border-box;
 }
 .default-pwd-content {
@@ -73,7 +73,7 @@ page {
 .default-pwd-title {
   font-size: 26rpx;
   font-weight: 700;
-  color: #002045;
+  color: #187a68;
   margin-bottom: 6rpx;
 }
 .default-pwd-desc {
@@ -84,8 +84,8 @@ page {
 .pwd-highlight {
   font-family: monospace;
   font-weight: 700;
-  color: #1a365d;
-  background: #e2eafc;
+  color: #187a68;
+  background: #dff3ed;
   padding: 2rpx 10rpx;
   border-radius: 8rpx;
 }
@@ -108,14 +108,14 @@ page {
   width: 100%;
   min-height: 92rpx;
   overflow: hidden;
-  border: 2rpx solid #c4c6cf;
+  border: 2rpx solid #d4e4df;
   border-radius: 16rpx;
-  background: #f0f3ff;
+  background: #ffffff;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .input-shell:focus-within {
-  border-color: #1a365d;
-  box-shadow: 0 0 0 2rpx rgba(26, 54, 93, 0.1);
+  border-color: #2e9f8b;
+  box-shadow: 0 0 0 4rpx rgba(46, 159, 139, 0.12);
 }
 .form-input {
   min-height: 88rpx;
@@ -138,8 +138,8 @@ page {
   transform: rotate(45deg) translateY(-3rpx);
 }
 .readonly-shell {
-  border-color: #d9e3f9;
-  background: #eceff5;
+  border-color: #cbe9e1;
+  background: #eff8f5;
 }
 .field-help {
   margin-top: 10rpx;
@@ -159,7 +159,7 @@ page {
   box-sizing: border-box;
   align-items: flex-start;
   gap: 32rpx;
-  border-top: 2rpx solid #d9e3f9;
+  border-top: 2rpx solid #dceee9;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10rpx);
 }
@@ -184,10 +184,10 @@ page {
   box-shadow: 0 3rpx 8rpx rgba(18, 28, 44, 0.06);
 }
 .submit-button {
-  border: 2rpx solid #1a365d !important;
-  background: #1a365d !important;
+  border: 2rpx solid #2A9A87 !important;
+  background: linear-gradient(135deg, #36AD97, #2A9A87) !important;
   color: #fff !important;
-  box-shadow: 0 5rpx 12rpx rgba(26, 54, 93, 0.18);
+  box-shadow: 0 8rpx 18rpx rgba(42, 154, 135, 0.22);
 }
 .picker-confirm {
   color: #2E9F8B !important;

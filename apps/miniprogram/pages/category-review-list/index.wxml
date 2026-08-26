@@ -1,7 +1,7 @@
 <view class="page">
   <view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px">
     <view class="back" bindtap="back">
-      <t-icon name="chevron-left" size="48rpx" color="#002045"/>
+      <t-icon name="chevron-left" size="48rpx" color="#2A9A87"/>
     </view>
     <view class="title">类目审核</view>
   </view>
@@ -45,7 +45,7 @@
         <t-icon
           name="{{item.selected ? 'check-circle-filled' : 'circle'}}"
           size="42rpx"
-          color="{{item.selected ? '#1a365d' : '#a9b0bb'}}"
+          color="{{item.selected ? '#2A9A87' : '#a9b0bb'}}"
         />
       </view>
       <view class="selection-check-disabled" wx:elif="{{selectionMode}}">

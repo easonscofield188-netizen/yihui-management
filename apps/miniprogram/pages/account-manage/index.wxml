@@ -2,7 +2,7 @@
 <view class="manage-page">
   <view class="nav" style="height:{{navHeight}}px;padding-top:{{statusBarHeight}}px">
     <view class="back" bindtap="back">
-      <t-icon name="chevron-left" size="48rpx" color="#002045" />
+      <t-icon name="chevron-left" size="48rpx" color="#2A9A87" />
     </view>
     <view class="title">账号管理</view>
   </view>
@@ -44,7 +44,7 @@
 
   <!-- 提示条 -->
   <view class="permission-notice">
-    <t-icon name="shield-check" size="32rpx" color="#1a365d" />
+    <t-icon name="shield-check" size="32rpx" color="#2A9A87" />
     <text>仅主超级系统管理员（YH-ADMIN_SUPER-000）拥有账号管理权限{{isDevEnvironment ? ' · 开发环境支持删除并释放工号' : ' · 生产环境禁止删除账号'}}</text>
   </view>
 
@@ -139,12 +139,12 @@
           data-job-title="{{item.jobTitle}}"
           bindtap="onEditJobTitle"
         >
-          <t-icon name="edit" size="26rpx" color="#0b5796" />
+          <t-icon name="edit" size="26rpx" color="#187a68" />
           <text>编辑职位</text>
         </view>
         <!-- 重置密码 -->
         <view class="action-btn action-reset" data-id="{{item.id}}" data-username="{{item.username}}" bindtap="onResetPassword">
-          <t-icon name="lock-on" size="26rpx" color="#1a365d" />
+          <t-icon name="lock-on" size="26rpx" color="#187a68" />
           <text>重置密码</text>
         </view>
 
@@ -258,6 +258,7 @@
   </t-picker>
 
   <t-picker
+    t-class-confirm="picker-confirm"
     visible="{{createRolePickerVisible}}"
     value="{{createRolePickerValue}}"
     title="选择账号角色"
@@ -270,6 +271,7 @@
   </t-picker>
 
   <t-picker
+    t-class-confirm="picker-confirm"
     visible="{{createJobTitlePickerVisible}}"
     value="{{createJobTitlePickerValue}}"
     title="选择职位"

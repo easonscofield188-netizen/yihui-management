@@ -1,6 +1,4 @@
-page {
-  background: #f7f9fd;
-}
+page { background: #f4f8f7; }
 .manage-page {
   min-height: 100vh;
   padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
@@ -18,8 +16,8 @@ page {
   align-items: center;
   justify-content: space-between;
   padding: 0 24rpx;
-  background: #f7f9fd;
-  border-bottom: 2rpx solid #e2e8f5;
+  background: rgba(255, 255, 255, .96);
+  border-bottom: 2rpx solid #dceee9;
   box-sizing: border-box;
 }
 
@@ -39,7 +37,7 @@ page {
   pointer-events: none;
   font-size: 34rpx;
   font-weight: 700;
-  color: #002045;
+  color: #182220;
   letter-spacing: -0.5rpx;
 }
 
@@ -54,10 +52,10 @@ page {
   height: 80rpx;
   padding: 0 24rpx;
   background: #ffffff;
-  border: 2rpx solid #d9e2ef;
+  border: 2rpx solid #d4e4df;
   border-radius: 20rpx;
   gap: 14rpx;
-  box-shadow: 0 4rpx 14rpx rgba(0, 32, 69, 0.04);
+  box-shadow: 0 4rpx 14rpx rgba(46, 159, 139, .06);
 }
 
 .search-input {
@@ -84,7 +82,7 @@ page {
   height: 68rpx;
   border-radius: 18rpx;
   background: #ffffff;
-  border: 2rpx solid #dbe3f1;
+  border: 2rpx solid #d4e4df;
   color: #556274;
   font-size: 26rpx;
   font-weight: 600;
@@ -92,10 +90,10 @@ page {
 }
 
 .tab.active {
-  background: #002045;
-  border-color: #002045;
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
+  border-color: #2A9A87;
   color: #ffffff;
-  box-shadow: 0 6rpx 16rpx rgba(0, 32, 69, 0.18);
+  box-shadow: 0 6rpx 16rpx rgba(42, 154, 135, .2);
 }
 
 .tab-count {
@@ -112,9 +110,9 @@ page {
   align-items: center;
   gap: 12rpx;
   border-radius: 14rpx;
-  background: #e9f0fa;
-  border: 1rpx solid #cfddf1;
-  color: #1a365d;
+  background: #e8f6f4;
+  border: 1rpx solid #c4e8de;
+  color: #187a68;
   font-size: 22rpx;
   line-height: 32rpx;
 }
@@ -161,7 +159,7 @@ page {
   justify-content: center;
   padding: 16rpx 28rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #ffffff;
-  border-top: 1rpx solid #e7edf5;
+  border-top: 1rpx solid #dceee9;
 }
 
 .bottom-create-button {
@@ -171,7 +169,7 @@ page {
   align-items: center;
   justify-content: center;
   gap: 6rpx;
-  color: #002f63;
+  color: #187a68;
   font-size: 22rpx;
   font-weight: 600;
 }
@@ -187,9 +185,9 @@ page {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #002f63;
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
   border: 4rpx solid #ffffff;
-  box-shadow: 0 5rpx 14rpx rgba(0, 47, 99, .22);
+  box-shadow: 0 8rpx 18rpx rgba(42, 154, 135, .25);
 }
 
 .create-mask {
@@ -210,8 +208,8 @@ page {
   max-height: 82vh;
   display: flex;
   flex-direction: column;
-  border-radius: 32rpx 32rpx 0 0;
-  background: #ffffff;
+  border-radius: 40rpx 40rpx 0 0;
+  background: #f4f8f7;
   box-sizing: border-box;
   overflow: hidden;
   transform: translateY(100%);
@@ -220,24 +218,24 @@ page {
 
 .create-mask.is-visible .create-sheet { transform: translateY(0); }
 
-.create-sheet-handle { width: 64rpx; height: 8rpx; margin: 16rpx auto 4rpx; border-radius: 99rpx; background: #d9e2ee; }
-.create-sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 28rpx 20rpx; border-bottom: 1rpx solid #edf1f6; }
-.create-sheet-title { font-size: 32rpx; color: #002045; font-weight: 700; }
+.create-sheet-handle { width: 64rpx; height: 8rpx; margin: 16rpx auto 4rpx; border-radius: 99rpx; background: #bcded5; }
+.create-sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 28rpx 20rpx; border-bottom: 1rpx solid #dceee9; background: #ffffff; }
+.create-sheet-title { font-size: 32rpx; color: #182220; font-weight: 700; }
 .create-sheet-desc { margin-top: 5rpx; font-size: 22rpx; color: #8090a4; }
-.create-sheet-close { width: 56rpx; height: 56rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f3f6fa; }
+.create-sheet-close { width: 56rpx; height: 56rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #edf8f5; }
 .create-sheet-content { max-height: 880rpx; padding: 8rpx 28rpx 20rpx; box-sizing: border-box; }
 .create-field { margin-top: 20rpx; }
 .create-field-label { display: block; margin-bottom: 10rpx; color: #334155; font-size: 25rpx; font-weight: 600; }
 .create-required { color: #e11d48; }
-.create-input, .create-select, .create-readonly { width: 100%; min-height: 76rpx; padding: 0 20rpx; border: 1rpx solid #dbe4ee; border-radius: 14rpx; box-sizing: border-box; background: #ffffff; color: #12233a; font-size: 26rpx; }
+.create-input, .create-select, .create-readonly { width: 100%; min-height: 76rpx; padding: 0 20rpx; border: 1rpx solid #d4e4df; border-radius: 16rpx; box-sizing: border-box; background: #ffffff; color: #182220; font-size: 26rpx; }
 .create-input { line-height: 76rpx; }
 .create-select { display: flex; align-items: center; justify-content: space-between; }
-.create-readonly { display: flex; align-items: center; color: #64748b; background: #f7f9fc; }
+.create-readonly { display: flex; align-items: center; color: #64748b; background: #eff8f5; }
 .create-placeholder { color: #9aa9bb; }
-.create-sheet-actions { display: flex; gap: 16rpx; padding: 18rpx 28rpx calc(18rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #edf1f6; background: #ffffff; }
+.create-sheet-actions { display: flex; gap: 16rpx; padding: 18rpx 28rpx calc(18rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #dceee9; background: #ffffff; }
 .create-cancel, .create-confirm { flex: 1; height: 76rpx; display: flex; align-items: center; justify-content: center; border-radius: 14rpx; font-size: 27rpx; font-weight: 600; }
 .create-cancel { color: #516277; background: #f2f5f8; }
-.create-confirm { color: #ffffff; background: #002f63; }
+.create-confirm { color: #ffffff; background: linear-gradient(135deg, #36AD97, #2A9A87); box-shadow: 0 8rpx 18rpx rgba(42, 154, 135, .2); }
 .create-confirm:active, .create-cancel:active { opacity: .8; }
 
 
@@ -270,42 +268,17 @@ page {
 }
 
 /* 2. 普通账号交替立体主题 A：科技深蓝立体阴影 */
-.account-card.card-theme-blue {
-  background: linear-gradient(150deg, #ffffff 0%, #fbfdff 45%, #f2f7fd 100%);
-  border: 2rpx solid #dbe6f5;
+.account-card.card-theme-blue, .account-card.card-theme-purple {
+  background: linear-gradient(150deg, #ffffff 0%, #fbfefd 45%, #eef9f6 100%);
+  border: 2rpx solid #d4ece5;
   box-shadow:
-    0 16rpx 36rpx rgba(0, 32, 69, 0.09),
-    0 4rpx 12rpx rgba(0, 32, 69, 0.04),
+    0 16rpx 36rpx rgba(46, 159, 139, 0.09),
+    0 4rpx 12rpx rgba(46, 159, 139, 0.04),
     inset 0 2rpx 0 rgba(255, 255, 255, 0.9);
 }
 
-.account-card.card-theme-blue .card-header {
-  border-bottom: 2rpx solid #edf3fc;
-}
-
-.account-card.card-theme-blue .card-actions {
-  background: #f8fbfe;
-  border-top: 2rpx solid #edf3fc;
-}
-
-/* 3. 普通账号交替立体主题 B：高雅紫罗兰立体阴影 */
-.account-card.card-theme-purple {
-  background: linear-gradient(150deg, #ffffff 0%, #fdfcff 45%, #f7f4fd 100%);
-  border: 2rpx solid #e8e1f8;
-  box-shadow:
-    0 16rpx 36rpx rgba(109, 40, 217, 0.09),
-    0 4rpx 12rpx rgba(109, 40, 217, 0.04),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.9);
-}
-
-.account-card.card-theme-purple .card-header {
-  border-bottom: 2rpx solid #f3edfa;
-}
-
-.account-card.card-theme-purple .card-actions {
-  background: #faf8fe;
-  border-top: 2rpx solid #f3edfa;
-}
+.account-card.card-theme-blue .card-header, .account-card.card-theme-purple .card-header { border-bottom: 2rpx solid #e1f2ed; }
+.account-card.card-theme-blue .card-actions, .account-card.card-theme-purple .card-actions { background: #f7fcfa; border-top: 2rpx solid #e1f2ed; }
 
 /* 4. 普通账号交替立体主题 C：清新松石翠绿立体阴影 */
 .account-card.card-theme-teal {
@@ -354,7 +327,7 @@ page {
   justify-content: center;
   flex: none;
   border: 2rpx solid #dce5f2;
-  box-shadow: 0 6rpx 16rpx rgba(0, 32, 69, 0.08);
+  box-shadow: 0 6rpx 16rpx rgba(46, 159, 139, 0.08);
 }
 
 .avatar-root {
@@ -460,13 +433,13 @@ page {
 
 .mono-val {
   font-family: monospace;
-  color: #002045;
+  color: #187a68;
   font-weight: 700;
 }
 
 .role-val {
   font-weight: 600;
-  color: #1a365d;
+  color: #187a68;
 }
 
 .date-val {
@@ -518,15 +491,15 @@ page {
 }
 
 .action-reset {
-  background: #eef4fe;
-  border: 1rpx solid #d2e1fa;
-  color: #1a365d;
+  background: #e8f6f4;
+  border: 1rpx solid #c4e8de;
+  color: #187a68;
 }
 
 .action-edit-job {
-  background: #eef7fe;
-  border: 1rpx solid #cbe4fa;
-  color: #0b5796;
+  background: #edf9f6;
+  border: 1rpx solid #c4e8de;
+  color: #187a68;
 }
 
 .action-disable {

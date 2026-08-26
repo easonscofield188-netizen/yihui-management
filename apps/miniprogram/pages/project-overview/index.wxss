@@ -613,12 +613,13 @@ page {
 
 .custom-popup {
   padding: 36rpx 34rpx calc(36rpx + env(safe-area-inset-bottom));
-  border-radius: 28rpx 28rpx 0 0;
-  background: #f9f9ff;
+  border-radius: 36rpx 36rpx 0 0;
+  background: #f4f8f7;
+  box-shadow: 0 -12rpx 32rpx rgba(24, 34, 32, .12);
 }
 
 .custom-popup-title {
-  color: #002045;
+  color: #182220;
   font-size: 34rpx;
   font-weight: 700;
 }
@@ -632,9 +633,9 @@ page {
 .custom-field {
   height: 84rpx;
   padding: 0 24rpx;
-  border: 2rpx solid #c4c6cf;
-  border-radius: 14rpx;
-  background: #f0f3ff;
+  border: 2rpx solid #d4e4df;
+  border-radius: 18rpx;
+  background: #ffffff;
   color: #121c2c;
   font-size: 28rpx;
   line-height: 84rpx;
@@ -668,10 +669,10 @@ page {
 }
 
 .custom-confirm {
-  border: 2rpx solid #1a365d;
-  background: #1a365d;
+  border: 2rpx solid #2a9a87;
+  background: linear-gradient(135deg, #36AD97, #2A9A87);
   color: #ffffff;
-  box-shadow: 0 6rpx 14rpx rgba(26, 54, 93, .18);
+  box-shadow: 0 8rpx 18rpx rgba(42, 154, 135, .2);
 }
 
 /* 运营支出与综合净利润卡片 */

@@ -21,7 +21,7 @@
     <scroll-view class="dialog-body" scroll-y show-scrollbar="{{false}}">
       <!-- 关联项目提示 -->
       <view class="project-pill" wx:if="{{projectName}}">
-        <t-icon name="building" size="30rpx" color="#002045" />
+        <t-icon name="building" size="30rpx" color="#2A9A87" />
         <text class="project-pill-name">{{projectName}}</text>
       </view>
 
@@ -74,7 +74,7 @@
         <!-- 选中的项目场景描述说明 -->
         <view class="scene-desc-card" wx:if="{{selectedSceneDescription}}">
           <view class="scene-desc-head">
-            <t-icon name="info-circle" size="28rpx" color="#002045" />
+            <t-icon name="info-circle" size="28rpx" color="#2A9A87" />
             <text class="scene-desc-title">场景说明</text>
           </view>
           <view class="scene-desc-text">{{selectedSceneDescription}}</view>
@@ -85,11 +85,11 @@
       <view class="form-card-box">
         <view class="card-box-header">
           <view class="card-box-title">
-            <t-icon name="bill" size="34rpx" color="#002045" />
+            <t-icon name="bill" size="34rpx" color="#2A9A87" />
             <text>本次成本支出</text>
           </view>
           <view class="add-cost-btn" bindtap="addCostItem">
-            <t-icon name="add" size="28rpx" color="#002045" />
+            <t-icon name="add" size="28rpx" color="#2A9A87" />
             <text>添加支出</text>
           </view>
         </view>
@@ -139,7 +139,7 @@
       <view class="form-card-box">
         <view class="card-box-header">
           <view class="card-box-title">
-            <t-icon name="wallet" size="34rpx" color="#002045" />
+            <t-icon name="wallet" size="34rpx" color="#2A9A87" />
             <text>订单金额（元）</text>
           </view>
         </view>
@@ -162,7 +162,7 @@
             <view class="toggle-title">本次订单是否已结清</view>
             <view class="toggle-desc">{{isSettled ? '订单金额将全部计为本次已收金额' : '可填写本次实际已收金额'}}</view>
           </view>
-          <t-switch value="{{isSettled}}" bindchange="onSettledChange" />
+          <t-switch t-class="settlement-switch" value="{{isSettled}}" bindchange="onSettledChange" />
         </view>
 
         <view class="settlement-row" wx:if="{{!isSettled}}">
@@ -187,7 +187,7 @@
       <view class="form-card-box voucher-card-box">
         <view class="card-box-header">
           <view class="card-box-title">
-            <t-icon name="attach" size="34rpx" color="#002045" />
+            <t-icon name="attach" size="34rpx" color="#2A9A87" />
             <text>发票凭证（选填）</text>
           </view>
         </view>
@@ -281,7 +281,7 @@
   <view class="client-picker-dialog">
     <view class="dialog-header">
       <view class="dialog-title-wrap">
-        <t-icon name="user" size="36rpx" color="#002045" />
+        <t-icon name="user" size="36rpx" color="#2A9A87" />
         <text class="dialog-title">选择关联客户</text>
       </view>
       <view class="close-btn" bindtap="closeClientPicker">
@@ -325,7 +325,7 @@
             <text wx:if="{{item.phone}}"> · {{item.phone}}</text>
           </view>
         </view>
-        <t-icon wx:if="{{selectedClientId === (item._id || item.id)}}" name="check" size="36rpx" color="#002045" />
+        <t-icon wx:if="{{selectedClientId === (item._id || item.id)}}" name="check" size="36rpx" color="#2A9A87" />
       </view>
     </scroll-view>
 
@@ -348,6 +348,7 @@
   title="快捷新建客户"
   confirm-btn="保存并选中"
   cancel-btn="取消"
+  t-class-confirm="quick-client-confirm"
   bindconfirm="submitQuickClient"
   bindcancel="closeCreateClientModal"
 >

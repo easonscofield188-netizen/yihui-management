@@ -4,14 +4,14 @@ page { background: #f9f9ff; }
 .nav-placeholder { width: 100%; }
 .nav-back { position: absolute; bottom: 0; left: 24rpx; display: flex; width: 70rpx; height: 88rpx; align-items: center; }
 .nav-title { position: absolute; right: 150rpx; bottom: 0; left: 150rpx; height: 88rpx; color: #182220; font-size: 36rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
-.toolbar { display: flex; padding: 24rpx 32rpx 18rpx; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 2rpx solid #e7eeff; background: #fff; }
+.toolbar { display: flex; padding: 24rpx 32rpx 18rpx; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 2rpx solid #dceee9; background: #fff; }
 .status-tabs { display: flex; gap: 12rpx; }
-.status-tab { padding: 10rpx 26rpx; border: 2rpx solid #d9e3f9; border-radius: 999rpx; background: #fff; color: #43474e; font-size: 24rpx; }
-.status-tab.active { border-color: #1a365d; background: #1a365d; color: #fff; font-weight: 600; }
-.mark-all { color: #1a365d; font-size: 24rpx; font-weight: 600; }
+.status-tab { padding: 10rpx 26rpx; border: 2rpx solid #d4e4df; border-radius: 999rpx; background: #fff; color: #43474e; font-size: 24rpx; }
+.status-tab.active { border-color: #2A9A87; background: linear-gradient(135deg, #36AD97, #2A9A87); color: #fff; font-weight: 600; }
+.mark-all { color: #187a68; font-size: 24rpx; font-weight: 600; }
 .mark-all.disabled { color: #b4b8bf; }
-.selection-toolbar { display: flex; min-height: 88rpx; padding: 0 32rpx; align-items: center; gap: 24rpx; border-bottom: 2rpx solid #dce5f6; background: #fff; }
-.selection-cancel, .selection-action { color: #1a365d; font-size: 25rpx; font-weight: 600; }
+.selection-toolbar { display: flex; min-height: 88rpx; padding: 0 32rpx; align-items: center; gap: 24rpx; border-bottom: 2rpx solid #dceee9; background: #fff; }
+.selection-cancel, .selection-action { color: #187a68; font-size: 25rpx; font-weight: 600; }
 .selection-count { min-width: 0; flex: 1; color: #43474e; font-size: 25rpx; text-align: center; }
 .selection-delete { padding: 10rpx 22rpx; border-radius: 999rpx; background: #c62828; color: #fff; font-size: 24rpx; font-weight: 600; }
 .selection-delete.disabled { background: #d9dce1; color: #8b919a; }
@@ -20,14 +20,14 @@ page { background: #f9f9ff; }
 .notification-row:last-child { margin-bottom: 0; }
 .notification-card { display: flex; min-height: 124rpx; box-sizing: border-box; padding: 26rpx 24rpx; align-items: center; gap: 20rpx; border: 2rpx solid #e1e6f0; border-radius: 20rpx; background: #fff; box-shadow: 0 7rpx 20rpx rgba(26,54,93,.04); }
 .notification-card.created { border-color: #d2eadc; background: #f6fcf8; }
-.notification-card.updated { border-color: #d8e2f5; background: #f7f9ff; }
+.notification-card.updated { border-color: #d0e9e2; background: #f7fcfa; }
 .notification-card.unread.created { border-color: #a9d8bb; background: #eef9f3; box-shadow: 0 8rpx 24rpx rgba(15,122,69,.08); }
-.notification-card.unread.updated { border-color: #b8caec; background: #eef4ff; box-shadow: 0 8rpx 24rpx rgba(36,87,167,.08); }
+.notification-card.unread.updated { border-color: #b9e4d9; background: #edf9f6; box-shadow: 0 8rpx 24rpx rgba(46,159,139,.1); }
 .notification-card.selecting { border-radius: 20rpx; }
 .selection-check { display: flex; width: 44rpx; flex: none; align-items: center; justify-content: center; }
 .notification-icon { display: flex; box-sizing: border-box; width: 72rpx; height: 72rpx; flex: none; align-items: center; justify-content: center; border: 2rpx solid transparent; border-radius: 18rpx; }
 .notification-icon.created { border-color: #b9e5ca; background: #e8f8ef; }
-.notification-icon.updated { border-color: #bfd1f3; background: #e7eeff; }
+.notification-icon.updated { border-color: #bfe5db; background: #e8f6f4; }
 .notification-main { min-width: 0; flex: 1; }
 .notification-head { display: flex; min-width: 0; align-items: center; gap: 10rpx; }
 .notification-title { min-width: 0; overflow: hidden; flex: 1; color: #121c2c; font-size: 28rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }

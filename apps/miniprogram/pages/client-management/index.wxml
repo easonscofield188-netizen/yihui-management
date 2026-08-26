@@ -1,6 +1,6 @@
 <view class="client-page">
   <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
-    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#2A9A87" /></view>
     <view class="nav-title">客户管理</view>
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
@@ -52,7 +52,7 @@
         <text>{{item.referencePreview[0].name}}{{item.referenceCount > 1 ? ' 等 ' + item.referenceCount + ' 个项目' : ''}}</text>
       </view>
       <view class="card-actions">
-        <view class="action-button edit" data-id="{{item.id}}" bindtap="editClient"><t-icon name="edit-1" size="30rpx" color="#1a365d" /><text>编辑</text></view>
+        <view class="action-button edit" data-id="{{item.id}}" bindtap="editClient"><t-icon name="edit-1" size="30rpx" color="#187a68" /><text>编辑</text></view>
         <view class="action-button delete {{item.referenceCount ? 'blocked' : ''}}" data-id="{{item.id}}" bindtap="requestDeleteClient"><t-icon name="delete" size="30rpx" color="{{item.referenceCount ? '#989fa6' : '#ba1a1a'}}" /><text>删除</text></view>
       </view>
     </view>
@@ -71,7 +71,7 @@
       <view class="sheet-handle"></view>
       <view class="sheet-title">{{impactMode === 'edit' ? '确认项目引用范围' : '当前客户无法删除'}}</view>
       <view class="impact-tip {{impactMode === 'delete' ? 'danger' : ''}}">
-        <t-icon name="info-circle-filled" size="34rpx" color="{{impactMode === 'delete' ? '#ba1a1a' : '#1a365d'}}" />
+        <t-icon name="info-circle-filled" size="34rpx" color="{{impactMode === 'delete' ? '#ba1a1a' : '#2A9A87'}}" />
         <text wx:if="{{impactMode === 'edit'}}">客户“{{prepared.client.name}}”已被 {{prepared.referenceCount}} 个项目引用，修改后这些项目会同步更新。</text>
         <text wx:else>客户“{{prepared.client.name}}”仍被 {{prepared.referenceCount}} 个项目引用，请先为这些项目重新选择客户。</text>
       </view>
@@ -100,7 +100,7 @@
         <t-icon name="close" size="40rpx" color="#74777f" bindtap="closeEditor" />
       </view>
       <view class="sync-banner" wx:if="{{prepared.referenceCount}}">
-        <t-icon name="link" size="30rpx" color="#1a365d" />
+        <t-icon name="link" size="30rpx" color="#2A9A87" />
         <text>保存后将同步更新 {{prepared.referenceCount}} 个引用项目</text>
       </view>
       <view class="form-field">

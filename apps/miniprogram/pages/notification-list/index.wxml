@@ -1,6 +1,6 @@
 <view class="notification-page">
   <view class="page-nav" style="height: {{navHeight}}px; padding-top: {{statusBarHeight}}px;">
-    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#002045" /></view>
+    <view class="nav-back" bindtap="goBack"><t-icon name="chevron-left" size="48rpx" color="#2A9A87" /></view>
     <view class="nav-title">消息通知</view>
   </view>
   <view class="nav-placeholder" style="height: {{navHeight}}px;"></view>
@@ -39,7 +39,7 @@
         bindlongpress="enterSelectionMode"
       >
         <view wx:if="{{selectionMode}}" class="selection-check">
-          <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? '#1a365d' : '#a9b0bb'}}" />
+          <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? '#2A9A87' : '#a9b0bb'}}" />
         </view>
         <view class="notification-icon {{item.eventType === 'project_created' ? 'created' : 'updated'}}">
           <t-icon name="{{item.iconName}}" size="38rpx" color="{{item.iconColor}}" />

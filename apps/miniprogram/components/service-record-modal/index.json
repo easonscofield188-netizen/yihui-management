@@ -8,6 +8,8 @@
     "t-switch": "tdesign-miniprogram/switch/switch",
     "t-date-time-picker": "tdesign-miniprogram/date-time-picker/date-time-picker",
     "t-picker": "tdesign-miniprogram/picker/picker",
-    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item"
+    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item",
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-dialog": "tdesign-miniprogram/dialog/dialog"
   }
 }

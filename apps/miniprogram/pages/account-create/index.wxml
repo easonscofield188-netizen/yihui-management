@@ -46,7 +46,7 @@
 
       <!-- 默认初始密码说明 -->
       <view class="default-pwd-tip">
-        <t-icon name="info-circle-filled" size="36rpx" color="#1a365d" />
+        <t-icon name="info-circle-filled" size="36rpx" color="#2A9A87" />
         <view class="default-pwd-content">
           <view class="default-pwd-title">统一初始密码：yh8888</view>
           <view class="default-pwd-desc">新账号初始密码统一为 <text class="pwd-highlight">yh8888</text>，首次登录时系统将提醒使用人及时修改。</view>

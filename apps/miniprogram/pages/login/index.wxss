@@ -24,17 +24,19 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 140rpx;
-  height: 140rpx;
-  margin: 0 auto 28rpx;
-  border-radius: 36rpx;
-  background: #ffffff;
-  border: 2rpx solid #E2ECE9;
-  box-shadow: 0 12rpx 32rpx rgba(46, 159, 139, 0.15);
+  width: 176rpx;
+  height: 176rpx;
+  margin: 0 auto 24rpx;
+  overflow: hidden;
+  border-radius: 46rpx;
+  background: #fbfefd;
+  border: 2rpx solid #d7ebe5;
+  box-shadow: 0 14rpx 34rpx rgba(46, 159, 139, 0.16);
 }
 .brand-logo-image {
-  width: 100rpx;
-  height: 100rpx;
+  width: 174rpx;
+  height: 174rpx;
+  transform: scale(1.18);
 }
 .brand-name {
   color: #182220;
@@ -131,6 +133,7 @@ page {
   margin-left: 8rpx;
 }
 .login-button {
+  width: 100% !important;
   height: 88rpx !important;
   margin-top: 34rpx;
   border-radius: 16rpx !important;
