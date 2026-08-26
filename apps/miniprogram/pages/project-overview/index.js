@@ -322,6 +322,7 @@ Page({
       `rangeType=${encodeURIComponent(rangeType)}`,
       `startDate=${encodeURIComponent(startDate)}`,
       `endDate=${encodeURIComponent(endDate)}`,
+      `projectType=${encodeURIComponent(this.data.typeValue || "all")}`,
     ].join("&");
     wx.navigateTo({ url: `/pages/project-financial-list/index?${query}` });
   },

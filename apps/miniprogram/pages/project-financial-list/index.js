@@ -104,6 +104,7 @@ Page({
     rangeType: "all",
     startDate: "",
     endDate: "",
+    projectType: "all",
     pageTitle: TYPE_META[FINANCIAL_TYPES.UNRECEIVED].title,
     summaryLabel: TYPE_META[FINANCIAL_TYPES.UNRECEIVED].summaryLabel,
     summaryAmountText: "0.00",
@@ -130,6 +131,9 @@ Page({
         : "all",
       startDate: String(options.startDate || "").slice(0, 10),
       endDate: String(options.endDate || "").slice(0, 10),
+      projectType: ["all", "normal", "long_term", "flower_plant"].includes(options.projectType)
+        ? options.projectType
+        : "all",
       pageTitle: meta.title,
       summaryLabel: meta.summaryLabel,
       emptyTitle: meta.emptyTitle,
@@ -177,6 +181,7 @@ Page({
         rangeType: this.data.rangeType,
         startDate: this.data.startDate,
         endDate: this.data.endDate,
+        projectType: this.data.projectType,
         page,
         pageSize: 20,
       });

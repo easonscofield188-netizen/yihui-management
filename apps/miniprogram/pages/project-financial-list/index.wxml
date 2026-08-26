@@ -10,7 +10,7 @@
   <view class="summary-card {{filterType === 'unpaid_cost' ? 'cost-summary' : 'receivable-summary'}}">
     <view>
       <view class="summary-label">{{summaryLabel}}</view>
-      <view class="summary-period">{{periodLabel}} · 共 {{total}} 个项目</view>
+      <view class="summary-period">{{periodLabel}} · 共 {{total}} 条</view>
     </view>
     <view class="summary-amount">¥{{summaryAmountText}}</view>
   </view>
@@ -20,7 +20,7 @@
       wx:for="{{projects}}"
       wx:key="_id"
       class="project-card {{item.isClosed ? 'closed-card' : ''}}"
-      data-id="{{item._id}}"
+      data-id="{{item.projectId || item._id}}"
       bindtap="openProject"
     >
       <view class="card-accent"></view>

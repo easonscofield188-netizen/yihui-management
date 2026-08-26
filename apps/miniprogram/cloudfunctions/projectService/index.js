@@ -2562,26 +2562,34 @@ async function listFinancialProjects(params = {}, access) {
     if (['normal', 'long_term', 'flower_plant'].includes(projectType)) {
       allProjects = allProjects.filter(p => (p.type || 'normal') === projectType);
     }
-    const rangeProjects = bounds
-      ? filterOverviewProjects(allProjects, bounds)
-      : allProjects;
-    const matchedProjects = rangeProjects
-      .map((project) => {
-        const amount = getOverviewProjectAmount(project);
-        const receivedAmount = Number(project.receivedAmount) || 0;
-        const payableAmount = getOverviewProjectCost(project);
-        const paidAmount = getOverviewProjectPaidCost(project);
+    const allRecords = await fetchAllRecords({ dataScope: access.dataScope });
+    const rangeEntries = filterOverviewEntries(buildOverviewEntries(allProjects, allRecords), bounds);
+    const matchedProjects = rangeEntries
+      .map((entry) => {
+        const amount = Number(entry.amount) || 0;
+        const receivedAmount = Number(entry.receivedAmount) || 0;
+        const payableAmount = Number(entry.costAmount) || 0;
+        const paidAmount = Number(entry.paidCostAmount) || 0;
         const unreceivedCents = Math.max(
           0,
           moneyToCents(amount) - moneyToCents(receivedAmount)
         );
-        const enriched = enrichProjectFinancials(project);
         const unpaidCostCents = Math.max(
           0,
           moneyToCents(payableAmount) - moneyToCents(paidAmount)
         );
         return {
-          ...enriched,
+          ...(entry.sourceProject || {}),
+          _id: entry.id || entry.projectId,
+          projectId: entry.projectId,
+          name: entry.sourceRecord
+            ? `${entry.projectName || entry.sourceProject?.name || '长期项目'} · ${entry.name || '服务记录'}`
+            : entry.name,
+          client: entry.client,
+          startDate: entry.sourceRecord?.serviceDate || entry.sourceProject?.startDate,
+          completionTime: entry.sourceRecord?.serviceDate || entry.sourceProject?.completionTime,
+          createTime: entry.createTime || entry.sourceProject?.createTime,
+          isRecord: Boolean(entry.sourceRecord),
           amount,
           receivedAmount,
           unreceivedAmount: centsToMoney(unreceivedCents),
@@ -2597,8 +2605,8 @@ async function listFinancialProjects(params = {}, access) {
           : moneyToCents(project.unpaidCostAmount) > 0
       ))
       .sort((a, b) => {
-        const timeA = toOverviewDate(a.createTime);
-        const timeB = toOverviewDate(b.createTime);
+        const timeA = toOverviewDate(a.startDate || a.createTime);
+        const timeB = toOverviewDate(b.startDate || b.createTime);
         return (timeB ? timeB.getTime() : 0) - (timeA ? timeA.getTime() : 0);
       });
 
@@ -2649,9 +2657,10 @@ function getOverviewProjectDate(project) {
   if (isHistoricalOverviewProject(project)) {
     return toOverviewDate(project.completionTime);
   }
-  return toOverviewDate(project.period && project.period[0])
-    || toOverviewDate(project.startDate)
-    || toOverviewDate(project.negotiatingTime)
+  // startDate 是项目交付日期；不能再优先使用项目周期起始日。
+  return toOverviewDate(project.startDate)
+    || toOverviewDate(project.completionTime)
+    || toOverviewDate(project.period && project.period[1])
     || toOverviewDate(project.createTime);
 }
 
@@ -2757,25 +2766,99 @@ function filterOverviewProjects(projects, bounds) {
   });
 }
 
-function buildOverviewMetrics(projects) {
-  const totalAmount = projects.reduce((sum, item) => sum + getOverviewProjectAmount(item), 0);
-  const receivedAmount = projects.reduce((sum, item) => sum + (Number(item.receivedAmount) || 0), 0);
-  const unpaidAmount = Math.max(0, totalAmount - receivedAmount);
-  const totalCost = projects.reduce((sum, item) => sum + getOverviewProjectCost(item), 0);
-  const paidCost = projects.reduce((sum, item) => sum + getOverviewProjectPaidCost(item), 0);
-  const unpaidCost = Math.max(0, totalCost - paidCost);
-  const profit = totalAmount - totalCost;
-  const profitRate = totalAmount ? (profit / totalAmount) * 100 : 0;
-  const costRate = totalAmount ? (totalCost / totalAmount) * 100 : 0;
+function isRecurringOverviewProject(project) {
+  return ['long_term', 'flower_plant'].includes(project && project.type);
+}
+
+/**
+ * 将项目统一展开为统计业务单元：常规项目为一笔，长期与鲜花绿植为每条服务记录一笔。
+ * 所有金额都只在云函数中计算，且长期类记录以 serviceDate 作为交付日期。
+ */
+function buildOverviewEntries(projects, records) {
+  const projectById = new Map(projects.map(project => [String(project._id || ''), project]));
+  const entries = projects
+    .filter(project => !isRecurringOverviewProject(project))
+    .map(project => ({
+      id: String(project._id || ''),
+      projectId: String(project._id || ''),
+      date: getOverviewProjectDate(project),
+      name: project.name || '',
+      client: project.client || '',
+      status: project.status || '',
+      type: project.type || 'normal',
+      createTime: project.createTime || null,
+      amount: getOverviewProjectAmount(project),
+      receivedAmount: Number(project.receivedAmount) || 0,
+      costAmount: getOverviewProjectCost(project),
+      paidCostAmount: getOverviewProjectPaidCost(project),
+      sourceProject: project,
+    }));
+
+  (records || []).forEach((record) => {
+    const project = projectById.get(String(record.projectId || ''));
+    if (!project || !isRecurringOverviewProject(project)) return;
+    const costs = Array.isArray(record.costs) ? record.costs : [];
+    const costAmount = record.costAmount !== undefined && record.costAmount !== null
+      ? Number(record.costAmount) || 0
+      : costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0);
+    const paidCostAmount = costs.length
+      ? costs.reduce((sum, cost) => (
+        isOverviewCostSettled(cost.settled) ? sum + (Number(cost.amount) || 0) : sum
+      ), 0)
+      : costAmount;
+    entries.push({
+      id: String(record._id || ''),
+      projectId: String(project._id || ''),
+      date: toOverviewDate(record.serviceDate),
+      name: record.content || project.name || '',
+      projectName: project.name || '',
+      client: record.clientName || project.client || '',
+      status: project.status || '',
+      type: project.type,
+      createTime: record.createdAt || record.createdTimestamp || project.createTime || null,
+      amount: Number(record.receivableAmount) || 0,
+      receivedAmount: Number(record.receivedAmount) || 0,
+      costAmount,
+      paidCostAmount,
+      sourceProject: project,
+      sourceRecord: record,
+    });
+  });
+  return entries;
+}
+
+function filterOverviewEntries(entries, bounds) {
+  if (!bounds) return entries.slice();
+  const start = bounds.start.getTime();
+  const end = bounds.end.getTime();
+  return entries.filter((entry) => {
+    if (!entry.date) return false;
+    const time = entry.date.getTime();
+    return time >= start && time <= end;
+  });
+}
+
+function buildOverviewMetrics(entries) {
+  const totalAmountCents = entries.reduce((sum, item) => sum + moneyToCents(item.amount), 0);
+  const receivedAmountCents = entries.reduce((sum, item) => sum + moneyToCents(item.receivedAmount), 0);
+  const totalCostCents = entries.reduce((sum, item) => sum + moneyToCents(item.costAmount), 0);
+  const paidCostCents = entries.reduce((sum, item) => sum + moneyToCents(item.paidCostAmount), 0);
+  const unpaidAmountCents = Math.max(0, totalAmountCents - receivedAmountCents);
+  const unpaidCostCents = Math.max(0, totalCostCents - paidCostCents);
+  const profitCents = totalAmountCents - totalCostCents;
+  const totalAmount = centsToMoney(totalAmountCents);
+  const profit = centsToMoney(profitCents);
+  const profitRate = totalAmountCents ? (profitCents / totalAmountCents) * 100 : 0;
+  const costRate = totalAmountCents ? (totalCostCents / totalAmountCents) * 100 : 0;
   return {
-    orderCount: projects.length,
-    totalAmount: Number(totalAmount.toFixed(2)),
-    receivedAmount: Number(receivedAmount.toFixed(2)),
-    unpaidAmount: Number(unpaidAmount.toFixed(2)),
-    totalCost: Number(totalCost.toFixed(2)),
-    paidCost: Number(paidCost.toFixed(2)),
-    unpaidCost: Number(unpaidCost.toFixed(2)),
-    profit: Number(profit.toFixed(2)),
+    orderCount: entries.length,
+    totalAmount,
+    receivedAmount: centsToMoney(receivedAmountCents),
+    unpaidAmount: centsToMoney(unpaidAmountCents),
+    totalCost: centsToMoney(totalCostCents),
+    paidCost: centsToMoney(paidCostCents),
+    unpaidCost: centsToMoney(unpaidCostCents),
+    profit,
     profitRate: Number(profitRate.toFixed(2)),
     costRate: Number(costRate.toFixed(2))
   };
@@ -2860,36 +2943,38 @@ async function getOverview(params = {}, access) {
     if (projectType !== 'all') {
       allProjects = allProjects.filter((project) => (project.type || 'normal') === projectType);
     }
-    const currentProjects = rangeType === 'all'
-      ? allProjects.slice()
-      : filterOverviewProjects(allProjects, bounds);
-    const previousProjects = rangeType === 'all'
+    const allRecords = await fetchAllRecords({ dataScope: access.dataScope });
+    const allEntries = buildOverviewEntries(allProjects, allRecords);
+    const currentEntries = filterOverviewEntries(allEntries, bounds);
+    const previousEntries = rangeType === 'all'
       ? []
-      : filterOverviewProjects(allProjects, getPreviousOverviewBounds(bounds));
-    // 最近订单状态：始终按最近一个月返回，不受 rangeType / 自定义筛选影响
-    const recentProjects = filterOverviewProjects(allProjects, getRecentOneMonthBounds())
+      : filterOverviewEntries(allEntries, getPreviousOverviewBounds(bounds));
+    // 最近订单状态按同一业务单元口径统计：长期类展示最近的服务/业务记录。
+    const recentProjects = filterOverviewEntries(allEntries, getRecentOneMonthBounds())
       .sort((a, b) => {
-        const timeA = (getOverviewProjectDate(a) || new Date(0)).getTime();
-        const timeB = (getOverviewProjectDate(b) || new Date(0)).getTime();
+        const timeA = (a.date || new Date(0)).getTime();
+        const timeB = (b.date || new Date(0)).getTime();
         return timeB - timeA;
       })
       .slice(0, 20)
       .map((item) => {
         const statusMeta = getOverviewStatusMeta(item.status);
         return {
-          id: item._id,
-          name: item.name || '',
-          amount: getOverviewProjectAmount(item),
+          id: item.projectId,
+          name: item.sourceRecord
+            ? `${item.projectName || item.sourceProject?.name || '长期项目'} · ${item.name || '服务记录'}`
+            : (item.name || ''),
+          amount: item.amount,
           status: item.status || '',
           statusLabel: statusMeta.label,
           statusTone: statusMeta.tone,
-          time: item.updateTime || item.createTime || getOverviewProjectDate(item),
+          time: item.date || item.createTime,
           createTime: item.createTime || null
         };
       });
 
-    const currentMetrics = buildOverviewMetrics(currentProjects);
-    const previousMetrics = buildOverviewMetrics(previousProjects);
+    const currentMetrics = buildOverviewMetrics(currentEntries);
+    const previousMetrics = buildOverviewMetrics(previousEntries);
     let trendPercent = 0;
     if (rangeType !== 'all') {
       if (previousMetrics.profit !== 0) {
